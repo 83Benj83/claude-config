@@ -34,30 +34,30 @@ peut échouer proprement → refaire manuellement dans un terminal Claude Code :
 
 **Vérifier :** `claude plugin list` → doit afficher `ecc@ecc … enabled`.
 
-## 🌀 Claude Flow / Ruflo / AgentDB (optionnel — features avancées)
+## 🌀 Claude Flow / Ruflo / AgentDB (installé automatiquement)
 
 Active : **memory graph, routing intelligent, swarm, agents, AgentDB, hooks avancés**,
 et les outils MCP `mcp__claude-flow__*`.
 
-> ⚠️ Sans ces dépendances, les hooks **fonctionnent quand même** : ils dégradent
-> proprement (ex. « Imported 0 entries » au démarrage). Rien ne casse.
->
-> Le `settings.json` référence `mcp__claude-flow__*` dans les permissions, mais cela
-> **n'installe pas** le serveur MCP — c'est juste une autorisation. Le serveur doit
-> être ajouté explicitement ci-dessous.
-
-Installation (optionnelle) :
+`install.sh` l'ajoute automatiquement au **scope user** (global) :
 
 ```bash
-# Soit via l'option d'install :
-./install.sh --with-claude-flow
-
-# Soit manuellement :
-claude mcp add claude-flow -- npx -y ruflo@latest mcp start
-npx ruflo@latest doctor --fix     # diagnostic
+claude mcp add -s user claude-flow -- npx -y ruflo@latest mcp start
 ```
 
-**Vérifier :** `claude mcp list` → doit afficher `claude-flow`.
+Le serveur tourne via **npx** (aucune install globale) : `ruflo@latest` est téléchargé
+à la volée au 1er lancement. **Action manuelle résiduelle** : au premier démarrage de
+Claude Code, il faut **approuver** le serveur MCP quand il le demande (sécurité Claude
+Code — un serveur MCP exécute du code, l'approbation ne peut donc pas être scriptée).
+
+> ⚠️ Le `settings.json` référence `mcp__claude-flow__*` dans les *permissions*, mais
+> c'est juste une autorisation, pas une installation. Le serveur lui-même est ajouté
+> par la commande ci-dessus (faite par `install.sh`).
+>
+> Pour ne PAS l'installer : `./install.sh --no-claude-flow`. Sans lui, les hooks
+> **fonctionnent quand même** en mode dégradé (ex. « Imported 0 entries »). Rien ne casse.
+
+**Vérifier :** `claude mcp list` → doit afficher `claude-flow` (Connected ou Pending approval).
 
 ## 🎨 Dépendances par skill (optionnelles)
 

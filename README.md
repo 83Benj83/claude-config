@@ -16,21 +16,30 @@ cd claude-config
 
 Puis **ouvre (ou redémarre) Claude Code**. C'est tout.
 
-`install.sh` :
+`install.sh` (tout est automatique par défaut) :
 - vérifie les prérequis (Node, npm, git, claude) ;
 - **sauvegarde** ta config existante dans `~/.claude/backups/` ;
 - copie la config partageable dans `~/.claude/` ;
-- **installe automatiquement le plugin ECC** (skills/agents `ecc:`) ;
+- **installe le plugin ECC** (skills/agents `ecc:`) — le clone du repo ECC peut prendre 1-2 min ;
+- **ajoute le serveur MCP claude-flow/ruflo** (memory, routing, swarm, AgentDB) au scope user ;
 - affiche un résumé + les éventuelles étapes restantes.
 
-> Si l'auto-install d'ECC échoue (Claude Code pas encore configuré), le script te
-> donne la commande manuelle exacte. Rien n'est jamais écrasé sans sauvegarde.
+> **Seule action manuelle possible** : au 1er lancement de Claude Code, approuver le
+> serveur MCP claude-flow quand il le demande (un serveur MCP exécute du code →
+> l'approbation ne peut pas être scriptée). Rien n'est jamais écrasé sans sauvegarde.
 
-Options :
+Vérifier que tout fonctionne, à tout moment :
 
 ```bash
-./install.sh --with-claude-flow   # + serveur MCP claude-flow (features avancées)
-./install.sh --no-ecc             # ne pas toucher au plugin ECC
+./doctor.sh
+```
+
+Options (rarement utiles) :
+
+```bash
+./install.sh --no-claude-flow   # sans le serveur MCP claude-flow
+./install.sh --no-ecc           # sans le plugin ECC
+./install.sh --doctor           # diagnostic seul, n'installe rien
 ```
 
 ---
@@ -40,6 +49,7 @@ Options :
 ```
 claude-config/
 ├── install.sh              # installeur (idempotent, avec sauvegarde)
+├── doctor.sh               # diagnostic complet de la stack
 ├── update.sh               # (propriétaire) resync ~/.claude → repo
 ├── README.md
 ├── docs/
@@ -85,8 +95,9 @@ Fournit tous les skills/agents/commandes `ecc:`. Auto-installé. Vérifier :
 
 ### Claude Flow / Ruflo / AgentDB
 Active memory graph, routing, swarm, AgentDB, hooks avancés + outils `mcp__claude-flow__*`.
-**Optionnel** — sans lui, les hooks dégradent proprement (rien ne casse).
-Installer : `./install.sh --with-claude-flow` ou `claude mcp add claude-flow -- npx -y ruflo@latest mcp start`.
+**Installé automatiquement** par `install.sh` (scope user, via npx). Au 1er lancement de
+Claude Code, approuve le serveur MCP quand il le demande. Désactiver : `--no-claude-flow`.
+Sans lui, les hooks dégradent proprement (rien ne casse).
 
 ### MCP personnels
 Tes connecteurs (context7, Supabase, Figma, Notion…) sont configurés hors `~/.claude`
@@ -100,7 +111,7 @@ et **ne sont pas** reproductibles par ce repo. Chacun ajoute les siens.
 |---|---|
 | `node absent — REQUIS` | Installe Node.js 18+ (`brew install node`) puis relance `./install.sh`. |
 | Skills `ecc:` absents | ECC pas installé → `claude plugin install ecc@ecc` puis redémarre Claude Code. |
-| « Imported 0 entries » au démarrage | Normal si `claude-flow` non installé (mode dégradé). Optionnel : `./install.sh --with-claude-flow`. |
+| « Imported 0 entries » au démarrage | `claude-flow` pas encore approuvé/connecté. Ouvre Claude Code et approuve le serveur MCP. Vérifie avec `./doctor.sh`. |
 | Un skill se plaint d'un module manquant | Voir [docs/dependencies.md](docs/dependencies.md) (deps optionnelles par skill). |
 | Je veux annuler | Ta config précédente est dans `~/.claude/backups/config-backup-<date>`. |
 
