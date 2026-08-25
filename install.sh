@@ -2,59 +2,212 @@
 #
 # install.sh — Installe cette configuration Claude Code dans ~/.claude
 #
-# Usage :   ./install.sh
+#   git clone https://github.com/83Benj83/claude-config.git
+#   cd claude-config
+#   ./install.sh                 # installation standard
+#   ./install.sh --with-claude-flow   # + bootstrap MCP claude-flow (avancé)
+#   ./install.sh --no-ecc        # ne pas tenter d'installer le plugin ECC
 #
-# Le script SAUVEGARDE ta config existante avant toute copie.
-# Il ne touche jamais à tes secrets (~/.claude/.credentials.json) ni à
-# tes sessions/historique : seuls les dossiers de config sont copiés.
+# Garanties :
+#   • Sauvegarde ~/.claude existant avant toute modification.
+#   • Copie UNIQUEMENT la configuration partageable (whitelist explicite).
+#   • Ne copie jamais credentials / sessions / history / cache / logs.
+#   • Aucun chemin absolu machine-spécifique.
+#   • Idempotent : relançable sans casser la configuration.
 
 set -euo pipefail
+
+# ── Couleurs ───────────────────────────────────────────────────
+if [ -t 1 ]; then
+  B=$'\033[1m'; G=$'\033[0;32m'; Y=$'\033[0;33m'; R=$'\033[0;31m'; C=$'\033[0;36m'; N=$'\033[0m'
+else
+  B=""; G=""; Y=""; R=""; C=""; N=""
+fi
+ok(){ echo "${G}✓${N} $*"; }
+warn(){ echo "${Y}!${N} $*"; }
+err(){ echo "${R}✗${N} $*"; }
+info(){ echo "${C}▶${N} $*"; }
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$REPO_DIR/.claude"
 DST="$HOME/.claude"
 
-# Éléments de config à installer (le reste de ~/.claude est laissé intact)
+# ── Options ────────────────────────────────────────────────────
+WITH_CLAUDE_FLOW=0
+DO_ECC=1
+for arg in "$@"; do
+  case "$arg" in
+    --with-claude-flow) WITH_CLAUDE_FLOW=1 ;;
+    --no-ecc) DO_ECC=0 ;;
+    -h|--help) grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) warn "Option inconnue ignorée : $arg" ;;
+  esac
+done
+
+# ── Whitelist explicite : SEULS ces éléments sont copiés ───────
 ITEMS=(skills agents commands rules helpers CLAUDE.md settings.json)
 
-echo "▶ Installation de la config Claude Code depuis : $REPO_DIR"
-echo "  Destination : $DST"
+# ── Timeout portable (macOS n'a pas toujours `timeout`) ────────
+run_timeout() { # run_timeout <secs> <cmd...>
+  local secs="$1"; shift
+  "$@" & local pid=$!
+  ( sleep "$secs"; kill -9 "$pid" 2>/dev/null ) & local watcher=$!
+  local rc=0
+  wait "$pid" 2>/dev/null || rc=$?
+  kill -9 "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  return "$rc"
+}
+
+# ── Détection OS ───────────────────────────────────────────────
+OS="$(uname -s)"
+case "$OS" in
+  Darwin) OS_NAME="macOS"; PKG_HINT="brew install node git" ;;
+  Linux)  OS_NAME="Linux"; PKG_HINT="voir https://nodejs.org (ou votre gestionnaire de paquets)" ;;
+  *)      OS_NAME="$OS";   PKG_HINT="voir https://nodejs.org" ;;
+esac
+
+echo
+echo "${B}========================================${N}"
+echo "${B} Claude Config — Installation${N}"
+echo "${B}========================================${N}"
+echo "  OS         : $OS_NAME"
+echo "  Source     : $REPO_DIR"
+echo "  Destination: $DST"
+echo
+
+# ── A. PRÉREQUIS ───────────────────────────────────────────────
+info "Vérification des prérequis…"
+MISSING_REQUIRED=0
+have(){ command -v "$1" >/dev/null 2>&1; }
+
+if have node; then ok "node $(node -v)"; else err "node absent — REQUIS (les hooks en dépendent)"; MISSING_REQUIRED=1; fi
+if have npm;  then ok "npm  $(npm -v)";  else warn "npm absent (fourni avec Node.js — requis pour les skills optionnels)"; fi
+if have git;  then ok "git  $(git --version | awk '{print $3}')"; else err "git absent — REQUIS"; MISSING_REQUIRED=1; fi
+if have claude; then ok "claude $(claude --version 2>/dev/null | awk '{print $1}')"; CLAUDE_OK=1; else warn "claude (Claude Code) absent — installe-le : https://claude.com/claude-code"; CLAUDE_OK=0; fi
+
+if [ "$MISSING_REQUIRED" -eq 1 ]; then
+  echo
+  err "Prérequis manquants. Installe-les puis relance :"
+  echo "   $OS_NAME → $PKG_HINT"
+  echo "   Node.js  → https://nodejs.org (version 18+ recommandée)"
+  exit 1
+fi
+echo
+
+# ── B. Ce qui va être fait ─────────────────────────────────────
+info "Vont être installés dans $DST : ${ITEMS[*]}"
+info "Ne seront JAMAIS touchés : .credentials.json, sessions, history, cache, telemetry, logs, projects, downloads."
 echo
 
 mkdir -p "$DST"
 
-# 1) Sauvegarde de l'existant
+# ── C. Sauvegarde de l'existant ────────────────────────────────
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP="$DST/backups/config-backup-$STAMP"
-mkdir -p "$BACKUP"
+BACKED_UP=0
 for item in "${ITEMS[@]}"; do
   if [ -e "$DST/$item" ]; then
+    mkdir -p "$BACKUP"
     cp -R "$DST/$item" "$BACKUP/" 2>/dev/null || true
+    BACKED_UP=1
   fi
 done
-echo "✔ Sauvegarde de ta config actuelle : $BACKUP"
+if [ "$BACKED_UP" -eq 1 ]; then ok "Sauvegarde de la config existante : $BACKUP"; else ok "Aucune config existante à sauvegarder (installation neuve)"; fi
 
-# 2) Copie de la nouvelle config
+# ── D. Copie de la configuration (whitelist) ───────────────────
 for item in "${ITEMS[@]}"; do
   if [ -e "$SRC/$item" ]; then
     rm -rf "$DST/$item"
     cp -R "$SRC/$item" "$DST/$item"
-    echo "✔ Installé : $item"
+    ok "Installé : $item"
+  else
+    warn "Absent du repo (ignoré) : $item"
   fi
 done
+# Rendre les scripts helpers exécutables (au cas où git n'aurait pas gardé le bit)
+[ -d "$DST/helpers" ] && chmod +x "$DST/helpers"/*.sh 2>/dev/null || true
+echo
 
-# 3) Config plugins (référence des marketplaces + plugins installés)
-mkdir -p "$DST/plugins"
-[ -f "$SRC/plugins/known_marketplaces.json" ] && cp "$SRC/plugins/known_marketplaces.json" "$DST/plugins/" && echo "✔ Installé : plugins/known_marketplaces.json"
-[ -f "$SRC/plugins/installed_plugins.json" ] && cp "$SRC/plugins/installed_plugins.json" "$DST/plugins/" && echo "✔ Installé : plugins/installed_plugins.json"
+# ── ECC : installation automatique guardée ─────────────────────
+ECC_STATUS="non tenté"
+if [ "$DO_ECC" -eq 1 ] && [ "$CLAUDE_OK" -eq 1 ]; then
+  info "Installation du plugin ECC (skills/agents 'ecc:')…"
+  if run_timeout 60 claude plugin marketplace add https://github.com/affaan-m/ECC.git >/dev/null 2>&1; then
+    :
+  else
+    warn "marketplace déjà présent ou non ajouté automatiquement (on continue)."
+  fi
+  if run_timeout 90 claude plugin install ecc@ecc --yes --scope user >/dev/null 2>&1; then
+    ECC_STATUS="installé"
+    ok "Plugin ECC installé."
+  else
+    ECC_STATUS="action manuelle requise"
+    warn "Installation auto d'ECC non aboutie (Claude Code peut-être pas encore configuré)."
+  fi
+elif [ "$DO_ECC" -eq 0 ]; then
+  ECC_STATUS="désactivé (--no-ecc)"
+else
+  ECC_STATUS="action manuelle requise (claude CLI absent)"
+fi
+echo
 
+# ── Optionnel : bootstrap claude-flow / ruflo (MCP avancé) ─────
+CF_STATUS="non installé (optionnel)"
+if [ "$WITH_CLAUDE_FLOW" -eq 1 ]; then
+  if [ "$CLAUDE_OK" -eq 1 ]; then
+    info "Bootstrap MCP claude-flow (memory / routing / swarm / AgentDB)…"
+    if run_timeout 120 claude mcp add claude-flow -- npx -y ruflo@latest mcp start >/dev/null 2>&1; then
+      CF_STATUS="MCP claude-flow ajouté"
+      ok "MCP claude-flow ajouté."
+    else
+      CF_STATUS="échec (voir docs/dependencies.md)"
+      warn "Ajout MCP claude-flow non abouti — voir docs/dependencies.md."
+    fi
+  else
+    CF_STATUS="ignoré (claude CLI absent)"
+  fi
+fi
 echo
-echo "✅ Config installée."
+
+# ── G. Vérification post-installation ──────────────────────────
+info "Vérification…"
+SKILLS_N=$(find "$DST/skills" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+SKILLMD_N=$(find "$DST/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+AGENTS_N=$(find "$DST/agents" -maxdepth 1 -mindepth 1 2>/dev/null | wc -l | tr -d ' ')
+CMDS_N=$(find "$DST/commands" -maxdepth 1 -mindepth 1 2>/dev/null | wc -l | tr -d ' ')
+RULES_N=$(find "$DST/rules" -type f 2>/dev/null | wc -l | tr -d ' ')
+HELPERS_N=$(find "$DST/helpers" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+chk(){ [ -e "$DST/$1" ] && echo "présent" || echo "${R}MANQUANT${N}"; }
+
+# ── H. Résumé final ────────────────────────────────────────────
 echo
-echo "▶ Étape manuelle — installer le plugin ECC (fournit les skills/agents 'ecc:') :"
-echo "    Dans un terminal Claude Code, lance :"
-echo "      /plugin marketplace add https://github.com/affaan-m/ECC.git"
-echo "      /plugin install ecc@ecc"
+echo "${B}========================================${N}"
+echo "${B} Installation terminée${N}"
+echo "${B}========================================${N}"
+echo "  ${G}✓${N} Skills        : $SKILLS_N ($SKILLMD_N SKILL.md)"
+echo "  ${G}✓${N} Agents        : $AGENTS_N"
+echo "  ${G}✓${N} Commands      : $CMDS_N"
+echo "  ${G}✓${N} Rules         : $RULES_N"
+echo "  ${G}✓${N} Helpers       : $HELPERS_N"
+echo "  ${G}✓${N} CLAUDE.md     : $(chk CLAUDE.md)"
+echo "  ${G}✓${N} settings.json : $(chk settings.json)"
+echo "  •   ECC           : $ECC_STATUS"
+echo "  •   claude-flow   : $CF_STATUS"
+echo "  •   Node          : $(node -v 2>/dev/null || echo absent)"
+echo "  •   Claude CLI    : $([ "$CLAUDE_OK" -eq 1 ] && claude --version 2>/dev/null | awk '{print $1}' || echo absent)"
+[ "$BACKED_UP" -eq 1 ] && echo "  •   Sauvegarde    : $BACKUP"
 echo
-echo "ℹ️  Redémarre Claude Code pour que tout soit pris en compte."
-echo "ℹ️  En cas de souci, ta config précédente est dans : $BACKUP"
+echo "${B}Étape suivante${N} :"
+echo "  1. Ouvre (ou redémarre) Claude Code."
+if [ "$ECC_STATUS" = "action manuelle requise" ] || [ "$ECC_STATUS" = "action manuelle requise (claude CLI absent)" ]; then
+  echo "  2. Installe ECC manuellement dans un terminal Claude Code :"
+  echo "        /plugin marketplace add https://github.com/affaan-m/ECC.git"
+  echo "        /plugin install ecc@ecc"
+fi
+echo
+echo "${B}Vérifier que tout est bon${N} :"
+echo "  claude plugin list          # doit montrer ecc@ecc enabled"
+echo "  ls ~/.claude/skills | wc -l # nombre de skills installés"
+echo
+echo "ℹ️  Dépendances par skill (optionnelles) : voir docs/dependencies.md"

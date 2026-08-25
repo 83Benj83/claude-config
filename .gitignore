@@ -30,10 +30,10 @@
 .claude/.last-*
 .claude/.proven-config-version
 
-# ── Caches de plugins (réinstallés automatiquement) ────────────
-.claude/plugins/cache/
-.claude/plugins/data/
-.claude/plugins/marketplaces/
+# ── Plugins : état LOCAL d'installation (chemins machine-spécifiques) ──
+# On ne versionne AUCUN fichier d'état de plugin : il contient des chemins
+# absolus /Users/<toi>/... et est régénéré par `claude plugin install`.
+.claude/plugins/
 
 # ── Divers OS ──────────────────────────────────────────────────
 .DS_Store
