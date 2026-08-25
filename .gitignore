@@ -1,0 +1,39 @@
+# ── Secrets & données perso (ne JAMAIS committer) ──────────────
+.claude/.credentials.json
+.claude/.credentials
+**/.credentials*
+*.env
+.env
+*.pem
+*_secret*
+*token*.json
+
+# ── Données de session / machine-spécifiques ───────────────────
+.claude/sessions/
+.claude/session-data/
+.claude/session-env/
+.claude/projects/
+.claude/history.jsonl
+.claude/tasks/
+.claude/state/
+.claude/telemetry/
+.claude/metrics/
+.claude/backups/
+.claude/cache/
+.claude/chrome/
+.claude/ide/
+.claude/shell-snapshots/
+.claude/file-history/
+.claude/plans/
+.claude/downloads/
+.claude/*.log
+.claude/.last-*
+.claude/.proven-config-version
+
+# ── Caches de plugins (réinstallés automatiquement) ────────────
+.claude/plugins/cache/
+.claude/plugins/data/
+.claude/plugins/marketplaces/
+
+# ── Divers OS ──────────────────────────────────────────────────
+.DS_Store

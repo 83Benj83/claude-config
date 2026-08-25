@@ -1,0 +1,232 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(playwright-cli open *)",
+      "Bash(playwright-cli snapshot *)",
+      "Bash(playwright-cli fill *)",
+      "Bash(playwright-cli find *)",
+      "Bash(npx @claude-flow*)",
+      "Bash(npx claude-flow*)",
+      "Bash(node .claude/*)",
+      "mcp__claude-flow__*"
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "ecc": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/affaan-m/ECC.git"
+      }
+    }
+  },
+  "syntaxHighlightingDisabled": true,
+  "theme": "dark",
+  "enabledPlugins": {
+    "ecc@ecc": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" pre-bash'",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" pre-edit'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" post-edit'",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" post-bash'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" route'",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" session-restore'",
+            "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/auto-memory-hook.mjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/auto-memory-hook.mjs\" import'",
+            "timeout": 8000
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" session-end'",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/auto-memory-hook.mjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/auto-memory-hook.mjs\" sync'",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" compact-manual'"
+          },
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" session-end'",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" compact-auto'"
+          },
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" session-end'",
+            "timeout": 6000
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" status'",
+            "timeout": 3000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" post-task'",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'D=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$D/.claude/helpers/hook-handler.cjs\" ] || D=\"${HOME}\"; exec node \"$D/.claude/helpers/hook-handler.cjs\" notify'",
+            "timeout": 3000
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true"
+  },
+  "spinnerVerbs": {
+    "mode": "append",
+    "verbs": [
+      "Consulting the memory graph‍‍‍",
+      "Warming the HNSW index‍‍‍",
+      "Recalling similar patterns‍‍‍",
+      "Searching semantic memory‍‍‍",
+      "Reranking with MMR‍‍‍",
+      "Traversing knowledge graph‍‍‍",
+      "Loading trajectory context‍‍‍",
+      "Optimizing your prompt‍‍‍",
+      "Sharpening the plan‍‍‍",
+      "Compacting the context‍‍‍",
+      "Distilling the trajectory‍‍‍",
+      "Reducing token spend‍‍‍",
+      "Compressing the working set‍‍‍",
+      "Learning from the trajectory‍‍‍",
+      "Training the router‍‍‍",
+      "Judging past verdicts‍‍‍",
+      "Consolidating memories‍‍‍",
+      "Reasoning through the graph‍‍‍",
+      "Predicting the next step‍‍‍",
+      "Auditing for CVEs‍‍‍",
+      "Scanning dependencies‍‍‍",
+      "Verifying signatures‍‍‍",
+      "Guarding against injection‍‍‍",
+      "Spawning subagents‍‍‍",
+      "Coordinating the swarm‍‍‍",
+      "Reaching consensus‍‍‍",
+      "Balancing the workload‍‍‍",
+      "Routing to the best model‍‍‍",
+      "Warming background workers‍‍‍",
+      "Analyzing the diff‍‍‍",
+      "Sharpening the review‍‍‍",
+      "Consulting Cognitum‍‍‍",
+      "Checking Cognitum credits‍‍‍",
+      "Routing via Cognitum‍‍‍",
+      "Fetching a Cognitum tip‍‍‍",
+      "Warming Cognitum cache‍‍‍",
+      "Weighing Cognitum options‍‍‍"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "plugins": {
+    "ecc@ecc": [
+      {
+        "scope": "user",
+        "installPath": "/Users/benjaminwilthien/.claude/plugins/cache/ecc/ecc/2.2.0",
+        "version": "2.2.0",
+        "installedAt": "2026-08-21T22:00:54.679Z",
+        "lastUpdated": "2026-08-21T22:00:54.679Z",
+        "gitCommitSha": "d8409a4b0813771235555e32e3d8046a73988bfa"
+      }
+    ]
+  }
+}
