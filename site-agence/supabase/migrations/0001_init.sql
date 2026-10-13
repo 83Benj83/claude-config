@@ -34,6 +34,7 @@ create index profiles_manager_id_idx on public.profiles (manager_id);
 
 -- ---------------------------------------------------------------------
 -- Prospections : une ligne par personne et par jour
+--  (la clé étrangère vers profiles impose d'être membre pour saisir)
 -- ---------------------------------------------------------------------
 create table public.prospecting_entries (
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -62,33 +63,28 @@ create trigger prospecting_entries_touch
   for each row execute function public.touch_updated_at();
 
 -- ---------------------------------------------------------------------
--- Création automatique du profil. Le tout premier compte devient admin.
+-- Appartenance à l'équipe
+--  Les profils sont créés uniquement par le site (après vérification du code
+--  d'invitation, avec la clé secrète). Un compte créé directement auprès de
+--  Supabase n'a pas de profil : il ne voit rien et ne peut rien saisir.
 -- ---------------------------------------------------------------------
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
+create or replace function public.is_member()
+returns boolean
+language sql
+stable
 security definer
 set search_path = ''
 as $$
-begin
-  insert into public.profiles (id, full_name, is_admin)
-  values (
-    new.id,
-    coalesce(nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''), split_part(new.email, '@', 1)),
-    not exists (select 1 from public.profiles where is_admin)
-  );
-  return new;
-end;
+  select exists (select 1 from public.profiles where id = (select auth.uid()));
 $$;
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+revoke all on function public.is_member() from public, anon;
+grant execute on function public.is_member() to authenticated;
 
 -- ---------------------------------------------------------------------
 -- Sécurité (RLS)
---  - tout membre connecté peut lire l'équipe et toutes les prospections
---    (le classement est public au sein de l'équipe) ;
+--  - tout membre de l'équipe (compte avec profil) peut lire l'équipe et
+--    toutes les prospections (le classement est public au sein de l'équipe) ;
 --  - chacun ne peut saisir / corriger que SES prospections, pour aujourd'hui
 --    et les 7 derniers jours ;
 --  - les profils ne sont modifiables que côté serveur (clé secrète), après
@@ -99,18 +95,18 @@ alter table public.prospecting_entries enable row level security;
 
 revoke all on public.profiles from anon;
 revoke all on public.prospecting_entries from anon;
-revoke insert, update, delete on public.profiles from authenticated;
-revoke delete on public.prospecting_entries from authenticated;
+revoke insert, update, delete, truncate, references, trigger on public.profiles from authenticated;
+revoke delete, truncate, references, trigger on public.prospecting_entries from authenticated;
 
 create policy "Les membres voient l'équipe"
   on public.profiles for select
   to authenticated
-  using (true);
+  using ((select public.is_member()));
 
 create policy "Les membres voient les prospections"
   on public.prospecting_entries for select
   to authenticated
-  using (true);
+  using ((select public.is_member()));
 
 create policy "Chacun saisit ses prospections récentes"
   on public.prospecting_entries for insert

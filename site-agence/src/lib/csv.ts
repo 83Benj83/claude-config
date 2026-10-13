@@ -4,7 +4,7 @@ import type { MonthReport } from "./stats";
 function cell(value: string | number): string {
   let text = String(value);
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 /** Export CSV du bilan mensuel, au format Excel français (séparateur `;`, BOM UTF-8). */

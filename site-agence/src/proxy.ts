@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { ConfigurationError, resolveRuntimeMode, type RuntimeMode } from "@/lib/runtime-mode";
 
 /** Pages accessibles sans être connecté. */
 const PUBLIC_PATHS = ["/connexion", "/inscription"];
@@ -13,14 +14,28 @@ const isPublicPath = (pathname: string) =>
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const url = process.env.SUPABASE_URL;
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  let mode: RuntimeMode;
+  try {
+    mode = resolveRuntimeMode(process.env);
+  } catch (error) {
+    if (!(error instanceof ConfigurationError)) throw error;
+    // Mauvaise configuration : on bloque plutôt que de basculer en mode démo.
+    console.error("[proxy]", error.message);
+    return new NextResponse("Site mal configuré : voir les journaux du serveur.", { status: 503 });
+  }
 
   let response = NextResponse.next({ request });
   let isSignedIn: boolean;
 
-  if (url && publishableKey && process.env.SUPABASE_SECRET_KEY) {
-    const supabase = createServerClient(url, publishableKey, {
+  if (mode.kind === "supabase") {
+    const supabase = createServerClient(mode.config.url, mode.config.publishableKey, {
+      cookieOptions: {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet, headers) => {
@@ -40,9 +55,6 @@ export async function proxy(request: NextRequest) {
   if (!isSignedIn && !isPublicPath(pathname)) {
     const loginUrl = new URL("/connexion", request.url);
     return redirectWithCookies(loginUrl, response);
-  }
-  if (isSignedIn && isPublicPath(pathname)) {
-    return redirectWithCookies(new URL("/", request.url), response);
   }
   return response;
 }

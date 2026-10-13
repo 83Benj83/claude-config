@@ -1,21 +1,15 @@
 import "server-only";
+import { resolveInviteCode, resolveRuntimeMode, type SupabaseConfig } from "./runtime-mode";
 
-export type SupabaseConfig = {
-  url: string;
-  publishableKey: string;
-  secretKey: string;
-};
+export type { SupabaseConfig };
 
 /**
  * Configuration Supabase lue côté serveur uniquement : aucune clé n'est
  * exposée au navigateur. Retourne `null` quand le site tourne en mode démo.
  */
 export function getSupabaseConfig(): SupabaseConfig | null {
-  const url = process.env.SUPABASE_URL;
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-  const secretKey = process.env.SUPABASE_SECRET_KEY;
-  if (!url || !publishableKey || !secretKey) return null;
-  return { url, publishableKey, secretKey };
+  const mode = resolveRuntimeMode(process.env);
+  return mode.kind === "supabase" ? mode.config : null;
 }
 
 export function isDemoMode(): boolean {
@@ -24,6 +18,13 @@ export function isDemoMode(): boolean {
 
 /** Code à transmettre aux nouveaux membres pour créer leur compte. */
 export function getInviteCode(): string | null {
-  const code = process.env.TEAM_INVITE_CODE?.trim();
-  return code ? code : null;
+  return resolveInviteCode(process.env);
 }
+
+/** Options des cookies de session : aucun client Supabase dans le navigateur, donc httpOnly. */
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+} as const;

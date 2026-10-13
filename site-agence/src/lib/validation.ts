@@ -3,6 +3,10 @@ import { addDays, isIsoDate } from "./dates";
 import { EDITABLE_PAST_DAYS, MAX_DAILY_COUNT } from "./rules";
 import type { IsoDate } from "./types";
 
+/** Texte d'une ligne, sans caractères de contrôle (retours chariot, tabulations…). */
+const NO_CONTROL_CHARS = /^[^\p{Cc}]*$/u;
+const CONTROL_CHARS_MESSAGE = "Caractères non autorisés.";
+
 export const entrySchema = z.object({
   date: z.string().refine(isIsoDate, "Date invalide."),
   count: z.coerce
@@ -29,7 +33,8 @@ export const signupSchema = z.object({
     .string()
     .trim()
     .min(2, "Indique ton prénom et ton nom.")
-    .max(80, "80 caractères maximum."),
+    .max(80, "80 caractères maximum.")
+    .regex(NO_CONTROL_CHARS, CONTROL_CHARS_MESSAGE),
   email: z.email("Adresse e-mail invalide.").max(254),
   password: z
     .string()
@@ -43,12 +48,13 @@ const optionalText = (max: number) =>
     .string()
     .trim()
     .max(max, `${max} caractères maximum.`)
+    .regex(NO_CONTROL_CHARS, CONTROL_CHARS_MESSAGE)
     .transform((value) => (value === "" ? null : value));
 
 export const memberUpdateSchema = z.object({
   id: z.string().min(1).max(64),
-  fullName: z.string().trim().min(2, "Nom trop court.").max(80, "80 caractères maximum."),
-  jobTitle: z.string().trim().min(2, "Poste trop court.").max(80, "80 caractères maximum."),
+  fullName: z.string().trim().min(2, "Nom trop court.").max(80, "80 caractères maximum.").regex(NO_CONTROL_CHARS, CONTROL_CHARS_MESSAGE),
+  jobTitle: z.string().trim().min(2, "Poste trop court.").max(80, "80 caractères maximum.").regex(NO_CONTROL_CHARS, CONTROL_CHARS_MESSAGE),
   department: optionalText(60),
   managerId: z
     .string()

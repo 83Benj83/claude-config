@@ -88,8 +88,8 @@ function InviteHelp() {
     </div>
   ) : (
     <p className="mt-3 text-sm leading-relaxed text-muted">
-      Aucun code d&apos;invitation configuré : définis la variable <code className="font-mono text-fg">TEAM_INVITE_CODE</code>{" "}
-      pour ouvrir les inscriptions.
+      Inscriptions fermées : définis la variable <code className="font-mono text-fg">TEAM_INVITE_CODE</code> (au moins
+      12 caractères) pour les ouvrir.
     </p>
   );
 }

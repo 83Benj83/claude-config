@@ -45,6 +45,11 @@ describe("CSV export", () => {
     expect(lines[3]).toContain(";17;");
   });
 
+  test("quotes carriage returns so they cannot start a new row", () => {
+    const withCr = monthReportToCsv(buildMonthReport([member("c", "Léa\r=cmd")], [], "2026-02"));
+    expect(withCr).toContain('"Léa\r=cmd"');
+  });
+
   test("neutralises spreadsheet formulas (CSV injection)", () => {
     expect(csv).not.toMatch(/;=HYPERLINK/);
     expect(csv).toContain(`"'=HYPERLINK(""evil"")"`);
@@ -132,12 +137,16 @@ describe("ranking entry flag", () => {
 });
 
 describe("environment", () => {
-  test("demo mode until all three Supabase variables are set", async () => {
+  test("Supabase mode once all three variables are set", async () => {
     const { getSupabaseConfig, isDemoMode, getInviteCode } = await import("@/lib/env");
-    vi.stubEnv("SUPABASE_URL", "https://projet.supabase.co");
-    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
+    vi.stubEnv("SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "");
     vi.stubEnv("SUPABASE_SECRET_KEY", "");
     expect(isDemoMode()).toBe(true);
+
+    vi.stubEnv("SUPABASE_URL", "https://projet.supabase.co");
+    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
+    expect(() => isDemoMode()).toThrow(/incomplète/);
 
     vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_x");
     expect(isDemoMode()).toBe(false);
@@ -149,8 +158,56 @@ describe("environment", () => {
 
     vi.stubEnv("TEAM_INVITE_CODE", "   ");
     expect(getInviteCode()).toBeNull();
-    vi.stubEnv("TEAM_INVITE_CODE", " vif-2026 ");
-    expect(getInviteCode()).toBe("vif-2026");
+    vi.stubEnv("TEAM_INVITE_CODE", "court");
+    expect(getInviteCode()).toBeNull();
+    vi.stubEnv("TEAM_INVITE_CODE", " atelier-vif-equipe-2026 ");
+    expect(getInviteCode()).toBe("atelier-vif-equipe-2026");
     vi.unstubAllEnvs();
+  });
+});
+
+describe("runtime mode", () => {
+  test("Supabase when the three variables are set", async () => {
+    const { resolveRuntimeMode } = await import("@/lib/runtime-mode");
+    expect(
+      resolveRuntimeMode({ SUPABASE_URL: "https://x.supabase.co", SUPABASE_PUBLISHABLE_KEY: "pk", SUPABASE_SECRET_KEY: "sk" }),
+    ).toEqual({ kind: "supabase", config: { url: "https://x.supabase.co", publishableKey: "pk", secretKey: "sk" } });
+  });
+
+  test("a partial configuration is an error, never a silent demo", async () => {
+    const { resolveRuntimeMode, ConfigurationError } = await import("@/lib/runtime-mode");
+    expect(() => resolveRuntimeMode({ SUPABASE_URL: "https://x.supabase.co", NODE_ENV: "development" })).toThrow(ConfigurationError);
+  });
+
+  test("demo mode needs DEMO_MODE=1 in production", async () => {
+    const { resolveRuntimeMode } = await import("@/lib/runtime-mode");
+    expect(resolveRuntimeMode({ NODE_ENV: "development" })).toEqual({ kind: "demo" });
+    expect(() => resolveRuntimeMode({ NODE_ENV: "production" })).toThrow(/DEMO_MODE=1/);
+    expect(resolveRuntimeMode({ NODE_ENV: "production", DEMO_MODE: "1" })).toEqual({ kind: "demo" });
+  });
+});
+
+describe("rate limiter", () => {
+  test("blocks after the limit, per key, and frees up after the window", async () => {
+    const { createRateLimiter } = await import("@/lib/rate-limit");
+    const isAllowed = createRateLimiter({ limit: 2, windowMs: 1000 });
+    expect(isAllowed("1.2.3.4", 0)).toBe(true);
+    expect(isAllowed("1.2.3.4", 10)).toBe(true);
+    expect(isAllowed("1.2.3.4", 20)).toBe(false);
+    expect(isAllowed("5.6.7.8", 20)).toBe(true);
+    expect(isAllowed("1.2.3.4", 1500)).toBe(true);
+  });
+});
+
+describe("control characters", () => {
+  test("names with line breaks or tabs are rejected", async () => {
+    const { signupSchema } = await import("@/lib/validation");
+    const result = signupSchema.safeParse({
+      fullName: "Léa\r=cmd",
+      email: "lea@agence.fr",
+      password: "un-mot-de-passe-long",
+      inviteCode: "atelier-vif-equipe-2026",
+    });
+    expect(result.success).toBe(false);
   });
 });
