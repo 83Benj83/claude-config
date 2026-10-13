@@ -4,7 +4,7 @@ import type { DateRange, IsoDate, MonthKey, Period } from "./types";
 export const APP_TIME_ZONE = "Europe/Paris";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const MONTH_KEY_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const MONTH_KEY_RE = /^(19[7-9]\d|2\d{3})-(0[1-9]|1[0-2])$/;
 
 const isoFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: APP_TIME_ZONE,

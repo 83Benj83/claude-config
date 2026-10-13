@@ -3,37 +3,37 @@ import { formatDayShort, isWeekend } from "@/lib/dates";
 import { firstName } from "@/lib/format";
 import type { MonthReport } from "@/lib/stats";
 
-/** Rampe séquentielle à une seule teinte (accent), du plus clair au plus soutenu. */
-const RAMP = [20, 40, 60, 80, 100];
+const STEPS = 5;
 
-function cellColor(value: number, max: number): string | undefined {
-  if (value <= 0 || max <= 0) return undefined;
-  const step = Math.min(RAMP.length - 1, Math.floor((value / max) * RAMP.length));
-  return `color-mix(in oklab, var(--accent) ${RAMP[step]}%, var(--surface))`;
+/** Marche de la rampe (0 = aucune prospection, 1 à 5 = du plus clair au plus soutenu). */
+function heatStep(value: number, max: number): number {
+  if (value <= 0 || max <= 0) return 0;
+  return Math.min(STEPS, Math.floor((value / max) * STEPS) + 1);
 }
 
 /**
- * Calendrier d'activité membre × jour. Tableau sémantique : les valeurs sont
- * lues par les lecteurs d'écran et affichées au survol.
+ * Calendrier d'activité membre × jour : un tableau dont chaque case affiche
+ * son nombre, la couleur renforce la lecture. Lisible au clavier, au toucher
+ * et par les lecteurs d'écran, sans dépendre du survol.
  */
 export function Heatmap({ report, lastDay }: { report: MonthReport; lastDay: string }) {
   const max = Math.max(0, ...report.rows.flatMap((row) => row.daily));
 
   return (
     <figure>
-      <div className="overflow-x-auto pb-2">
-        <table className="w-max border-separate border-spacing-[2px] text-xs">
+      <div className="relative overflow-x-auto pb-2">
+        <table className="w-max border-separate border-spacing-[2px] text-[0.625rem]">
           <caption className="sr-only">Prospections par personne et par jour</caption>
           <thead>
             <tr>
-              <th scope="col" className="sticky left-0 z-10 bg-surface pr-3 text-left font-medium text-subtle">
+              <th scope="col" className="sticky left-0 z-10 bg-surface pr-3 text-left">
                 <span className="sr-only">Membre</span>
               </th>
               {report.days.map((day) => (
                 <th
                   key={day}
                   scope="col"
-                  className={`w-6 min-w-6 pb-1 text-center font-normal tabular ${isWeekend(day) ? "text-subtle/60" : "text-subtle"}`}
+                  className={`w-7 min-w-7 pb-1 text-center text-xs tabular ${isWeekend(day) ? "font-normal text-subtle" : "font-medium text-muted"}`}
                 >
                   <span aria-hidden>{Number(day.slice(8))}</span>
                   <span className="sr-only">{formatDayShort(day)}</span>
@@ -44,7 +44,7 @@ export function Heatmap({ report, lastDay }: { report: MonthReport; lastDay: str
           <tbody>
             {report.rows.map((row) => (
               <tr key={row.member.id}>
-                <th scope="row" className="sticky left-0 z-10 bg-surface pr-3 text-left font-medium text-fg">
+                <th scope="row" className="sticky left-0 z-10 bg-surface pr-3 text-left text-xs font-medium text-fg">
                   <span className="flex items-center gap-2 whitespace-nowrap">
                     <Avatar member={row.member} size="xs" />
                     {firstName(row.member.fullName)}
@@ -52,18 +52,23 @@ export function Heatmap({ report, lastDay }: { report: MonthReport; lastDay: str
                 </th>
                 {row.daily.map((value, index) => {
                   const day = report.days[index];
-                  const future = day > lastDay;
-                  const label = `${row.member.fullName}, ${formatDayShort(day)} : ${value} prospection${value > 1 ? "s" : ""}`;
+                  if (day > lastDay) {
+                    return (
+                      <td key={day} className="p-0">
+                        <span className="block size-7 rounded-[5px] border border-dashed border-line">
+                          <span className="sr-only">à venir</span>
+                        </span>
+                      </td>
+                    );
+                  }
+                  const step = heatStep(value, max);
                   return (
                     <td key={day} className="p-0">
                       <span
-                        title={future ? undefined : label}
-                        className={`block size-6 rounded-[5px] transition-transform hover:scale-110 ${
-                          future ? "border border-dashed border-line" : value > 0 ? "" : "bg-surface-2"
-                        }`}
-                        style={{ background: future ? undefined : cellColor(value, max) }}
+                        title={`${row.member.fullName}, ${formatDayShort(day)} : ${value}`}
+                        className={`heat ${step > 0 ? `heat-${step}` : ""} grid size-7 place-items-center rounded-[5px] font-medium tabular`}
                       >
-                        <span className="sr-only">{future ? "à venir" : value}</span>
+                        {value > 0 ? value : <span className="sr-only">0</span>}
                       </span>
                     </td>
                   );
@@ -76,13 +81,8 @@ export function Heatmap({ report, lastDay }: { report: MonthReport; lastDay: str
       <figcaption className="mt-4 flex items-center gap-2 text-xs text-subtle">
         Moins
         <span className="flex gap-[2px]" aria-hidden>
-          <span className="size-3.5 rounded-[4px] bg-surface-2" />
-          {RAMP.map((step) => (
-            <span
-              key={step}
-              className="size-3.5 rounded-[4px]"
-              style={{ background: `color-mix(in oklab, var(--accent) ${step}%, var(--surface))` }}
-            />
+          {Array.from({ length: STEPS + 1 }, (_, step) => (
+            <span key={step} className={`heat ${step > 0 ? `heat-${step}` : ""} size-3.5 rounded-[4px]`} />
           ))}
         </span>
         Plus

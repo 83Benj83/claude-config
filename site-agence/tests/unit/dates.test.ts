@@ -86,6 +86,7 @@ describe("validators", () => {
     expect(isMonthKey("2026-13")).toBe(false);
     expect(isMonthKey("2026-1")).toBe(false);
     expect(isMonthKey(undefined)).toBe(false);
+    expect(isMonthKey("0050-01")).toBe(false);
   });
 });
 

@@ -38,7 +38,7 @@ export function Closing() {
             <h2 id="closing-title" className="text-4xl font-semibold tracking-tighter sm:text-5xl">
               {site.closing.title}
             </h2>
-            <p className="mt-4 text-lg leading-relaxed text-on-accent/80">{site.closing.text}</p>
+            <p className="mt-4 text-lg leading-relaxed text-on-accent">{site.closing.text}</p>
           </div>
           <Link href="/classement#ma-journee" className={buttonClasses({ variant: "inverse", size: "lg" })}>
             Saisir ma journée

@@ -52,6 +52,7 @@ async function TeamView() {
 
       {members.length > 0 ? (
         <div className="dot-grid rounded-2xl border border-line px-4 py-10 sm:px-8 sm:py-14">
+          <h2 className="sr-only">Organigramme</h2>
           <OrgChart roots={buildOrgTree(members)} meId={me.id} monthTotals={monthTotals} />
         </div>
       ) : (

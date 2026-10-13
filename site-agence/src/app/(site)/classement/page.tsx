@@ -41,6 +41,7 @@ async function RankingView({ searchParams }: { searchParams: PageProps<"/classem
           <h2 className="text-lg font-semibold tracking-tight text-fg">Ma journée</h2>
           <p className="mt-1 mb-5 text-sm text-subtle first-letter:uppercase">{formatDayLong(data.today)}</p>
           <EntryForm
+            key={data.me.id}
             days={data.editableDays.map((day) => ({
               value: day,
               label: formatRelativeDay(day, data.today),

@@ -7,7 +7,7 @@ import { site } from "@/config/site";
  * accent plein, trame de points, surface claire, surface teintée.
  */
 const CELLS = [
-  { className: "md:col-span-4 bg-accent text-on-accent", iconClass: "bg-on-accent/10", textClass: "text-on-accent/80", big: true },
+  { className: "md:col-span-4 bg-accent text-on-accent", iconClass: "bg-on-accent/10", textClass: "text-on-accent", big: true },
   { className: "md:col-span-2 dot-grid bg-surface border border-line", iconClass: "bg-accent-soft text-accent-ink", textClass: "text-muted", big: false },
   { className: "md:col-span-3 bg-surface border border-line", iconClass: "bg-surface-2 text-fg", textClass: "text-muted", big: false },
   { className: "md:col-span-3 bg-surface-2 border border-line", iconClass: "bg-surface text-accent-ink", textClass: "text-muted", big: false },

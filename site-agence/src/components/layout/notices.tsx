@@ -9,7 +9,7 @@ import { getToday } from "@/lib/queries";
 export function DemoBanner() {
   if (!isDemoMode()) return null;
   return (
-    <div className="border-b border-line bg-surface-2 text-[0.8125rem] text-muted">
+    <div data-page-notice className="border-b border-line bg-surface-2 text-[0.8125rem] text-muted">
       <p className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2 sm:px-6 lg:px-8">
         <InfoIcon size={16} className="shrink-0 text-accent-ink" aria-hidden />
         <span>
@@ -32,7 +32,7 @@ export async function EntryReminder() {
   if (entries.some((entry) => entry.memberId === member.id)) return null;
 
   return (
-    <div className="border-b border-accent/30 bg-accent-soft">
+    <div data-page-notice className="border-b border-accent/30 bg-accent-soft">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm sm:px-6 lg:px-8">
         <p className="text-fg">
           <span className="font-semibold">{member.fullName.split(" ")[0]}</span>, ta journée n&apos;est pas

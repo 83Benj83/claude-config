@@ -9,10 +9,12 @@ import { ThemeToggle } from "./theme-toggle";
 
 /*
  * Échelle de z-index : header 40, menus et panneaux 50. Rien d'autre n'en utilise.
+ * Le flou est porté par un pseudo-élément : un backdrop-filter sur le header
+ * deviendrait le bloc conteneur du menu mobile en position fixe.
  */
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line/80 bg-bg/80 backdrop-blur-xl backdrop-saturate-150">
+    <header className="sticky top-0 z-40 border-b border-line/80 before:absolute before:inset-0 before:-z-10 before:bg-bg/80 before:backdrop-blur-xl before:backdrop-saturate-150">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
         <BrandMark />
         <NavLinks />

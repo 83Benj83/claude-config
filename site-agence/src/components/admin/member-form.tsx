@@ -5,6 +5,7 @@ import { useActionState, useId } from "react";
 import { updateMember, type MemberFormState } from "@/app/actions/members";
 import { buttonClasses } from "@/components/ui/button";
 import { Field, FormError } from "@/components/ui/field";
+import { submitWithoutReset } from "@/components/ui/submit-without-reset";
 import type { Member } from "@/lib/types";
 
 type Props = {
@@ -20,7 +21,7 @@ export function MemberForm({ member, managers, departments }: Props) {
   const ids = { manager: useId(), departments: useId(), adminError: useId(), managerError: useId() };
 
   return (
-    <form action={action} className="grid gap-5 sm:grid-cols-2" noValidate>
+    <form action={action} onSubmit={submitWithoutReset(action)} className="grid gap-5 sm:grid-cols-2" noValidate>
       <input type="hidden" name="id" value={member.id} />
       <div className="sm:col-span-2">
         <FormError message={state.status === "error" ? state.message : undefined} />
@@ -52,7 +53,7 @@ export function MemberForm({ member, managers, departments }: Props) {
           defaultValue={member.managerId ?? ""}
           aria-invalid={Boolean(state.errors?.managerId)}
           aria-describedby={state.errors?.managerId ? ids.managerError : undefined}
-          className="h-11 rounded-xl border border-line-strong bg-surface px-3 text-[0.9375rem] text-fg outline-none focus:border-accent"
+          className="h-11 rounded-xl border border-line-input bg-surface px-3 text-[0.9375rem] text-fg focus:border-accent"
         >
           <option value="">Aucun (haut de l&apos;organigramme)</option>
           {managers
@@ -130,7 +131,7 @@ function Checkbox({
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        aria-describedby={describedBy ?? `${id}-hint`}
+        aria-describedby={[`${id}-hint`, describedBy].filter(Boolean).join(" ")}
         className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]"
       />
       <label htmlFor={id} className="text-sm">

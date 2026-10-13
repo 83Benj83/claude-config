@@ -22,7 +22,7 @@ export function Field({ label, error, hint, className = "", ...input }: Props) {
         id={id}
         aria-invalid={Boolean(error)}
         aria-describedby={describedBy}
-        className="h-11 rounded-xl border border-line-strong bg-surface px-3.5 text-[0.9375rem] text-fg outline-none transition-colors placeholder:text-subtle focus:border-accent aria-[invalid=true]:border-danger"
+        className="h-11 rounded-xl border border-line-input bg-surface px-3.5 text-[0.9375rem] text-fg transition-colors placeholder:text-subtle focus:border-accent aria-[invalid=true]:border-danger"
         {...input}
       />
       {hint && (

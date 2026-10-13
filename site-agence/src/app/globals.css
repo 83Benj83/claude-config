@@ -26,6 +26,11 @@
   --danger: #b91c1c;
   --danger-soft: #fef2f2;
   --shadow-tint: 24 24 27;
+  /* Bordure des champs et anneau de focus : contraste ≥ 3:1 (WCAG 1.4.11). */
+  --line-input: #8a8a94;
+  --focus: #c2410c;
+  --dot: rgb(24 24 27 / 0.14);
+  --shimmer: rgb(255 255 255 / 0.35);
   color-scheme: light;
 }
 
@@ -49,6 +54,10 @@
     --danger: #f87171;
     --danger-soft: #2a1212;
     --shadow-tint: 0 0 0;
+    --line-input: #6b6b76;
+    --focus: #f5571c;
+    --dot: rgb(255 255 255 / 0.08);
+    --shimmer: rgb(255 255 255 / 0.05);
     color-scheme: dark;
   }
 }
@@ -72,6 +81,10 @@
   --danger: #f87171;
   --danger-soft: #2a1212;
   --shadow-tint: 0 0 0;
+  --line-input: #6b6b76;
+  --focus: #f5571c;
+  --dot: rgb(255 255 255 / 0.08);
+  --shimmer: rgb(255 255 255 / 0.05);
   color-scheme: dark;
 }
 
@@ -81,6 +94,7 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-line-input: var(--line-input);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);
@@ -129,7 +143,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -160,20 +174,37 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+    background: linear-gradient(90deg, transparent, var(--shimmer), transparent);
     animation: shimmer 1.6s var(--ease-out-expo) infinite;
-  }
-  :root[data-theme="dark"] .skeleton::after {
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.05), transparent);
   }
 
   /* Trame de points pour varier les surfaces sans image. */
   .dot-grid {
-    background-image: radial-gradient(rgb(var(--shadow-tint) / 0.14) 1px, transparent 1px);
+    background-image: radial-gradient(var(--dot) 1px, transparent 1px);
     background-size: 14px 14px;
   }
-  :root[data-theme="dark"] .dot-grid {
-    background-image: radial-gradient(rgb(255 255 255 / 0.08) 1px, transparent 1px);
+
+  /*
+   * Rampe séquentielle du calendrier d'activité (une seule teinte, du clair au
+   * soutenu). Chiffres en encre principale, contraste ≥ 4,5:1 vérifié dans les
+   * deux thèmes ; la 4e marche est un peu moins saturée en sombre pour ça.
+   */
+  .heat {
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  .heat-1 { background: color-mix(in oklab, var(--accent) 20%, var(--surface)); color: var(--fg); }
+  .heat-2 { background: color-mix(in oklab, var(--accent) 40%, var(--surface)); color: var(--fg); }
+  .heat-3 { background: color-mix(in oklab, var(--accent) 60%, var(--surface)); color: var(--fg); }
+  .heat-4 { background: color-mix(in oklab, var(--accent) var(--heat-4-mix, 80%), var(--surface)); color: var(--fg); }
+  .heat-5 { background: var(--accent); color: var(--on-accent); }
+  :root[data-theme="dark"] {
+    --heat-4-mix: 70%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --heat-4-mix: 70%;
+    }
   }
 
   .tabular {

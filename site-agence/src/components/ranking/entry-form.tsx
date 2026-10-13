@@ -6,6 +6,7 @@ import { MotionRoot } from "@/components/motion/motion-root";
 import { useActionState, useId, useState } from "react";
 import { saveEntry, type EntryFormState } from "@/app/actions/entries";
 import { buttonClasses } from "@/components/ui/button";
+import { submitWithoutReset } from "@/components/ui/submit-without-reset";
 import { MAX_DAILY_COUNT } from "@/lib/rules";
 
 type Props = {
@@ -36,7 +37,7 @@ export function EntryForm({ days, existing }: Props) {
   };
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
+    <form action={formAction} onSubmit={submitWithoutReset(formAction)} className="flex flex-col gap-5" noValidate>
       <div className="flex flex-col gap-2">
         <label htmlFor={ids.date} className="text-sm font-medium text-fg">
           Jour
@@ -48,7 +49,7 @@ export function EntryForm({ days, existing }: Props) {
           onChange={(event) => onDateChange(event.target.value)}
           aria-invalid={Boolean(state.errors?.date)}
           aria-describedby={state.errors?.date ? ids.dateError : undefined}
-          className="h-11 rounded-xl border border-line-strong bg-surface px-3 text-[0.9375rem] text-fg outline-none transition-colors focus:border-accent"
+          className="h-11 rounded-xl border border-line-input bg-surface px-3 text-[0.9375rem] text-fg transition-colors focus:border-accent"
         >
           {days.map((day) => (
             <option key={day.value} value={day.value}>
@@ -72,7 +73,7 @@ export function EntryForm({ days, existing }: Props) {
           <button
             type="button"
             onClick={() => step(-1)}
-            className="grid size-14 shrink-0 place-items-center rounded-xl border border-line-strong bg-surface text-fg transition-colors hover:bg-surface-2 active:scale-95"
+            className="grid size-14 shrink-0 place-items-center rounded-xl border border-line-input bg-surface text-fg transition-colors hover:bg-surface-2 active:scale-95"
             aria-label="Retirer une prospection"
           >
             <MinusIcon size={20} aria-hidden />
@@ -91,12 +92,12 @@ export function EntryForm({ days, existing }: Props) {
             onChange={(event) => setCount(event.target.value)}
             aria-invalid={Boolean(state.errors?.count)}
             aria-describedby={`${ids.help}${state.errors?.count ? ` ${ids.countError}` : ""}`}
-            className="h-14 min-w-0 flex-1 rounded-xl border border-line-strong bg-surface text-center text-3xl font-semibold tracking-tight text-fg tabular outline-none transition-colors placeholder:text-subtle focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="h-14 min-w-0 flex-1 rounded-xl border border-line-input bg-surface text-center text-3xl font-semibold tracking-tight text-fg tabular transition-colors placeholder:text-subtle focus:border-accent [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <button
             type="button"
             onClick={() => step(1)}
-            className="grid size-14 shrink-0 place-items-center rounded-xl border border-line-strong bg-surface text-fg transition-colors hover:bg-surface-2 active:scale-95"
+            className="grid size-14 shrink-0 place-items-center rounded-xl border border-line-input bg-surface text-fg transition-colors hover:bg-surface-2 active:scale-95"
             aria-label="Ajouter une prospection"
           >
             <PlusIcon size={20} aria-hidden />

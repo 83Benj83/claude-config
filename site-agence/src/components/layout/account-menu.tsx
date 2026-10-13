@@ -2,10 +2,10 @@
 
 import { GearIcon, SignOutIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useTransition, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
 import type { Member } from "@/lib/types";
+import { useDisclosure } from "./use-disclosure";
 
 type Props = {
   member: Pick<Member, "fullName" | "jobTitle" | "avatarUrl" | "isAdmin">;
@@ -13,31 +13,26 @@ type Props = {
 };
 
 export function AccountMenu({ member, signOutAction }: Props) {
-  const pathname = usePathname();
-  const [openedOn, setOpenedOn] = useState<string | null>(null);
-  const open = openedOn === pathname;
+  const { open, toggle, close, triggerRef, rootRef, onBlurCapture } = useDisclosure();
   const menuId = useId();
-  const rootRef = useRef<HTMLDivElement>(null);
+  const [signingOut, startSignOut] = useTransition();
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenedOn(null);
-    };
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpenedOn(null);
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  // Rechargement complet après la déconnexion : aucun état (formulaires,
+  // pages gardées en mémoire) ne passe d'un membre à l'autre.
+  const onSignOut = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    startSignOut(async () => {
+      await signOutAction();
+      window.location.replace(new URL("/connexion", window.location.origin).href);
+    });
+  };
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative" onBlurCapture={onBlurCapture}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpenedOn(open ? null : pathname)}
+        onClick={toggle}
         aria-expanded={open}
         aria-controls={menuId}
         aria-label={`Compte de ${member.fullName}`}
@@ -59,19 +54,21 @@ export function AccountMenu({ member, signOutAction }: Props) {
             {member.isAdmin && (
               <Link
                 href="/admin"
+                onClick={() => close()}
                 className="flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm text-muted hover:bg-surface-2 hover:text-fg"
               >
                 <GearIcon size={18} aria-hidden />
                 Gérer l&apos;équipe
               </Link>
             )}
-            <form action={signOutAction}>
+            <form action={signOutAction} onSubmit={onSignOut}>
               <button
                 type="submit"
-                className="flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm text-muted hover:bg-surface-2 hover:text-fg"
+                disabled={signingOut}
+                className="flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm text-muted hover:bg-surface-2 hover:text-fg disabled:opacity-60"
               >
                 <SignOutIcon size={18} aria-hidden />
-                Se déconnecter
+                {signingOut ? "Déconnexion…" : "Se déconnecter"}
               </button>
             </form>
           </div>

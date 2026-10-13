@@ -101,6 +101,7 @@ export async function demoSignIn(formData: FormData): Promise<void> {
   redirect("/");
 }
 
+/** Déconnexion. Le client recharge ensuite entièrement la page (voir AccountMenu). */
 export async function signOut(): Promise<void> {
   const config = getSupabaseConfig();
   if (config) {
@@ -109,5 +110,4 @@ export async function signOut(): Promise<void> {
   } else {
     (await cookies()).delete(DEMO_SESSION_COOKIE);
   }
-  redirect("/connexion");
 }

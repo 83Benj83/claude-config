@@ -6,7 +6,7 @@ import type { MonthReport } from "@/lib/stats";
 /** Bilan détaillé par personne : la vue tableau de toutes les données du mois. */
 export function ReportTable({ report, meId }: { report: MonthReport; meId: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[44rem] text-sm">
         <caption className="sr-only">Bilan mensuel par personne</caption>
         <thead>
