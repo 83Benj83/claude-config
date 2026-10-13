@@ -45,3 +45,13 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Aperçu interactif (fichiers construits)
+/preview/dist
+/preview/dist-local
+/preview/.seed-build
+/preview/seed
+/scripts/.build
+# Listes réelles d’identifiants : jamais dans le dépôt
+/scripts/*.csv
+!/scripts/identifiants.exemple.csv

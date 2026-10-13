@@ -28,6 +28,6 @@ export default defineConfig({
     url: `${baseURL}/connexion`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    env: { SUPABASE_URL: "", SUPABASE_PUBLISHABLE_KEY: "", SUPABASE_SECRET_KEY: "" },
+    env: { SUPABASE_URL: "", SUPABASE_SECRET_KEY: "", SESSION_SECRET: "" },
   },
 });

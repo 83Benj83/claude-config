@@ -12,7 +12,18 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Fichiers générés.
+    "coverage/**",
+    "preview/dist/**",
+    "preview/dist-local/**",
+    "preview/.seed-build/**",
   ]),
+  {
+    rules: {
+      // Retirer un champ par décomposition (`{ secret, ...rest }`) est voulu.
+      "@typescript-eslint/no-unused-vars": ["warn", { ignoreRestSiblings: true }],
+    },
+  },
 ]);
 
 export default eslintConfig;

@@ -1,11 +1,11 @@
 import "server-only";
-import { resolveInviteCode, resolveRuntimeMode, type SupabaseConfig } from "./runtime-mode";
+import { resolveRuntimeMode, type SupabaseConfig } from "./runtime-mode";
 
 export type { SupabaseConfig };
 
 /**
- * Configuration Supabase lue côté serveur uniquement : aucune clé n'est
- * exposée au navigateur. Retourne `null` quand le site tourne en mode démo.
+ * Configuration lue côté serveur uniquement : aucune clé n'est exposée au
+ * navigateur. Retourne `null` quand le site tourne en mode démo.
  */
 export function getSupabaseConfig(): SupabaseConfig | null {
   const mode = resolveRuntimeMode(process.env);
@@ -16,15 +16,10 @@ export function isDemoMode(): boolean {
   return getSupabaseConfig() === null;
 }
 
-/** Code à transmettre aux nouveaux membres pour créer leur compte. */
-export function getInviteCode(): string | null {
-  return resolveInviteCode(process.env);
+/**
+ * Secret de signature des sessions. En démo, une valeur fixe suffit : les
+ * comptes de démonstration et leurs mots de passe sont publics.
+ */
+export function getSessionSecret(): string {
+  return getSupabaseConfig()?.sessionSecret ?? "mode-demo-secret-public-ne-protege-rien-en-production";
 }
-
-/** Options des cookies de session : aucun client Supabase dans le navigateur, donc httpOnly. */
-export const SESSION_COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-} as const;

@@ -1,129 +1,92 @@
 -- =====================================================================
--- Espace équipe : profils, organigramme et prospections quotidiennes.
+-- Espace équipe : membres (identifiants), prospects, ressources.
 -- À exécuter une fois dans Supabase (SQL Editor) ou via `supabase db push`.
+--
+-- Sécurité : toutes les tables sont accessibles UNIQUEMENT par le serveur
+-- du site, avec la clé secrète. La Row Level Security est activée sans
+-- aucune règle : les clés publiques de Supabase ne lisent ni n'écrivent rien.
 -- =====================================================================
 
--- Journée de référence : heure de Paris, pas UTC.
-create or replace function public.app_today()
-returns date
-language sql
-stable
-set search_path = ''
-as $$
-  select (now() at time zone 'Europe/Paris')::date;
-$$;
+create extension if not exists pg_trgm;
 
 -- ---------------------------------------------------------------------
--- Profils (1 ligne par compte, créée automatiquement à l'inscription)
+-- Membres : un identifiant + un mot de passe défini par un admin
 -- ---------------------------------------------------------------------
-create table public.profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
+create table public.members (
+  id uuid primary key default gen_random_uuid(),
+  login text not null check (char_length(login) between 2 and 40),
+  -- identifiant normalisé (minuscules, sans accents) : unicité et recherche
+  login_key text not null unique,
   full_name text not null check (char_length(full_name) between 1 and 80),
   job_title text not null default 'Membre de l''équipe' check (char_length(job_title) between 1 and 80),
   department text check (department is null or char_length(department) <= 60),
-  manager_id uuid references public.profiles (id) on delete set null,
+  manager_id uuid references public.members (id) on delete set null,
   avatar_url text check (avatar_url is null or avatar_url ~ '^https://'),
   is_prospector boolean not null default true,
   is_admin boolean not null default false,
+  active boolean not null default true,
   sort_order integer not null default 0,
+  -- empreinte PBKDF2 (jamais le mot de passe en clair) ; obligatoire : pas d'identifiant sans mot de passe
+  password_hash text not null check (password_hash like 'pbkdf2$%'),
+  -- incrémentée pour déconnecter toutes les sessions (changement de mot de passe)
+  session_version integer not null default 1,
+  welcomed_at timestamptz,
+  last_login_at timestamptz,
   created_at timestamptz not null default now(),
-  constraint profiles_not_own_manager check (manager_id is distinct from id)
+  constraint members_not_own_manager check (manager_id is distinct from id)
 );
 
-create index profiles_manager_id_idx on public.profiles (manager_id);
+create index members_manager_id_idx on public.members (manager_id);
 
 -- ---------------------------------------------------------------------
--- Prospections : une ligne par personne et par jour
---  (la clé étrangère vers profiles impose d'être membre pour saisir)
+-- Prospects : une ligne par prise de contact avec un établissement
 -- ---------------------------------------------------------------------
-create table public.prospecting_entries (
-  user_id uuid not null references public.profiles (id) on delete cascade,
-  entry_date date not null,
-  count integer not null check (count between 0 and 500),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (user_id, entry_date)
+create table public.prospects (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references public.members (id) on delete restrict,
+  name text not null check (char_length(name) between 1 and 120),
+  -- nom et ville normalisés par le site : reconnaissance des établissements déjà contactés
+  name_key text not null,
+  city text not null check (char_length(city) between 1 and 80),
+  city_key text not null,
+  channel text not null check (
+    channel in ('telephone', 'email', 'instagram', 'facebook', 'linkedin', 'visite', 'formulaire', 'autre')
+  ),
+  contact text check (contact is null or char_length(contact) <= 160),
+  note text check (note is null or char_length(note) <= 500),
+  contacted_on date not null,
+  created_at timestamptz not null default now()
 );
 
-create index prospecting_entries_date_idx on public.prospecting_entries (entry_date);
+create index prospects_contacted_on_idx on public.prospects (contacted_on);
+create index prospects_member_day_idx on public.prospects (member_id, contacted_on);
+create index prospects_created_at_idx on public.prospects (created_at desc);
+create index prospects_establishment_idx on public.prospects (name_key, city_key);
+create index prospects_name_key_trgm_idx on public.prospects using gin (name_key gin_trgm_ops);
 
-create or replace function public.touch_updated_at()
-returns trigger
-language plpgsql
-set search_path = ''
-as $$
-begin
-  new.updated_at := now();
-  return new;
-end;
-$$;
-
-create trigger prospecting_entries_touch
-  before update on public.prospecting_entries
-  for each row execute function public.touch_updated_at();
+-- Nombre d'établissements distincts déjà contactés.
+create view public.establishment_count with (security_invoker = true) as
+  select count(distinct (name_key, city_key))::integer as total from public.prospects;
 
 -- ---------------------------------------------------------------------
--- Appartenance à l'équipe
---  Les profils sont créés uniquement par le site (après vérification du code
---  d'invitation, avec la clé secrète). Un compte créé directement auprès de
---  Supabase n'a pas de profil : il ne voit rien et ne peut rien saisir.
+-- Ressources : adresses e-mail, modèles de messages, liens utiles
 -- ---------------------------------------------------------------------
-create or replace function public.is_member()
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (select 1 from public.profiles where id = (select auth.uid()));
-$$;
-
-revoke all on function public.is_member() from public, anon;
-grant execute on function public.is_member() to authenticated;
+create table public.resources (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('email', 'template', 'link')),
+  title text not null check (char_length(title) between 1 and 100),
+  value text not null check (char_length(value) between 1 and 5000),
+  note text check (note is null or char_length(note) <= 300),
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
 
 -- ---------------------------------------------------------------------
--- Sécurité (RLS)
---  - tout membre de l'équipe (compte avec profil) peut lire l'équipe et
---    toutes les prospections (le classement est public au sein de l'équipe) ;
---  - chacun ne peut saisir / corriger que SES prospections, pour aujourd'hui
---    et les 7 derniers jours ;
---  - les profils ne sont modifiables que côté serveur (clé secrète), après
---    vérification du rôle admin dans l'application.
+-- Sécurité : aucun accès en dehors du serveur du site
 -- ---------------------------------------------------------------------
-alter table public.profiles enable row level security;
-alter table public.prospecting_entries enable row level security;
+alter table public.members enable row level security;
+alter table public.prospects enable row level security;
+alter table public.resources enable row level security;
 
-revoke all on public.profiles from anon;
-revoke all on public.prospecting_entries from anon;
-revoke insert, update, delete, truncate, references, trigger on public.profiles from authenticated;
-revoke delete, truncate, references, trigger on public.prospecting_entries from authenticated;
-
-create policy "Les membres voient l'équipe"
-  on public.profiles for select
-  to authenticated
-  using ((select public.is_member()));
-
-create policy "Les membres voient les prospections"
-  on public.prospecting_entries for select
-  to authenticated
-  using ((select public.is_member()));
-
-create policy "Chacun saisit ses prospections récentes"
-  on public.prospecting_entries for insert
-  to authenticated
-  with check (
-    user_id = (select auth.uid())
-    and entry_date between public.app_today() - 7 and public.app_today()
-  );
-
-create policy "Chacun corrige ses prospections récentes"
-  on public.prospecting_entries for update
-  to authenticated
-  using (
-    user_id = (select auth.uid())
-    and entry_date between public.app_today() - 7 and public.app_today()
-  )
-  with check (
-    user_id = (select auth.uid())
-    and entry_date between public.app_today() - 7 and public.app_today()
-  );
+revoke all on public.members, public.prospects, public.resources from anon, authenticated;
+revoke all on public.establishment_count from anon, authenticated;

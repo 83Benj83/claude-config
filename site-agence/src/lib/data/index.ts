@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { cache } from "react";
 import { getSupabaseConfig } from "../env";
-import { createAdminClient, createSessionClient } from "../supabase/server";
+import { createServerClient } from "../supabase/server";
 import { getDemoRepository } from "./demo-repository";
 import type { Repository } from "./repository";
 import { SupabaseRepository } from "./supabase-repository";
@@ -13,5 +13,5 @@ export const getRepository = cache(async (): Promise<Repository> => {
   await connection();
   const config = getSupabaseConfig();
   if (!config) return getDemoRepository();
-  return new SupabaseRepository(await createSessionClient(config), createAdminClient(config));
+  return new SupabaseRepository(createServerClient(config));
 });

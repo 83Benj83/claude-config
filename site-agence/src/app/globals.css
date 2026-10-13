@@ -23,14 +23,20 @@
   --inverse: #18181b;
   --on-inverse: #f4f4f5;
   --success: #15803d;
+  --success-soft: #ecfdf3;
   --danger: #b91c1c;
   --danger-soft: #fef2f2;
+  /* Icônes des toasts, posées sur le fond inversé. */
+  --success-on-inverse: #4ade80;
+  --danger-on-inverse: #f87171;
   --shadow-tint: 24 24 27;
   /* Bordure des champs et anneau de focus : contraste ≥ 3:1 (WCAG 1.4.11). */
   --line-input: #8a8a94;
   --focus: #c2410c;
   --dot: rgb(24 24 27 / 0.14);
   --shimmer: rgb(255 255 255 / 0.35);
+  /* Défini ici aussi pour les règles CSS écrites à la main (hors utilitaires). */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
 }
 
@@ -51,8 +57,11 @@
     --inverse: #f4f4f5;
     --on-inverse: #18181b;
     --success: #4ade80;
+    --success-soft: #0f2a1a;
     --danger: #f87171;
     --danger-soft: #2a1212;
+    --success-on-inverse: #15803d;
+    --danger-on-inverse: #b91c1c;
     --shadow-tint: 0 0 0;
     --line-input: #6b6b76;
     --focus: #f5571c;
@@ -78,8 +87,11 @@
   --inverse: #f4f4f5;
   --on-inverse: #18181b;
   --success: #4ade80;
+  --success-soft: #0f2a1a;
   --danger: #f87171;
   --danger-soft: #2a1212;
+  --success-on-inverse: #15803d;
+  --danger-on-inverse: #b91c1c;
   --shadow-tint: 0 0 0;
   --line-input: #6b6b76;
   --focus: #f5571c;
@@ -105,8 +117,11 @@
   --color-inverse: var(--inverse);
   --color-on-inverse: var(--on-inverse);
   --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-on-inverse: var(--success-on-inverse);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-danger-on-inverse: var(--danger-on-inverse);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --shadow-card: 0 1px 0 rgb(var(--shadow-tint) / 0.04), 0 12px 32px -16px rgb(var(--shadow-tint) / 0.18);
@@ -229,109 +244,6 @@
       display: none;
     }
   }
-
-  /* Contenu Markdown du guide de prospection. */
-  .prose-guide {
-    color: var(--muted);
-    font-size: 1.0625rem;
-    line-height: 1.75;
-  }
-  .prose-guide > * + * {
-    margin-top: 1.1em;
-  }
-  .prose-guide h2 {
-    color: var(--fg);
-    font-size: 1.625rem;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    font-weight: 600;
-    margin-top: 2.6em;
-    padding-top: 1.4em;
-    border-top: 1px solid var(--line);
-  }
-  .prose-guide h2:first-child {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
-  }
-  .prose-guide h3 {
-    color: var(--fg);
-    font-size: 1.1875rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    margin-top: 1.8em;
-  }
-  .prose-guide strong {
-    color: var(--fg);
-    font-weight: 600;
-  }
-  .prose-guide a {
-    color: var(--accent-ink);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-  .prose-guide ul,
-  .prose-guide ol {
-    padding-left: 1.25rem;
-  }
-  .prose-guide ul {
-    list-style: disc;
-  }
-  .prose-guide ol {
-    list-style: decimal;
-  }
-  .prose-guide li + li {
-    margin-top: 0.4em;
-  }
-  .prose-guide li::marker {
-    color: var(--accent-ink);
-  }
-  .prose-guide blockquote {
-    border-left: 3px solid var(--accent);
-    background: var(--accent-soft);
-    color: var(--fg);
-    padding: 1rem 1.25rem;
-    border-radius: 0 12px 12px 0;
-  }
-  .prose-guide code {
-    font-family: var(--font-geist-mono), ui-monospace, monospace;
-    font-size: 0.9em;
-    background: var(--surface-2);
-    padding: 0.15em 0.4em;
-    border-radius: 6px;
-  }
-  .prose-guide pre {
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    padding: 1rem 1.25rem;
-    border-radius: 12px;
-    overflow-x: auto;
-    white-space: pre-wrap;
-  }
-  .prose-guide pre code {
-    background: none;
-    padding: 0;
-  }
-  .prose-guide table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-  }
-  .prose-guide th,
-  .prose-guide td {
-    text-align: left;
-    padding: 0.6rem 0.75rem;
-    border-bottom: 1px solid var(--line);
-  }
-  .prose-guide th {
-    color: var(--fg);
-    font-weight: 600;
-  }
-  .prose-guide hr {
-    border: 0;
-    border-top: 1px solid var(--line);
-    margin: 2.5em 0;
-  }
 }
 
 @keyframes shimmer {
@@ -340,14 +252,50 @@
   }
 }
 
-/* Entrée du hero : en CSS pour s'exécuter avant l'hydratation (LCP non retardé par le JS). */
-@keyframes rise {
+/* Toasts : montée courte. */
+.toast-in {
+  animation: toast-in 280ms var(--ease-out-expo) both;
+}
+@keyframes toast-in {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(10px) scale(0.98);
   }
-  to {
-    opacity: 1;
-    transform: none;
+}
+
+/*
+ * Panneaux (<dialog>) : feuille qui monte du bas sur téléphone, panneau qui
+ * glisse depuis la droite sur grand écran. Le fond s'assombrit en fondu.
+ */
+dialog.sheet-right[open],
+dialog.sheet-bottom[open] {
+  animation: sheet-up 360ms var(--ease-out-expo) both;
+}
+dialog[open]::backdrop {
+  animation: fade-in 240ms ease-out both;
+}
+@media (min-width: 48rem) {
+  dialog.sheet-right[open] {
+    animation-name: sheet-left;
   }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-left {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Changement d'écran : fondu très court, sans décalage de mise en page. */
+.screen-in {
+  animation: fade-in 200ms ease-out both;
 }

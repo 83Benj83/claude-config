@@ -10,25 +10,27 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "preview:build": "vite build --config preview/vite.config.mts && node preview/inline.mjs dist",
+    "preview:local": "PREVIEW_MOCK=1 vite build --config preview/vite.config.mts && node preview/inline.mjs dist-local",
+    "preview:seed": "vite build --config preview/vite.config.mts --ssr seed-cli.ts --outDir .seed-build && node preview/.seed-build/seed-cli.mjs",
+    "members:import": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-members.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "geist": "^1.7.2",
     "motion": "^14.2.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "~1.56.0",
     "@tailwindcss/turbopack": "^4",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vite": "^8.3.4",
     "vitest": "^5.0.4"
   }
 }

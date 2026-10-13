@@ -1,101 +1,85 @@
 import { describe, expect, test } from "vitest";
-import {
-  entrySchema,
-  fieldErrors,
-  isEditableDate,
-  loginSchema,
-  memberUpdateSchema,
-  signupSchema,
-} from "@/lib/validation";
+import { fieldErrors, isEditableDate, loginSchema, memberSchema, prospectSchema, resourceSchema, welcomeSchema } from "@/lib/validation";
 
-describe("entrySchema", () => {
-  test("accepts a valid entry and coerces form strings", () => {
-    expect(entrySchema.parse({ date: "2026-10-13", count: "42" })).toEqual({
+describe("prospectSchema", () => {
+  const valid = { name: " Le Petit Zinc ", city: "Lyon", channel: "instagram", contact: "", note: "", date: "2026-10-13" };
+
+  test("accepts a valid prospect, trims and nulls empty optional fields", () => {
+    expect(prospectSchema.parse(valid)).toEqual({
+      name: "Le Petit Zinc",
+      city: "Lyon",
+      channel: "instagram",
+      contact: null,
+      note: null,
       date: "2026-10-13",
-      count: 42,
     });
   });
 
   test.each([
-    [{ date: "2026-10-13", count: "-1" }, "count"],
-    [{ date: "2026-10-13", count: "2.5" }, "count"],
-    [{ date: "2026-10-13", count: "501" }, "count"],
-    [{ date: "2026-10-13", count: "abc" }, "count"],
-    [{ date: "2026-02-31", count: "3" }, "date"],
-  ])("rejects %o", (input, field) => {
-    const result = entrySchema.safeParse(input);
+    [{ name: "" }, "name"],
+    [{ city: "L" }, "city"],
+    [{ channel: "pigeon" }, "channel"],
+    [{ date: "2026-02-31" }, "date"],
+    [{ name: "Zinc\r=cmd" }, "name"],
+  ])("rejects %o", (patch, field) => {
+    const result = prospectSchema.safeParse({ ...valid, ...patch });
     expect(result.success).toBe(false);
     if (!result.success) expect(fieldErrors(result.error)).toHaveProperty(field);
   });
 });
 
 describe("isEditableDate", () => {
-  test("today and the last 7 days are editable", () => {
+  test("today and the last 7 days only", () => {
     expect(isEditableDate("2026-10-13", "2026-10-13")).toBe(true);
     expect(isEditableDate("2026-10-06", "2026-10-13")).toBe(true);
-  });
-
-  test("the future and older days are locked", () => {
-    expect(isEditableDate("2026-10-14", "2026-10-13")).toBe(false);
     expect(isEditableDate("2026-10-05", "2026-10-13")).toBe(false);
+    expect(isEditableDate("2026-10-14", "2026-10-13")).toBe(false);
   });
 });
 
 describe("auth schemas", () => {
-  test("login requires a valid email", () => {
-    expect(loginSchema.safeParse({ email: "nope", password: "x" }).success).toBe(false);
-    expect(loginSchema.safeParse({ email: "lea@agence.fr", password: "x" }).success).toBe(true);
+  test("login needs an identifier and a password", () => {
+    expect(loginSchema.safeParse({ login: "", password: "x" }).success).toBe(false);
+    expect(loginSchema.safeParse({ login: "lea", password: "" }).success).toBe(false);
+    expect(loginSchema.parse({ login: " lea ", password: "x" }).login).toBe("lea");
   });
 
-  test("signup enforces a 10 character password and trims the name", () => {
-    const short = signupSchema.safeParse({
-      fullName: "Léa Fontaine",
-      email: "lea@agence.fr",
-      password: "court",
-      inviteCode: "abc",
-    });
-    expect(short.success).toBe(false);
-
-    const ok = signupSchema.parse({
-      fullName: "  Léa Fontaine ",
-      email: "lea@agence.fr",
-      password: "un-mot-de-passe-long",
-      inviteCode: " abc ",
-    });
-    expect(ok.fullName).toBe("Léa Fontaine");
-    expect(ok.inviteCode).toBe("abc");
+  test("welcome confirms the name and job title", () => {
+    expect(welcomeSchema.safeParse({ fullName: "Léa Fontaine", jobTitle: "Prospectrice" }).success).toBe(true);
+    expect(welcomeSchema.safeParse({ fullName: "L", jobTitle: "Prospectrice" }).success).toBe(false);
   });
 });
 
-describe("memberUpdateSchema", () => {
+describe("memberSchema", () => {
   const base = {
-    id: "m1",
+    id: "",
+    login: "lea",
     fullName: "Léa Fontaine",
     jobTitle: "Prospectrice",
     department: "",
     managerId: "",
     avatarUrl: "",
+    password: "",
     isProspector: true,
     isAdmin: false,
+    active: true,
   };
 
-  test("empty optional fields become null", () => {
-    expect(memberUpdateSchema.parse(base)).toMatchObject({
-      department: null,
-      managerId: null,
-      avatarUrl: null,
-    });
+  test("empty optional fields become null and an empty password means unchanged", () => {
+    expect(memberSchema.parse(base)).toMatchObject({ id: null, department: null, managerId: null, avatarUrl: null, password: "" });
   });
 
-  test("avatar URLs must be https", () => {
-    const result = memberUpdateSchema.safeParse({ ...base, avatarUrl: "javascript:alert(1)" });
-    expect(result.success).toBe(false);
-    expect(memberUpdateSchema.safeParse({ ...base, avatarUrl: "https://cdn.fr/a.jpg" }).success).toBe(true);
+  test("short passwords and non-https avatars are refused", () => {
+    expect(fieldErrors(memberSchema.safeParse({ ...base, password: "abc" }).error!)).toHaveProperty("password");
+    expect(memberSchema.safeParse({ ...base, avatarUrl: "javascript:alert(1)" }).success).toBe(false);
   });
+});
 
-  test("fieldErrors falls back to a form-level key", () => {
-    const result = memberUpdateSchema.safeParse({ ...base, fullName: "L" });
-    expect(result.success).toBe(false);
-    if (!result.success) expect(fieldErrors(result.error).fullName).toBe("Nom trop court.");
+describe("resourceSchema", () => {
+  test("validates the value according to its kind", () => {
+    expect(resourceSchema.safeParse({ id: "", kind: "email", title: "Devis", value: "pas-un-mail", note: "" }).success).toBe(false);
+    expect(resourceSchema.safeParse({ id: "", kind: "link", title: "Portfolio", value: "javascript:x", note: "" }).success).toBe(false);
+    const template = resourceSchema.parse({ id: "", kind: "template", title: "Relance", value: "Bonjour,\nMerci", note: "" });
+    expect(template).toMatchObject({ id: null, note: null, sortOrder: 0 });
   });
 });

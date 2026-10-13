@@ -13,6 +13,7 @@ import type { Entry, Member } from "@/lib/types";
 
 const member = (id: string, overrides: Partial<Member> = {}): Member => ({
   id,
+  login: id,
   fullName: `Membre ${id}`,
   jobTitle: "Prospecteur",
   department: "Commercial",
@@ -20,7 +21,10 @@ const member = (id: string, overrides: Partial<Member> = {}): Member => ({
   avatarUrl: null,
   isProspector: true,
   isAdmin: false,
+  active: true,
   sortOrder: 0,
+  welcomedAt: null,
+  lastLoginAt: null,
   ...overrides,
 });
 

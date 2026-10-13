@@ -1,213 +1,101 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
+import { createToken, readToken } from "@/lib/auth/token";
+import { monthReportToCsv, prospectsToCsv } from "@/lib/csv";
+import { createRateLimiter } from "@/lib/rate-limit";
+import { ConfigurationError, resolveRuntimeMode } from "@/lib/runtime-mode";
+import { buildMonthReport } from "@/lib/stats";
+import { makeMember, makeProspect } from "./helpers";
 
-vi.mock("server-only", () => ({}));
+const SECRET = "x".repeat(40);
 
-import { monthReportToCsv } from "@/lib/csv";
-import { createDemoState, DemoRepository } from "@/lib/data/demo-repository";
-import { DEMO_MEMBERS, generateDemoEntries } from "@/lib/data/demo-seed";
-import { formatDecimal, formatDelta, formatInt, formatPercent, formatRank, firstName, pluralize } from "@/lib/format";
-import { extractHeadings, slugify } from "@/lib/guide";
-import { buildMonthReport, buildRanking } from "@/lib/stats";
-import type { Member } from "@/lib/types";
+describe("jeton de session", () => {
+  const payload = { memberId: "lea", version: 2, expiresAt: 2_000_000 };
 
-const member = (id: string, fullName: string): Member => ({
-  id,
-  fullName,
-  jobTitle: "Prospecteur",
-  department: null,
-  managerId: null,
-  avatarUrl: null,
-  isProspector: true,
-  isAdmin: false,
-  sortOrder: 0,
-});
-
-describe("CSV export", () => {
-  const report = buildMonthReport(
-    [member("a", "Alice Martin"), member("b", "=HYPERLINK(\"evil\")")],
-    [
-      { memberId: "a", date: "2026-02-03", count: 12 },
-      { memberId: "b", date: "2026-02-04", count: 5 },
-    ],
-    "2026-02",
-  );
-  const csv = monthReportToCsv(report);
-  const lines = csv.split("\r\n");
-
-  test("starts with a UTF-8 BOM and uses semicolons for French Excel", () => {
-    expect(csv.charCodeAt(0)).toBe(0xfeff);
-    expect(lines[0]).toContain("Rang;Membre;Poste;Total");
+  test("se relit tel quel avant expiration", () => {
+    expect(readToken(createToken(payload, SECRET), SECRET, 1_000_000)).toEqual(payload);
   });
 
-  test("has one line per prospector plus header and team total", () => {
-    expect(lines).toHaveLength(4);
-    expect(lines[3]).toContain("Équipe");
-    expect(lines[3]).toContain(";17;");
+  test("est refusé après expiration", () => {
+    expect(readToken(createToken(payload, SECRET), SECRET, 2_000_000)).toBeNull();
   });
 
-  test("quotes carriage returns so they cannot start a new row", () => {
-    const withCr = monthReportToCsv(buildMonthReport([member("c", "Léa\r=cmd")], [], "2026-02"));
-    expect(withCr).toContain('"Léa\r=cmd"');
+  test("est refusé s'il est modifié ou signé avec un autre secret", () => {
+    const token = createToken(payload, SECRET);
+    expect(readToken(token.replace("lea.", "admin."), SECRET, 1)).toBeNull();
+    expect(readToken(token.replace(".2.", ".3."), SECRET, 1)).toBeNull();
+    expect(readToken(token, "y".repeat(40), 1)).toBeNull();
   });
 
-  test("neutralises spreadsheet formulas (CSV injection)", () => {
-    expect(csv).not.toMatch(/;=HYPERLINK/);
-    expect(csv).toContain(`"'=HYPERLINK(""evil"")"`);
+  test("ignore les valeurs mal formées", () => {
+    expect(readToken(undefined, SECRET)).toBeNull();
+    expect(readToken("abc", SECRET)).toBeNull();
+    expect(readToken("a.b.c.d.e", SECRET)).toBeNull();
   });
 });
 
-describe("guide helpers", () => {
-  test("slugify removes accents and punctuation", () => {
-    expect(slugify("Répondre aux objections !")).toBe("repondre-aux-objections");
-    expect(slugify("  Le premier   message ")).toBe("le-premier-message");
+describe("limiteur de débit", () => {
+  test("bloque au-delà de la limite puis libère après la fenêtre", () => {
+    const allow = createRateLimiter({ limit: 2, windowMs: 1_000 });
+    expect(allow("ip", 0)).toBe(true);
+    expect(allow("ip", 10)).toBe(true);
+    expect(allow("ip", 20)).toBe(false);
+    expect(allow("autre", 20)).toBe(true);
+    expect(allow("ip", 1_011)).toBe(true);
   });
 
-  test("extractHeadings only keeps level 2 titles outside code blocks", () => {
-    const markdown = ["# Titre", "## Avant de commencer", "### Sous-partie", "```", "## pas un titre", "```", "## Les relances ##"].join("\n");
-    expect(extractHeadings(markdown)).toEqual([
-      { id: "avant-de-commencer", title: "Avant de commencer" },
-      { id: "les-relances", title: "Les relances" },
-    ]);
-  });
-});
-
-describe("demo data", () => {
-  test("the seed is deterministic and never in the future", () => {
-    const first = generateDemoEntries("2026-10-13");
-    expect(generateDemoEntries("2026-10-13")).toEqual(first);
-    expect(first.every((entry) => entry.date <= "2026-10-13" && entry.count >= 0 && entry.count <= 500)).toBe(true);
-  });
-
-  test("only some members have entered today, so the reminder can be demoed", () => {
-    const today = generateDemoEntries("2026-10-13").filter((entry) => entry.date === "2026-10-13");
-    const ids = new Set(today.map((entry) => entry.memberId));
-    expect(ids.size).toBeGreaterThan(0);
-    expect(ids.has("theo")).toBe(false);
-  });
-
-  test("the demo org chart has a single root and valid managers", () => {
-    const ids = new Set(DEMO_MEMBERS.map((m) => m.id));
-    expect(DEMO_MEMBERS.filter((m) => m.managerId === null)).toHaveLength(1);
-    expect(DEMO_MEMBERS.every((m) => m.managerId === null || ids.has(m.managerId))).toBe(true);
-  });
-
-  test("DemoRepository reads, upserts and updates without leaking references", async () => {
-    const repository = new DemoRepository(createDemoState("2026-10-13"));
-    await repository.upsertEntry({ memberId: "theo", date: "2026-10-13", count: 3 });
-    await repository.upsertEntry({ memberId: "theo", date: "2026-10-13", count: 8 });
-    const today = await repository.listEntries({ from: "2026-10-13", to: "2026-10-13" });
-    expect(today.filter((entry) => entry.memberId === "theo")).toEqual([{ memberId: "theo", date: "2026-10-13", count: 8 }]);
-
-    await repository.updateMember("theo", { jobTitle: "Business developer" });
-    expect((await repository.getMember("theo"))?.jobTitle).toBe("Business developer");
-    expect(await repository.getMember("inconnu")).toBeNull();
-
-    const members = await repository.listMembers();
-    members[0].fullName = "Modifié";
-    expect((await repository.listMembers())[0].fullName).not.toBe("Modifié");
+  test("peek vérifie sans compter", () => {
+    const allow = createRateLimiter({ limit: 1, windowMs: 1_000 });
+    expect(allow("login", 0, { peek: true })).toBe(true);
+    expect(allow("login", 0, { peek: true })).toBe(true);
+    expect(allow("login", 0)).toBe(true);
+    expect(allow("login", 1, { peek: true })).toBe(false);
   });
 });
 
-describe("formatting", () => {
-  test("French number formats", () => {
-    expect(formatInt(1284)).toBe("1 284");
-    expect(formatDecimal(12.345)).toBe("12,3");
-    expect(formatPercent(0.237)).toBe("24 %");
-    expect(formatDelta(12)).toBe("+12");
-    expect(formatDelta(-3)).toBe("-3");
-    expect(formatRank(1)).toBe("1er");
-    expect(formatRank(4)).toBe("4e");
-    expect(firstName("Léa Fontaine")).toBe("Léa");
-    expect(pluralize(1, "jour")).toBe("1 jour");
-    expect(pluralize(3, "jour")).toBe("3 jours");
-  });
-});
+describe("mode de fonctionnement", () => {
+  const full = { SUPABASE_URL: "https://x.supabase.co", SUPABASE_SECRET_KEY: "sb_secret", SESSION_SECRET: SECRET };
 
-describe("ranking entry flag", () => {
-  test("hasEntry distinguishes a real zero from a missing entry", () => {
-    const rows = buildRanking(
-      [member("a", "Alice"), member("b", "Bruno")],
-      [{ memberId: "a", date: "2026-10-13", count: 0 }],
-      { from: "2026-10-13", to: "2026-10-13" },
-      { from: "2026-10-12", to: "2026-10-12" },
-    );
-    expect(rows.find((row) => row.member.id === "a")?.hasEntry).toBe(true);
-    expect(rows.find((row) => row.member.id === "b")?.hasEntry).toBe(false);
-  });
-});
-
-describe("environment", () => {
-  test("Supabase mode once all three variables are set", async () => {
-    const { getSupabaseConfig, isDemoMode, getInviteCode } = await import("@/lib/env");
-    vi.stubEnv("SUPABASE_URL", "");
-    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "");
-    vi.stubEnv("SUPABASE_SECRET_KEY", "");
-    expect(isDemoMode()).toBe(true);
-
-    vi.stubEnv("SUPABASE_URL", "https://projet.supabase.co");
-    vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
-    expect(() => isDemoMode()).toThrow(/incomplète/);
-
-    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_x");
-    expect(isDemoMode()).toBe(false);
-    expect(getSupabaseConfig()).toEqual({
-      url: "https://projet.supabase.co",
-      publishableKey: "sb_publishable_x",
-      secretKey: "sb_secret_x",
+  test("Supabase quand les trois variables sont là", () => {
+    expect(resolveRuntimeMode(full)).toEqual({
+      kind: "supabase",
+      config: { url: full.SUPABASE_URL, secretKey: full.SUPABASE_SECRET_KEY, sessionSecret: SECRET },
     });
-
-    vi.stubEnv("TEAM_INVITE_CODE", "   ");
-    expect(getInviteCode()).toBeNull();
-    vi.stubEnv("TEAM_INVITE_CODE", "court");
-    expect(getInviteCode()).toBeNull();
-    vi.stubEnv("TEAM_INVITE_CODE", " atelier-vif-equipe-2026 ");
-    expect(getInviteCode()).toBe("atelier-vif-equipe-2026");
-    vi.unstubAllEnvs();
-  });
-});
-
-describe("runtime mode", () => {
-  test("Supabase when the three variables are set", async () => {
-    const { resolveRuntimeMode } = await import("@/lib/runtime-mode");
-    expect(
-      resolveRuntimeMode({ SUPABASE_URL: "https://x.supabase.co", SUPABASE_PUBLISHABLE_KEY: "pk", SUPABASE_SECRET_KEY: "sk" }),
-    ).toEqual({ kind: "supabase", config: { url: "https://x.supabase.co", publishableKey: "pk", secretKey: "sk" } });
   });
 
-  test("a partial configuration is an error, never a silent demo", async () => {
-    const { resolveRuntimeMode, ConfigurationError } = await import("@/lib/runtime-mode");
-    expect(() => resolveRuntimeMode({ SUPABASE_URL: "https://x.supabase.co", NODE_ENV: "development" })).toThrow(ConfigurationError);
+  test("refuse une configuration partielle ou un secret trop court", () => {
+    expect(() => resolveRuntimeMode({ SUPABASE_URL: full.SUPABASE_URL })).toThrow(ConfigurationError);
+    expect(() => resolveRuntimeMode({ ...full, SESSION_SECRET: "court" })).toThrow(/32 caractères/);
   });
 
-  test("demo mode needs DEMO_MODE=1 in production", async () => {
-    const { resolveRuntimeMode } = await import("@/lib/runtime-mode");
+  test("démo en développement, et en production seulement si demandée", () => {
     expect(resolveRuntimeMode({ NODE_ENV: "development" })).toEqual({ kind: "demo" });
-    expect(() => resolveRuntimeMode({ NODE_ENV: "production" })).toThrow(/DEMO_MODE=1/);
+    expect(() => resolveRuntimeMode({ NODE_ENV: "production" })).toThrow(ConfigurationError);
     expect(resolveRuntimeMode({ NODE_ENV: "production", DEMO_MODE: "1" })).toEqual({ kind: "demo" });
   });
 });
 
-describe("rate limiter", () => {
-  test("blocks after the limit, per key, and frees up after the window", async () => {
-    const { createRateLimiter } = await import("@/lib/rate-limit");
-    const isAllowed = createRateLimiter({ limit: 2, windowMs: 1000 });
-    expect(isAllowed("1.2.3.4", 0)).toBe(true);
-    expect(isAllowed("1.2.3.4", 10)).toBe(true);
-    expect(isAllowed("1.2.3.4", 20)).toBe(false);
-    expect(isAllowed("5.6.7.8", 20)).toBe(true);
-    expect(isAllowed("1.2.3.4", 1500)).toBe(true);
+describe("export CSV", () => {
+  test("neutralise les formules et protège les séparateurs", () => {
+    const members = [makeMember("a", { fullName: "Léa ; Fontaine" })];
+    const csv = prospectsToCsv(
+      [makeProspect({ memberId: "a", name: "=HYPERLINK(\"x\")", city: "Lyon", note: "ligne 1\nligne 2" })],
+      members,
+    );
+    expect(csv.startsWith("﻿Date;")).toBe(true);
+    expect(csv).toContain(`"'=HYPERLINK(""x"")"`);
+    expect(csv).toContain(`"Léa ; Fontaine"`);
+    expect(csv).toContain(`"ligne 1\nligne 2"`);
   });
-});
 
-describe("control characters", () => {
-  test("names with line breaks or tabs are rejected", async () => {
-    const { signupSchema } = await import("@/lib/validation");
-    const result = signupSchema.safeParse({
-      fullName: "Léa\r=cmd",
-      email: "lea@agence.fr",
-      password: "un-mot-de-passe-long",
-      inviteCode: "atelier-vif-equipe-2026",
-    });
-    expect(result.success).toBe(false);
+  test("nomme « Ancien membre » un auteur disparu", () => {
+    expect(prospectsToCsv([makeProspect({ memberId: "parti" })], [])).toContain("Ancien membre");
+  });
+
+  test("le bilan a une ligne par membre et une ligne d'équipe", () => {
+    const members = [makeMember("a"), makeMember("b")];
+    const report = buildMonthReport(members, [{ memberId: "a", date: "2026-10-01", count: 3 }], "2026-10");
+    const lines = monthReportToCsv(report).split("\r\n");
+    expect(lines).toHaveLength(4);
+    expect(lines[3]).toMatch(/^;Équipe;;3;/);
   });
 });

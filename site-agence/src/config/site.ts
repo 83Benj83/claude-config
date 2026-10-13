@@ -1,6 +1,7 @@
 /**
  * Contenu éditorial du site. Tout ce qui décrit l'agence se modifie ici :
  * nom, textes de présentation, services, méthode et valeurs.
+ * Les mêmes textes servent au site et à l'aperçu interactif.
  */
 
 export type IconName =
@@ -18,12 +19,12 @@ export const site = {
   monogram: "AV",
   tagline: "Agence de création de sites web",
   description:
-    "L'espace interne de l'équipe Atelier Vif\u00a0: l'agence, l'organigramme, le guide de prospection et le classement.",
+    "L'espace interne de l'équipe Atelier Vif\u00a0: prospection, établissements déjà contactés, classement, équipe et ressources.",
 
   hero: {
     title: "On crée des sites qui ramènent des clients.",
     subtitle:
-      "Ici, tout ce qu'il faut pour prospecter\u00a0: l'équipe, la méthode, et le classement mis à jour chaque soir.",
+      "Ici, tout ce qu'il faut pour prospecter\u00a0: les restaurants déjà contactés, les bons messages et le classement en direct.",
   },
 
   about: {
@@ -94,14 +95,6 @@ export const site = {
 
   closing: {
     title: "Ta journée compte.",
-    text: "Note tes prospections avant de partir\u00a0: trente secondes, et le classement de l'équipe est à jour.",
+    text: "Ajoute chaque restaurant dès que tu l'as contacté\u00a0: dix secondes, et le classement de l'équipe est à jour.",
   },
 } as const;
-
-export const navigation = [
-  { href: "/", label: "Accueil" },
-  { href: "/equipe", label: "Équipe" },
-  { href: "/guide", label: "Guide" },
-  { href: "/classement", label: "Classement" },
-  { href: "/bilan", label: "Bilan" },
-] as const;

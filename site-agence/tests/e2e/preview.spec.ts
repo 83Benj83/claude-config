@@ -1,0 +1,65 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { expect, test } from "@playwright/test";
+
+/** Aperçu interactif construit avec sa base locale en mémoire (`npm run preview:local`). */
+const FILE = join(process.cwd(), "preview/dist-local/local.html");
+
+test("aperçu local : connexion, ajout, doublon, recherche, création d'identifiant", async ({ page }) => {
+  test.skip(!existsSync(FILE), "Construire l'aperçu d'abord : npm run preview:local");
+  // Parcours écrit pour le menu latéral ; la navigation mobile est couverte par site.spec.ts.
+  test.skip(test.info().project.name !== "desktop", "Parcours de bureau");
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  await page.goto(pathToFileURL(FILE).href);
+  await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Léa");
+  await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Léa/ }).click();
+  await page.getByLabel("Mot de passe", { exact: true }).fill("lea2026");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: /Léa/ })).toBeVisible();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Prospecter", exact: true }).click();
+  await page.getByLabel("Nom du restaurant").fill("Chez Aperçu");
+  await page.getByLabel("Ville", { exact: true }).fill("Lyon");
+  await page.locator("label").filter({ hasText: /^Téléphone$/ }).click();
+  await page.getByRole("button", { name: "Ajouter le prospect" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Chez Aperçu ajouté" })).toBeVisible();
+  await page.getByLabel("Nom du restaurant").fill("chez apercu");
+  await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Déjà contacté ?", exact: true }).click();
+  await page.getByRole("searchbox", { name: "Nom du restaurant" }).fill("Aperçu");
+  await expect(page.getByRole("button", { name: /Chez Aperçu/ })).toBeVisible();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Classement", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Bilan du mois", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
+  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await page.getByRole("button", { name: "Changer d'identifiant" }).click();
+  await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Camille");
+  await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Camille/ }).click();
+  await page.getByLabel("Mot de passe", { exact: true }).fill("camille2026");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Identifiants", exact: true }).click();
+  await page.getByRole("button", { name: "Nouvel identifiant" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByLabel("Identifiant", { exact: true }).fill("sami");
+  const password = await sheet.getByLabel("Mot de passe", { exact: true }).inputValue();
+  await sheet.getByLabel("Prénom et nom").fill("Sami Test");
+  await sheet.getByLabel("Poste").fill("Prospecteur");
+  await sheet.getByRole("button", { name: "Créer l'identifiant" }).click();
+  await expect(sheet.getByText("Accès à transmettre")).toBeVisible({ timeout: 15000 });
+  await sheet.getByRole("button", { name: "Terminé" }).click();
+  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await page.getByRole("button", { name: "Changer d'identifiant" }).click();
+  await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Sami");
+  await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Sami/ }).click();
+  await page.getByLabel("Mot de passe", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page.getByText("Première connexion")).toBeVisible({ timeout: 15000 });
+  await page.getByRole("button", { name: "C'est parti" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: /Sami/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});

@@ -1,8 +1,43 @@
 import { addDays, isWeekend } from "../dates";
-import type { Entry, IsoDate, Member } from "../types";
+import type { Channel, IsoDate, Member, Prospect, Resource } from "../types";
 
-/** Équipe fictive du mode démo. Remplacée par les vrais comptes une fois Supabase branché. */
-export const DEMO_MEMBERS: readonly Member[] = [
+/**
+ * Données d'exemple du mode démo et de l'aperçu interactif : une équipe
+ * fictive, ses identifiants de test et un historique de prospection réaliste.
+ * Tout est déterministe (mêmes données à chaque génération pour un jour donné).
+ */
+
+type DemoMember = Member & { demoPassword: string };
+
+function demo(
+  id: string,
+  fullName: string,
+  jobTitle: string,
+  department: string,
+  managerId: string | null,
+  overrides: Partial<Member> = {},
+): DemoMember {
+  return {
+    id,
+    login: id,
+    fullName,
+    jobTitle,
+    department,
+    managerId,
+    avatarUrl: null,
+    isProspector: true,
+    isAdmin: false,
+    active: true,
+    sortOrder: 0,
+    welcomedAt: "2026-01-05T09:00:00.000Z",
+    lastLoginAt: null,
+    // Mot de passe de démonstration : identifiant + « 2026 ».
+    demoPassword: `${id}2026`,
+    ...overrides,
+  };
+}
+
+export const DEMO_MEMBERS: readonly DemoMember[] = [
   demo("camille", "Camille Renaud", "Fondatrice & directrice", "Direction", null, { isAdmin: true, isProspector: false }),
   demo("mehdi", "Mehdi Belkacem", "Responsable commercial", "Commercial", "camille", { isAdmin: true, sortOrder: 1 }),
   demo("ines", "Inès Marchetti", "Lead développeuse", "Production", "camille", { isProspector: false, sortOrder: 2 }),
@@ -13,48 +48,39 @@ export const DEMO_MEMBERS: readonly Member[] = [
   demo("amandine", "Amandine Roux", "Business developer", "Commercial", "mehdi", { sortOrder: 7 }),
   demo("karim", "Karim Ouali", "Business developer", "Commercial", "mehdi", { sortOrder: 8 }),
   demo("hugo", "Hugo Lefebvre", "Designer UI/UX", "Production", "ines", { isProspector: false, sortOrder: 9 }),
-  demo("nathan", "Nathan Perrin", "Développeur web", "Production", "ines", { isProspector: false, sortOrder: 10 }),
+  // Identifiant pas encore utilisé : montre l'écran de bienvenue à la première connexion.
+  demo("recrue", "Nouvelle recrue", "Chargé de prospection", "Commercial", "mehdi", { sortOrder: 10, welcomedAt: null }),
 ];
 
-function demo(
-  id: string,
-  fullName: string,
-  jobTitle: string,
-  department: string,
-  managerId: string | null,
-  overrides: Partial<Member> = {},
-): Member {
-  return {
-    id,
-    fullName,
-    jobTitle,
-    department,
-    managerId,
-    avatarUrl: null,
-    isProspector: true,
-    isAdmin: false,
-    sortOrder: 0,
-    ...overrides,
-  };
-}
-
-/** Rythme moyen de prospections par jour ouvré, pour des données réalistes. */
-const DAILY_PACE: Record<string, number> = {
-  mehdi: 14,
-  lea: 31,
-  yanis: 27,
-  clara: 35,
-  theo: 22,
-  amandine: 29,
-  karim: 18,
+/** Rythme moyen de prospects par jour ouvré, et villes de prédilection. */
+const PROFILES: Record<string, { pace: number; cities: string[] }> = {
+  mehdi: { pace: 5, cities: ["Lyon", "Villeurbanne"] },
+  lea: { pace: 13, cities: ["Lyon", "Villeurbanne", "Annecy"] },
+  yanis: { pace: 11, cities: ["Marseille", "Aix-en-Provence", "Toulon"] },
+  clara: { pace: 15, cities: ["Bordeaux", "Toulouse"] },
+  theo: { pace: 9, cities: ["Lille", "Lyon"] },
+  amandine: { pace: 12, cities: ["Nantes", "Rennes", "Bordeaux"] },
+  karim: { pace: 7, cities: ["Montpellier", "Marseille", "Nice"] },
 };
 
-/** Membres qui ont déjà saisi leur journée en cours, pour animer le classement du jour. */
-const ALREADY_ENTERED_TODAY = new Set(["clara", "yanis", "lea", "karim"]);
+/** Membres qui ont déjà prospecté aujourd'hui, pour animer le classement du jour. */
+const ACTIVE_TODAY = new Set(["clara", "yanis", "lea", "karim"]);
 
-const HISTORY_DAYS = 120;
+const HISTORY_DAYS = 45;
 
-/** Générateur pseudo-aléatoire déterministe (mulberry32) : mêmes données à chaque démarrage. */
+const NAME_STARTS = [
+  "Le Bistrot", "La Table", "Le Comptoir", "La Cantine", "L'Atelier", "Le Café", "La Brasserie", "Le Bouchon",
+  "La Trattoria", "Pizzeria", "Crêperie", "Le Petit", "Chez", "La Maison", "Le Jardin", "La Terrasse", "Sushi",
+  "Le Grill", "La Guinguette", "Burger",
+];
+const NAME_ENDS = [
+  "du Marché", "des Halles", "de Marius", "de Léon", "du Port", "des Arts", "Saint-Paul", "Gourmand", "des Amis",
+  "de la Gare", "du Coin", "Zinc", "Paulette", "Bella Napoli", "Kyo", "du Vieux Quartier", "des Canuts",
+  "de Lucie", "Sous les Tilleuls", "du Square", "Fernand", "Mama Rosa", "Bonheur", "des Pêcheurs", "Lumière",
+  "du Théâtre", "Gaston", "Olive", "de la Place", "Cocotte",
+];
+
+/** Générateur pseudo-aléatoire déterministe (mulberry32). */
 function seededRandom(seed: number) {
   let state = seed >>> 0;
   return () => {
@@ -72,26 +98,93 @@ function hash(text: string): number {
   return h >>> 0;
 }
 
-/** Historique de prospections des 120 derniers jours, relatif à `today`. */
-export function generateDemoEntries(today: IsoDate): Entry[] {
-  const entries: Entry[] = [];
-  for (const [memberId, pace] of Object.entries(DAILY_PACE)) {
+const pick = <T,>(random: () => number, items: readonly T[]): T => items[Math.floor(random() * items.length)];
+
+/** Moyens de contact pondérés (le téléphone et Instagram dominent). */
+const CHANNEL_WEIGHTS: [Channel, number][] = [
+  ["telephone", 34], ["instagram", 24], ["email", 16], ["visite", 10], ["facebook", 8], ["formulaire", 5], ["linkedin", 2], ["autre", 1],
+];
+
+function pickChannel(random: () => number): Channel {
+  const total = CHANNEL_WEIGHTS.reduce((sum, [, weight]) => sum + weight, 0);
+  let roll = random() * total;
+  for (const [channel, weight] of CHANNEL_WEIGHTS) {
+    roll -= weight;
+    if (roll < 0) return channel;
+  }
+  return "telephone";
+}
+
+function contactFor(channel: Channel, name: string, random: () => number): string | null {
+  const slug = name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]+/g, "");
+  switch (channel) {
+    case "telephone":
+      return `0${4 + Math.floor(random() * 3)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)}`;
+    case "instagram":
+      return `@${slug.slice(0, 18)}`;
+    case "email":
+      return `contact@${slug.slice(0, 16)}.fr`;
+    default:
+      return null;
+  }
+}
+
+/** Historique de prospects des 45 derniers jours, relatif à `today`. */
+export function generateDemoProspects(today: IsoDate): Prospect[] {
+  const prospects: Prospect[] = [];
+  for (const [memberId, profile] of Object.entries(PROFILES)) {
     const random = seededRandom(hash(memberId));
     for (let offset = HISTORY_DAYS; offset >= 0; offset -= 1) {
       const date = addDays(today, -offset);
-      const roll = random();
-      const isToday = offset === 0;
-      if (isToday && !ALREADY_ENTERED_TODAY.has(memberId)) continue;
-      if (isWeekend(date)) {
-        if (roll < 0.8) continue; // rares sessions le week-end
-        entries.push({ memberId, date, count: Math.round(pace * 0.3 * random()) });
-        continue;
+      if (offset === 0 && !ACTIVE_TODAY.has(memberId)) continue;
+      if (isWeekend(date) && random() < 0.85) continue;
+      if (random() < 0.08) continue; // jour off
+      const count = Math.max(1, Math.round(profile.pace * (0.5 + random()) * (offset === 0 ? 0.6 : 1)));
+      for (let index = 0; index < count; index += 1) {
+        const city = pick(random, profile.cities);
+        // Un vivier de noms par ville : certains établissements sont recontactés.
+        const cityRandom = seededRandom(hash(city) + Math.floor(random() * 260));
+        const name = `${pick(cityRandom, NAME_STARTS)} ${pick(cityRandom, NAME_ENDS)}`;
+        const channel = pickChannel(random);
+        const hour = 9 + Math.floor((index / count) * 9);
+        prospects.push({
+          id: `demo-${memberId}-${date}-${index}`,
+          memberId,
+          name,
+          city,
+          channel,
+          contact: contactFor(channel, name, random),
+          note: random() < 0.12 ? pick(random, ["Rappeler la semaine prochaine", "Intéressé, attend un devis", "Site actuel très lent", "Pas de site, seulement Instagram", "Gérant absent, repasser"]) : null,
+          date,
+          createdAt: `${date}T${String(hour).padStart(2, "0")}:${String(Math.floor(random() * 60)).padStart(2, "0")}:00.000Z`,
+        });
       }
-      if (roll < 0.06) continue; // jour off
-      const variation = 0.55 + random() * 0.9;
-      const count = Math.max(0, Math.round(pace * variation * (isToday ? 0.6 : 1)));
-      entries.push({ memberId, date, count });
     }
   }
-  return entries;
+  return prospects;
 }
+
+export const DEMO_RESOURCES: readonly Resource[] = [
+  { id: "res-1", kind: "email", title: "Adresse de prospection", value: "prospection@atelier-vif.fr", note: "À utiliser pour tous les premiers contacts.", sortOrder: 1 },
+  { id: "res-2", kind: "email", title: "Devis et contrats", value: "devis@atelier-vif.fr", note: "Mettre en copie dès qu'un devis part.", sortOrder: 2 },
+  {
+    id: "res-3",
+    kind: "template",
+    title: "Premier message (restaurant sans site)",
+    value:
+      "Bonjour,\n\nJ'ai découvert votre restaurant sur Google et vos avis sont excellents. En revanche, je n'ai pas trouvé de site internet pour réserver ou voir la carte.\n\nNous créons des sites simples et rapides pour les restaurants. Je peux vous montrer un exemple en 10 minutes, cette semaine ?\n\nBelle journée,",
+    note: "Exemple : remplace-le par vos vrais modèles.",
+    sortOrder: 3,
+  },
+  {
+    id: "res-4",
+    kind: "template",
+    title: "Relance à J+3",
+    value: "Bonjour,\n\nJe me permets de revenir vers vous au sujet de votre site internet. Avez-vous eu le temps d'y réfléchir ?\n\nBonne journée,",
+    note: null,
+    sortOrder: 4,
+  },
+  { id: "res-5", kind: "link", title: "Portfolio de l'agence", value: "https://atelier-vif.fr/realisations", note: "À envoyer après un premier échange positif.", sortOrder: 5 },
+  { id: "res-6", kind: "link", title: "Prise de rendez-vous", value: "https://cal.com/atelier-vif/decouverte", note: null, sortOrder: 6 },
+  { id: "res-7", kind: "link", title: "Tableau des relances", value: "https://docs.google.com/spreadsheets", note: "Lien d'exemple à remplacer.", sortOrder: 7 },
+];

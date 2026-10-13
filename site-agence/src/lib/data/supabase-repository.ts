@@ -1,10 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DateRange, Entry, Member, MemberPatch } from "../types";
-import type { Repository } from "./repository";
+import { cityKey, nameKey } from "../establishments";
+import type { Channel, DateRange, Member, Prospect, Resource, ResourceKind } from "../types";
+import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "./repository";
 
-type ProfileRow = {
+type MemberRow = {
   id: string;
+  login: string;
   full_name: string;
   job_title: string;
   department: string | null;
@@ -12,19 +14,48 @@ type ProfileRow = {
   avatar_url: string | null;
   is_prospector: boolean;
   is_admin: boolean;
+  active: boolean;
+  sort_order: number;
+  welcomed_at: string | null;
+  last_login_at: string | null;
+  password_hash: string | null;
+  session_version: number;
+};
+
+type ProspectRow = {
+  id: string;
+  member_id: string;
+  name: string;
+  city: string;
+  channel: Channel;
+  contact: string | null;
+  note: string | null;
+  contacted_on: string;
+  created_at: string;
+};
+
+type ResourceRow = {
+  id: string;
+  kind: ResourceKind;
+  title: string;
+  value: string;
+  note: string | null;
   sort_order: number;
 };
 
-type EntryRow = { user_id: string; entry_date: string; count: number };
-
-const PROFILE_COLUMNS =
-  "id, full_name, job_title, department, manager_id, avatar_url, is_prospector, is_admin, sort_order";
+const MEMBER_PUBLIC_COLUMNS =
+  "id, login, full_name, job_title, department, manager_id, avatar_url, is_prospector, is_admin, active, sort_order, welcomed_at, last_login_at";
+const MEMBER_CREDENTIAL_COLUMNS = `${MEMBER_PUBLIC_COLUMNS}, password_hash, session_version`;
+const PROSPECT_COLUMNS = "id, member_id, name, city, channel, contact, note, contacted_on, created_at";
 
 /** Taille de page pour contourner la limite de 1000 lignes de PostgREST. */
 const PAGE_SIZE = 1000;
+/** Plafond de candidats pour une recherche par nom. */
+const SEARCH_CAP = 3000;
 
-const toMember = (row: ProfileRow): Member => ({
+const toMember = (row: Omit<MemberRow, "password_hash" | "session_version">): Member => ({
   id: row.id,
+  login: row.login,
   fullName: row.full_name,
   jobTitle: row.job_title,
   department: row.department,
@@ -32,89 +63,218 @@ const toMember = (row: ProfileRow): Member => ({
   avatarUrl: row.avatar_url,
   isProspector: row.is_prospector,
   isAdmin: row.is_admin,
+  active: row.active,
+  sortOrder: row.sort_order,
+  welcomedAt: row.welcomed_at,
+  lastLoginAt: row.last_login_at,
+});
+
+const toCredentials = (row: MemberRow): Credentials => ({
+  member: toMember(row),
+  passwordHash: row.password_hash,
+  sessionVersion: row.session_version,
+});
+
+const toProspect = (row: ProspectRow): Prospect => ({
+  id: row.id,
+  memberId: row.member_id,
+  name: row.name,
+  city: row.city,
+  channel: row.channel,
+  contact: row.contact,
+  note: row.note,
+  date: row.contacted_on,
+  createdAt: row.created_at,
+});
+
+const toResource = (row: ResourceRow): Resource => ({
+  id: row.id,
+  kind: row.kind,
+  title: row.title,
+  value: row.value,
+  note: row.note,
   sortOrder: row.sort_order,
 });
 
-const toProfilePatch = (patch: MemberPatch): Partial<ProfileRow> => {
-  const row: Partial<ProfileRow> = {};
-  if (patch.fullName !== undefined) row.full_name = patch.fullName;
-  if (patch.jobTitle !== undefined) row.job_title = patch.jobTitle;
-  if (patch.department !== undefined) row.department = patch.department;
-  if (patch.managerId !== undefined) row.manager_id = patch.managerId;
-  if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
-  if (patch.isProspector !== undefined) row.is_prospector = patch.isProspector;
-  if (patch.isAdmin !== undefined) row.is_admin = patch.isAdmin;
-  if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
-  return row;
-};
-
 export class DataAccessError extends Error {
   constructor(operation: string, cause: { message: string }) {
-    super(`Supabase: échec de ${operation} (${cause.message})`);
+    super(`Supabase : échec de ${operation} (${cause.message})`);
     this.name = "DataAccessError";
   }
 }
 
+function check<T>(operation: string, result: { data: T; error: { message: string } | null }): T {
+  if (result.error) throw new DataAccessError(operation, result.error);
+  return result.data;
+}
+
+/** Accès serveur uniquement (clé secrète) ; les autorisations sont vérifiées par les Server Actions. */
 export class SupabaseRepository implements Repository {
-  /**
-   * @param session client de l'utilisateur connecté (lectures et saisies, RLS active)
-   * @param admin client clé secrète, uniquement pour les modifications réservées aux admins
-   */
-  constructor(
-    private readonly session: SupabaseClient,
-    private readonly admin: SupabaseClient,
-  ) {}
+  constructor(private readonly db: SupabaseClient) {}
 
   async listMembers(): Promise<Member[]> {
-    const { data, error } = await this.session
-      .from("profiles")
-      .select(PROFILE_COLUMNS)
-      .order("sort_order")
-      .order("full_name");
-    if (error) throw new DataAccessError("la lecture des membres", error);
-    return (data as ProfileRow[]).map(toMember);
+    const rows = check(
+      "la lecture des membres",
+      await this.db.from("members").select(MEMBER_PUBLIC_COLUMNS).order("sort_order").order("full_name"),
+    );
+    return (rows as MemberRow[]).map(toMember);
   }
 
-  async getMember(id: string): Promise<Member | null> {
-    const { data, error } = await this.session
-      .from("profiles")
-      .select(PROFILE_COLUMNS)
-      .eq("id", id)
-      .maybeSingle();
-    if (error) throw new DataAccessError("la lecture du profil", error);
-    return data ? toMember(data as ProfileRow) : null;
+  async getCredentialsById(id: string): Promise<Credentials | null> {
+    const row = check("la lecture du membre", await this.db.from("members").select(MEMBER_CREDENTIAL_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toCredentials(row as MemberRow) : null;
   }
 
-  async listEntries({ from, to }: DateRange): Promise<Entry[]> {
-    const entries: Entry[] = [];
+  async getCredentialsByLogin(login: string): Promise<Credentials | null> {
+    const row = check(
+      "la lecture de l'identifiant",
+      await this.db.from("members").select(MEMBER_CREDENTIAL_COLUMNS).eq("login_key", loginKey(login)).maybeSingle(),
+    );
+    return row ? toCredentials(row as MemberRow) : null;
+  }
+
+  async createMember({ passwordHash, ...member }: NewMember): Promise<Member> {
+    const row = check(
+      "la création de l'identifiant",
+      await this.db
+        .from("members")
+        .insert({
+          login: member.login,
+          login_key: loginKey(member.login),
+          full_name: member.fullName,
+          job_title: member.jobTitle,
+          department: member.department,
+          manager_id: member.managerId,
+          avatar_url: member.avatarUrl,
+          is_prospector: member.isProspector,
+          is_admin: member.isAdmin,
+          active: member.active,
+          sort_order: member.sortOrder,
+          password_hash: passwordHash,
+        })
+        .select(MEMBER_PUBLIC_COLUMNS)
+        .single(),
+    );
+    return toMember(row as MemberRow);
+  }
+
+  async updateMember(id: string, { passwordHash, revokeSessions, ...patch }: MemberUpdate): Promise<void> {
+    const row: Record<string, unknown> = {};
+    if (patch.login !== undefined) {
+      row.login = patch.login;
+      row.login_key = loginKey(patch.login);
+    }
+    if (patch.fullName !== undefined) row.full_name = patch.fullName;
+    if (patch.jobTitle !== undefined) row.job_title = patch.jobTitle;
+    if (patch.department !== undefined) row.department = patch.department;
+    if (patch.managerId !== undefined) row.manager_id = patch.managerId;
+    if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
+    if (patch.isProspector !== undefined) row.is_prospector = patch.isProspector;
+    if (patch.isAdmin !== undefined) row.is_admin = patch.isAdmin;
+    if (patch.active !== undefined) row.active = patch.active;
+    if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
+    if (patch.welcomedAt !== undefined) row.welcomed_at = patch.welcomedAt;
+    if (patch.lastLoginAt !== undefined) row.last_login_at = patch.lastLoginAt;
+    if (passwordHash) row.password_hash = passwordHash;
+
+    if (revokeSessions) {
+      const current = await this.getCredentialsById(id);
+      if (current) row.session_version = current.sessionVersion + 1;
+    }
+    if (Object.keys(row).length === 0) return;
+    check("la mise à jour du membre", await this.db.from("members").update(row).eq("id", id));
+  }
+
+  async listProspects(range?: DateRange): Promise<Prospect[]> {
+    const prospects: Prospect[] = [];
     for (let offset = 0; ; offset += PAGE_SIZE) {
-      const { data, error } = await this.session
-        .from("prospecting_entries")
-        .select("user_id, entry_date, count")
-        .gte("entry_date", from)
-        .lte("entry_date", to)
-        .order("entry_date")
-        .order("user_id")
-        .range(offset, offset + PAGE_SIZE - 1);
-      if (error) throw new DataAccessError("la lecture des prospections", error);
-      const rows = data as EntryRow[];
-      entries.push(...rows.map((row) => ({ memberId: row.user_id, date: row.entry_date, count: row.count })));
-      if (rows.length < PAGE_SIZE) return entries;
+      let query = this.db.from("prospects").select(PROSPECT_COLUMNS);
+      if (range) query = query.gte("contacted_on", range.from).lte("contacted_on", range.to);
+      const rows = check(
+        "la lecture des prospects",
+        await query.order("contacted_on").order("id").range(offset, offset + PAGE_SIZE - 1),
+      ) as ProspectRow[];
+      prospects.push(...rows.map(toProspect));
+      if (rows.length < PAGE_SIZE) return prospects;
     }
   }
 
-  async upsertEntry(entry: Entry): Promise<void> {
-    const { error } = await this.session
-      .from("prospecting_entries")
-      .upsert(
-        { user_id: entry.memberId, entry_date: entry.date, count: entry.count },
-        { onConflict: "user_id,entry_date" },
-      );
-    if (error) throw new DataAccessError("l'enregistrement de la journée", error);
+  async listRecentProspects(limit: number): Promise<Prospect[]> {
+    const rows = check(
+      "la lecture des derniers prospects",
+      await this.db.from("prospects").select(PROSPECT_COLUMNS).order("created_at", { ascending: false }).limit(limit),
+    );
+    return (rows as ProspectRow[]).map(toProspect);
   }
 
-  async updateMember(id: string, patch: MemberPatch): Promise<void> {
-    const { error } = await this.admin.from("profiles").update(toProfilePatch(patch)).eq("id", id);
-    if (error) throw new DataAccessError("la mise à jour du membre", error);
+  async findProspectsByNameToken(token: string): Promise<Prospect[]> {
+    const safe = token.replace(/[^a-z0-9 ]/g, "");
+    if (!safe) return [];
+    const rows = check(
+      "la recherche d'établissements",
+      await this.db
+        .from("prospects")
+        .select(PROSPECT_COLUMNS)
+        .ilike("name_key", `%${safe}%`)
+        .order("created_at", { ascending: false })
+        .limit(SEARCH_CAP),
+    );
+    return (rows as ProspectRow[]).map(toProspect);
+  }
+
+  async countEstablishments(): Promise<number> {
+    const row = check("le comptage des établissements", await this.db.from("establishment_count").select("total").single());
+    return (row as { total: number }).total;
+  }
+
+  async getProspect(id: string): Promise<Prospect | null> {
+    const row = check("la lecture du prospect", await this.db.from("prospects").select(PROSPECT_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toProspect(row as ProspectRow) : null;
+  }
+
+  async addProspect(prospect: Prospect): Promise<void> {
+    check(
+      "l'enregistrement du prospect",
+      await this.db.from("prospects").insert({
+        id: prospect.id,
+        member_id: prospect.memberId,
+        name: prospect.name,
+        name_key: nameKey(prospect.name),
+        city: prospect.city,
+        city_key: cityKey(prospect.city),
+        channel: prospect.channel,
+        contact: prospect.contact,
+        note: prospect.note,
+        contacted_on: prospect.date,
+        created_at: prospect.createdAt,
+      }),
+    );
+  }
+
+  async deleteProspect(id: string): Promise<void> {
+    check("la suppression du prospect", await this.db.from("prospects").delete().eq("id", id));
+  }
+
+  async listResources(): Promise<Resource[]> {
+    const rows = check("la lecture des ressources", await this.db.from("resources").select("id, kind, title, value, note, sort_order"));
+    return (rows as ResourceRow[]).map(toResource);
+  }
+
+  async saveResource(resource: Resource): Promise<void> {
+    check(
+      "l'enregistrement de la ressource",
+      await this.db.from("resources").upsert({
+        id: resource.id,
+        kind: resource.kind,
+        title: resource.title,
+        value: resource.value,
+        note: resource.note,
+        sort_order: resource.sortOrder,
+      }),
+    );
+  }
+
+  async deleteResource(id: string): Promise<void> {
+    check("la suppression de la ressource", await this.db.from("resources").delete().eq("id", id));
   }
 }

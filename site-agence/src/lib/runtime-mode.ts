@@ -2,21 +2,24 @@
  * Choix du mode de fonctionnement à partir des variables d'environnement.
  * Fonction pure, partagée par le proxy et le serveur.
  *
- * - les trois variables Supabase présentes → mode Supabase ;
- * - aucune variable → mode démo, autorisé en développement, ou en production
- *   seulement avec `DEMO_MODE=1` (jamais par accident) ;
- * - configuration partielle → erreur explicite.
+ * - SUPABASE_URL + SUPABASE_SECRET_KEY + SESSION_SECRET → mode Supabase ;
+ * - aucune de ces variables → mode démo, autorisé en développement, ou en
+ *   production seulement avec `DEMO_MODE=1` (jamais par accident) ;
+ * - configuration partielle ou secret de session trop court → erreur explicite.
  */
 
 export type SupabaseConfig = {
   url: string;
-  publishableKey: string;
   secretKey: string;
+  sessionSecret: string;
 };
 
 export type RuntimeMode = { kind: "supabase"; config: SupabaseConfig } | { kind: "demo" };
 
 type Env = Record<string, string | undefined>;
+
+/** Longueur minimale du secret qui signe les cookies de session. */
+export const MIN_SESSION_SECRET_LENGTH = 32;
 
 export class ConfigurationError extends Error {
   constructor(message: string) {
@@ -27,31 +30,25 @@ export class ConfigurationError extends Error {
 
 export function resolveRuntimeMode(env: Env): RuntimeMode {
   const url = env.SUPABASE_URL?.trim();
-  const publishableKey = env.SUPABASE_PUBLISHABLE_KEY?.trim();
   const secretKey = env.SUPABASE_SECRET_KEY?.trim();
-  const provided = [url, publishableKey, secretKey].filter(Boolean).length;
+  const sessionSecret = env.SESSION_SECRET?.trim();
+  const provided = [url, secretKey, sessionSecret].filter(Boolean).length;
 
-  if (url && publishableKey && secretKey) {
-    return { kind: "supabase", config: { url, publishableKey, secretKey } };
+  if (url && secretKey && sessionSecret) {
+    if (sessionSecret.length < MIN_SESSION_SECRET_LENGTH) {
+      throw new ConfigurationError(`SESSION_SECRET doit contenir au moins ${MIN_SESSION_SECRET_LENGTH} caractères.`);
+    }
+    return { kind: "supabase", config: { url, secretKey, sessionSecret } };
   }
   if (provided > 0) {
     throw new ConfigurationError(
-      "Configuration Supabase incomplète : définis SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY et SUPABASE_SECRET_KEY.",
+      "Configuration incomplète : définis SUPABASE_URL, SUPABASE_SECRET_KEY et SESSION_SECRET.",
     );
   }
   if (env.NODE_ENV === "production" && env.DEMO_MODE !== "1") {
     throw new ConfigurationError(
-      "Supabase n'est pas configuré. Définis les variables SUPABASE_* (ou DEMO_MODE=1 pour un site de démonstration).",
+      "Supabase n'est pas configuré. Définis SUPABASE_URL, SUPABASE_SECRET_KEY et SESSION_SECRET (ou DEMO_MODE=1 pour un site de démonstration).",
     );
   }
   return { kind: "demo" };
-}
-
-/** Longueur minimale du code d'invitation, pour résister aux essais en série. */
-export const MIN_INVITE_CODE_LENGTH = 12;
-
-/** Code d'invitation valide, ou `null` si absent ou trop court (inscriptions fermées). */
-export function resolveInviteCode(env: Env): string | null {
-  const code = env.TEAM_INVITE_CODE?.trim();
-  return code && code.length >= MIN_INVITE_CODE_LENGTH ? code : null;
 }

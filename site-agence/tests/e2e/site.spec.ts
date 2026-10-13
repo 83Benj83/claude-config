@@ -1,167 +1,139 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, navigate } from "./helpers";
+import { loginAs, openSection, signIn, unique } from "./helpers";
 
 test.describe("accès", () => {
   test("un visiteur non connecté est renvoyé vers la connexion", async ({ page }) => {
     await page.goto("/classement");
     await expect(page).toHaveURL(/\/connexion$/);
-    await expect(page.getByRole("heading", { name: "Choisis un profil" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Connexion" })).toBeVisible();
   });
 
-  test("l'export CSV refuse les visiteurs non connectés", async ({ request }) => {
-    const response = await request.get("/bilan/export", { maxRedirects: 0 });
-    expect([307, 401]).toContain(response.status());
+  test("un mauvais mot de passe est refusé", async ({ page }) => {
+    await signIn(page, "Théo Garnier", "pas-le-bon");
+    await expect(page.getByRole("alert").filter({ hasText: "Identifiant ou mot de passe incorrect" })).toBeVisible();
+    await expect(page).toHaveURL(/\/connexion$/);
   });
 
-  test("un membre non admin ne peut pas ouvrir la gestion de l'équipe", async ({ page }) => {
-    await loginAs(page, "Théo Garnier");
+  test("un membre non admin ne peut pas ouvrir la gestion des identifiants", async ({ page }) => {
+    await loginAs(page, "theo", "Théo Garnier");
     await page.goto("/admin");
     await expect(page).toHaveURL("/");
   });
 });
 
-test.describe("parcours d'un prospecteur", () => {
-  test("présentation, organigramme, guide et bilan s'affichent", async ({ page }) => {
-    await loginAs(page, "Léa Fontaine");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("sites");
-    await expect(page.getByRole("heading", { name: "Podium du jour" })).toBeVisible();
+test.describe("prospection", () => {
+  test("ajouter un restaurant, être prévenu du doublon, le retrouver dans la recherche", async ({ page }) => {
+    const name = `Chez Test ${unique()}`;
+    await loginAs(page, "lea", "Léa Fontaine");
+    await page.goto("/prospection");
 
-    await navigate(page, "Équipe");
-    await expect(page.getByRole("heading", { level: 1, name: "L'équipe" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: /Camille Renaud/ })).toBeVisible();
+    await page.getByLabel("Nom du restaurant").fill(name);
+    await page.getByLabel("Ville", { exact: true }).fill("Lyon");
+    await page.getByRole("radio", { name: "Téléphone" }).check({ force: true });
+    await page.getByRole("button", { name: "Ajouter le prospect" }).click();
+    await expect(page.getByRole("status").filter({ hasText: `${name} ajouté` })).toBeVisible();
 
-    await navigate(page, "Guide");
-    await expect(page.getByRole("heading", { level: 1, name: "Guide de prospection" })).toBeVisible();
-    await expect(page.getByRole("heading", { level: 2, name: "Le premier message" })).toBeVisible();
+    // Même nom tapé une seconde fois : alerte « déjà contacté » en direct.
+    await page.getByLabel("Nom du restaurant").fill(name.toUpperCase());
+    await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
 
-    await navigate(page, "Bilan");
-    await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
-    await expect(page.getByRole("table", { name: "Bilan mensuel par personne" })).toBeVisible();
+    await page.goto(`/recherche?q=${encodeURIComponent(name)}`);
+    await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(name) })).toBeVisible();
+
+    await page.getByRole("searchbox", { name: "Nom du restaurant" }).fill(`Introuvable ${unique()}`);
+    await expect(page.getByText("Jamais contacté")).toBeVisible();
   });
 
-  test("saisir sa journée met à jour le classement", async ({ page }, testInfo) => {
-    // Un membre différent par projet : les données démo sont partagées par le serveur.
-    const name = testInfo.project.name === "mobile" ? "Amandine Roux" : "Théo Garnier";
-    const count = String(40 + Math.floor(Math.random() * 50));
-    await loginAs(page, name);
-    await page.goto("/classement");
-
-    await page.getByLabel("Prospections effectuées").fill(count);
-    await page.getByRole("button", { name: /Enregistrer ma journée|Mettre à jour/ }).click();
-
-    await expect(page.getByRole("status").filter({ hasText: `${count} prospections enregistrées pour aujourd'hui` })).toBeVisible();
-    const myRow = page.getByRole("list", { name: "Classement complet" }).getByRole("listitem").filter({ hasText: name });
-    await expect(myRow).toContainText(count);
-    await expect(page.getByText("ta journée n'est pas encore saisie")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Mettre à jour" })).toBeVisible();
+  test("les champs obligatoires sont vérifiés", async ({ page }) => {
+    await loginAs(page, "yanis", "Yanis Haddad");
+    await page.goto("/prospection");
+    await page.getByRole("button", { name: "Ajouter le prospect" }).click();
+    await expect(page.getByText("Choisis le moyen de contact")).toBeVisible();
   });
 
-  test("une valeur invalide est refusée avec un message clair", async ({ page }) => {
-    await loginAs(page, "Karim Ouali");
-    await page.goto("/classement");
-    await page.getByLabel("Prospections effectuées").fill("9999");
-    await page.getByRole("button", { name: /Enregistrer ma journée|Mettre à jour/ }).click();
-    await expect(page.getByText("Maximum 500 par jour.")).toBeVisible();
-  });
+  test("classement par période et export du bilan", async ({ page }) => {
+    await loginAs(page, "clara", "Clara Nguyen");
+    await openSection(page, "Classement");
+    await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();
+    await page.getByRole("button", { name: "Mois", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Mois", exact: true })).toHaveAttribute("aria-pressed", "true");
 
-  test("les onglets de période changent le classement", async ({ page }) => {
-    await loginAs(page, "Léa Fontaine");
-    await page.goto("/classement");
-    await page.getByRole("link", { name: "Mois" }).click();
-    await expect(page).toHaveURL(/p=mois/);
-    await expect(page.getByRole("link", { name: "Mois" })).toHaveAttribute("aria-current", "page");
-    await expect(page.getByText("par rapport au même moment le mois dernier").first()).toBeVisible();
-  });
-
-  test("le bilan peut être exporté en CSV", async ({ page }) => {
-    await loginAs(page, "Léa Fontaine");
     await page.goto("/bilan");
-    const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("link", { name: "Exporter en CSV" }).click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toMatch(/^bilan-prospection-\d{4}-\d{2}\.csv$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Bilan CSV" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^bilan-prospection-\d{4}-\d{2}\.csv$/);
   });
 });
 
-test.describe("administration", () => {
-  test("un admin modifie le poste d'un membre", async ({ page }) => {
-    await loginAs(page, "Mehdi Belkacem");
-    await page.goto("/admin");
-    const card = page.locator("details", { has: page.locator("summary", { hasText: "Nathan Perrin" }) });
-    await card.locator("summary").click();
-    await card.getByLabel("Poste").fill("Développeur full-stack");
-    await card.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(card.getByText("Modifications enregistrées.")).toBeVisible();
-
+test.describe("équipe et ressources", () => {
+  test("organigramme, annuaire et présentation de l'agence", async ({ page }) => {
+    await loginAs(page, "karim", "Karim Ouali");
     await page.goto("/equipe");
-    await expect(page.getByText("Développeur full-stack")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Équipe de Camille Renaud" })).toBeVisible();
+    await page.getByRole("button", { name: "Annuaire" }).click();
+    await expect(page.locator("main").getByText("Karim Ouali")).toBeVisible();
+
+    await page.goto("/agence");
+    await page.getByRole("button", { name: "Méthode", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /Repérer/ })).toBeVisible();
+  });
+
+  test("un admin ajoute une ressource, visible et copiable par l'équipe", async ({ page }) => {
+    const title = `Lien test ${unique()}`;
+    await loginAs(page, "camille", "Camille Renaud");
+    await page.goto("/ressources");
+    await page.getByRole("button", { name: "Ajouter" }).click();
+    const sheet = page.getByRole("dialog");
+    await sheet.locator("label").filter({ hasText: /^Lien$/ }).click();
+    await expect(sheet.getByRole("radio", { name: "Lien" })).toBeChecked();
+    await sheet.getByLabel("Titre").fill(title);
+    await sheet.getByRole("textbox", { name: "Lien" }).fill("https://example.com/maquette");
+    await sheet.getByRole("button", { name: "Enregistrer" }).click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  });
+
+  test("un membre non admin ne voit pas les boutons d'édition des ressources", async ({ page }) => {
+    await loginAs(page, "theo", "Théo Garnier");
+    await page.goto("/ressources");
+    await expect(page.getByRole("heading", { level: 1, name: "Mails et liens" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Ajouter" })).toHaveCount(0);
   });
 });
 
-test.describe("régressions corrigées après revue", () => {
-  test("après une saisie sur un autre jour, le jour choisi reste affiché", async ({ page }, testInfo) => {
-    await loginAs(page, testInfo.project.name === "mobile" ? "Clara Nguyen" : "Yanis Haddad");
-    await page.goto("/classement");
-    const day = page.getByLabel("Jour");
-    await day.selectOption({ index: 1 }); // hier
-    const yesterday = await day.inputValue();
-    await page.getByLabel("Prospections effectuées").fill("12");
-    await page.getByRole("button", { name: /Enregistrer ma journée|Mettre à jour/ }).click();
-    await expect(page.getByRole("status").filter({ hasText: "12 prospections enregistrées pour hier" })).toBeVisible();
-    await expect(day).toHaveValue(yesterday);
-    await expect(page.getByLabel("Prospections effectuées")).toHaveValue("12");
-  });
+test("un admin crée un identifiant, la personne s'y connecte pour la première fois", async ({ page }) => {
+  const login = `test${unique()}`;
+  const fullName = `Recrue ${login}`;
+  await loginAs(page, "camille", "Camille Renaud");
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Nouvel identifiant" }).click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByLabel("Identifiant", { exact: true }).fill(login);
+  const password = await sheet.getByLabel("Mot de passe", { exact: true }).inputValue();
+  expect(password.length).toBeGreaterThanOrEqual(6);
+  await sheet.getByLabel("Prénom et nom").fill(fullName);
+  await sheet.getByLabel("Poste").fill("Chargé de prospection");
+  await sheet.getByRole("button", { name: "Créer l'identifiant" }).click();
+  await expect(sheet.getByText("Accès à transmettre")).toBeVisible();
+  await expect(sheet.getByText(`Mot de passe : ${password}`)).toBeVisible();
+  await sheet.getByRole("button", { name: "Terminé" }).click();
 
-  test("le formulaire d'un membre ne réapparaît pas pour le suivant", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === "mobile", "même parcours sur desktop suffit");
-    await loginAs(page, "Léa Fontaine");
-    await page.goto("/classement");
-    await page.getByLabel("Prospections effectuées").fill("88");
+  // Nouvel appareil : ni session, ni dernier identifiant mémorisé.
+  await page.context().clearCookies();
+  await page.evaluate(() => localStorage.clear());
+  await signIn(page, fullName, password);
+  await expect(page).toHaveURL("/bienvenue");
+  await page.getByRole("button", { name: "C'est parti" }).click();
+  await expect(page).toHaveURL("/");
+});
 
-    await page.getByRole("button", { name: /Compte de Léa Fontaine/ }).click();
-    await page.getByRole("button", { name: "Se déconnecter" }).click();
-    await expect(page).toHaveURL(/\/connexion$/);
-
-    await loginAs(page, "Karim Ouali");
-    await page.goto("/classement");
-    await expect(page.getByLabel("Prospections effectuées")).not.toHaveValue("88");
-  });
-
-  test("Échap ferme le menu du compte et rend le focus au bouton", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === "mobile", "menu du compte testé sur desktop");
-    await loginAs(page, "Léa Fontaine");
-    const trigger = page.getByRole("button", { name: /Compte de Léa Fontaine/ });
-    await trigger.click();
-    await expect(page.getByRole("button", { name: "Se déconnecter" })).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("button", { name: "Se déconnecter" })).toBeHidden();
-    await expect(trigger).toBeFocused();
-  });
-
-  test("le menu mobile couvre l'écran et ses liens fonctionnent", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== "mobile", "menu réservé aux petits écrans");
-    await loginAs(page, "Léa Fontaine");
-    await page.getByRole("button", { name: "Ouvrir le menu" }).click();
-    const panel = page.getByRole("navigation", { name: "Navigation principale" });
-    const box = await panel.boundingBox();
-    const viewport = page.viewportSize();
-    expect(box && viewport && box.height).toBeGreaterThan((viewport?.height ?? 0) - 100);
-    await panel.getByRole("link", { name: "Bilan" }).click();
-    await expect(page).toHaveURL(/\/bilan$/);
-    await expect(page.getByRole("button", { name: "Ouvrir le menu" })).toBeVisible();
-  });
-
-  test("une erreur de validation garde les modifications de l'admin", async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === "mobile", "formulaire admin testé sur desktop");
-    await loginAs(page, "Mehdi Belkacem");
-    await page.goto("/admin");
-    const card = page.locator("details", { has: page.locator("summary", { hasText: "Hugo Lefebvre" }) });
-    await card.locator("summary").click();
-    await card.getByLabel("Pôle").fill("Design");
-    await card.getByLabel("Poste").fill("X");
-    await card.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(card.getByText("Poste trop court.")).toBeVisible();
-    await expect(card.getByLabel("Pôle")).toHaveValue("Design");
-    await expect(card.getByLabel("Poste")).toHaveValue("X");
-  });
+test("aucun débordement horizontal sur les écrans principaux", async ({ page }) => {
+  await loginAs(page, "mehdi", "Mehdi Belkacem");
+  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/equipe", "/ressources", "/agence", "/admin"]) {
+    await page.goto(path);
+    await expect(page.locator("main")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `débordement sur ${path}`).toBeLessThanOrEqual(0);
+  }
 });

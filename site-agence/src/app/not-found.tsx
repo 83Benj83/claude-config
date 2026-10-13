@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { BrandMark } from "@/components/brand-mark";
-import { buttonClasses } from "@/components/ui/button";
+import { BrandMark } from "@/ui/primitives/brand-mark";
+import { buttonClasses } from "@/ui/primitives/button";
 
 export default function NotFound() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-center">
-      <BrandMark />
+      <BrandMark href={null} />
       <p className="text-7xl font-semibold tracking-tighter text-fg">404</p>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-fg">Cette page n&apos;existe pas.</h1>
