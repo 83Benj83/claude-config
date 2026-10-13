@@ -7,9 +7,9 @@
  *   npm run members:import -- identifiants.csv --verifier  (vérifie le fichier sans rien écrire)
  *
  * Format (séparateur `;`, première ligne = en-têtes) :
- *   identifiant;nom;poste;mot de passe;admin;responsable
- *   paul;Paul Martin;Fondateur;un-mot-de-passe-solide;oui;
- *   sarah;Sarah Benali;Prospectrice;un-autre-mot-de-passe;non;paul
+ *   identifiant;nom;poste;mot de passe;admin;responsable;pôle;prospecteur
+ *   paul;Paul Martin;Fondateur;un-mot-de-passe-solide;oui;;Direction;non
+ *   sarah;Sarah Benali;Prospectrice;un-autre-mot-de-passe;non;paul;Prospection;oui
  *
  * Un identifiant déjà présent est mis à jour (nom, poste, rôle, mot de passe)
  * et ses sessions ouvertes sont fermées. Les variables SUPABASE_URL,
@@ -41,11 +41,11 @@ async function main() {
       login: row.login,
       fullName: row.fullName,
       jobTitle: row.jobTitle || "Membre de l'équipe",
-      department: "",
+      department: row.department,
       managerId: "",
       avatarUrl: "",
       password: row.password,
-      isProspector: true,
+      isProspector: row.isProspector,
       isAdmin: row.isAdmin,
       active: true,
     });
@@ -92,6 +92,8 @@ async function main() {
       await repository.updateMember(existing.member.id, {
         fullName: fields.fullName,
         jobTitle: fields.jobTitle,
+        department: fields.department,
+        isProspector: fields.isProspector,
         isAdmin: fields.isAdmin,
         active: true,
         passwordHash,

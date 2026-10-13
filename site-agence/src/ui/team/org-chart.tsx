@@ -9,30 +9,56 @@ import type { Member } from "@/lib/types";
 type Context = { meId: string; monthTotals: Record<string, number> };
 
 /**
- * Organigramme : la tête de chaque arbre en haut, puis une colonne par
- * responsable avec son équipe en dessous. Les niveaux plus profonds
- * s'indentent dans la colonne, ce qui reste lisible quand l'équipe grandit.
+ * Organigramme : la direction en haut (plusieurs personnes côte à côte en cas
+ * de co-direction), puis une colonne par responsable avec son équipe en
+ * dessous. Les niveaux plus profonds s'indentent dans la colonne, ce qui
+ * reste lisible quand l'équipe grandit.
  */
 export function OrgChart({ roots, meId, monthTotals }: { roots: OrgNode[]; meId: string; monthTotals: Record<string, number> }) {
+  if (roots.length === 0) return null;
   const context = { meId, monthTotals };
+  // Direction : ceux qui ont une équipe, plus leurs collègues du même pôle (co-direction).
+  const leaderDepartments = new Set(roots.filter((root) => root.reports.length > 0).map((root) => root.member.department).filter(Boolean));
+  const leading = roots.filter((root) => root.reports.length > 0 || (root.member.department && leaderDepartments.has(root.member.department)));
+  const heads = leading.length > 0 ? leading : roots;
+  const unassigned = roots.filter((root) => !heads.includes(root));
+
   return (
-    <div className="flex flex-col gap-16">
-      {roots.map((root) => (
-        <OrgTree key={root.member.id} node={root} context={context} />
-      ))}
+    <div className="flex flex-col gap-14">
+      <OrgTree heads={heads} context={context} />
+      {unassigned.length > 0 && (
+        <section aria-labelledby="sans-responsable">
+          <h3 id="sans-responsable" className="mb-3 text-xs font-medium tracking-wide text-subtle uppercase">
+            Sans responsable
+          </h3>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {unassigned.map((root) => (
+              <li key={root.member.id}>
+                <MemberCard member={root.member} context={context} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
-function OrgTree({ node, context }: { node: OrgNode; context: Context }) {
-  const columns = node.reports;
+function OrgTree({ heads, context }: { heads: OrgNode[]; context: Context }) {
+  // Équipe commune à toute la direction : les personnes rattachées à l'un ou l'autre des responsables du haut.
+  const columns = heads.flatMap((head) => head.reports);
   const columnCount = Math.min(columns.length, 4);
   const inset = columnCount > 1 ? `calc(100% / ${columnCount * 2})` : "50%";
+  const names = heads.map((head) => head.member.fullName);
+  const label = names.length > 1 ? `${names.slice(0, -1).join(", ")} et ${names.at(-1)}` : names[0];
 
   return (
-    <section aria-label={`Équipe de ${node.member.fullName}`} className="flex flex-col items-center">
-      <div className="w-full max-w-xs">
-        <MemberCard member={node.member} context={context} emphasis />
+    <section aria-label={`Équipe de ${label}`} className="flex flex-col items-center">
+      {heads.length > 1 && <p className="mb-3 text-xs font-medium tracking-wide text-subtle uppercase">Co-direction</p>}
+      <div className={`grid w-full gap-3 ${heads.length > 1 ? "max-w-2xl sm:grid-cols-2" : "max-w-xs"}`}>
+        {heads.map((head) => (
+          <MemberCard key={head.member.id} member={head.member} context={context} emphasis />
+        ))}
       </div>
 
       {columns.length > 0 && (

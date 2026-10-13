@@ -45,8 +45,8 @@ describe("auth schemas", () => {
   });
 
   test("welcome confirms the name and job title", () => {
-    expect(welcomeSchema.safeParse({ fullName: "Léa Fontaine", jobTitle: "Prospectrice" }).success).toBe(true);
-    expect(welcomeSchema.safeParse({ fullName: "L", jobTitle: "Prospectrice" }).success).toBe(false);
+    expect(welcomeSchema.safeParse({ fullName: "Léa Fontaine" }).success).toBe(true);
+    expect(welcomeSchema.safeParse({ fullName: "L" }).success).toBe(false);
   });
 });
 

@@ -47,7 +47,7 @@ export type CsvExport = { filename: string; content: string };
 export type AppActions = {
   signIn(input: { login: string; password: string }): Promise<ActionResult<{ next: string }>>;
   signOut(): Promise<void>;
-  completeWelcome(input: { fullName: string; jobTitle: string }): Promise<ActionResult>;
+  completeWelcome(input: { fullName: string }): Promise<ActionResult>;
 
   addProspect(input: ProspectFormValues): Promise<ActionResult<{ prospect: Prospect; todayCount: number }>>;
   deleteProspect(id: string): Promise<ActionResult>;

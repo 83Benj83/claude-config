@@ -50,9 +50,9 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Entre ton mot de passe.").max(200),
 });
 
+/** Première connexion : la personne confirme son nom ; le poste est fixé par les admins. */
 export const welcomeSchema = z.object({
   fullName: line(2, 80, "Indique ton prénom et ton nom."),
-  jobTitle: line(2, 80, "Indique ton poste."),
 });
 
 export const memberSchema = z.object({

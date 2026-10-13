@@ -1,7 +1,8 @@
 /**
  * Lecture du fichier des identifiants (séparateur `;`, première ligne = en-têtes) :
- *   identifiant;nom;poste;mot de passe;admin;responsable
- * `admin` vaut oui/non ; `responsable` est l'identifiant du responsable (facultatif).
+ *   identifiant;nom;poste;mot de passe;admin;responsable;pôle;prospecteur
+ * `admin` et `prospecteur` valent oui/non (prospecteur : oui si vide) ;
+ * `responsable` est l'identifiant du responsable ; `pôle` est libre (facultatifs).
  */
 export type MemberCsvRow = {
   line: number;
@@ -11,6 +12,8 @@ export type MemberCsvRow = {
   password: string;
   isAdmin: boolean;
   managerLogin: string;
+  department: string;
+  isProspector: boolean;
 };
 
 const YES = new Set(["oui", "o", "yes", "y", "1", "x", "admin"]);
@@ -18,7 +21,18 @@ const YES = new Set(["oui", "o", "yes", "y", "1", "x", "admin"]);
 export function parseMembersCsv(text: string): MemberCsvRow[] {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   return lines.slice(1).map((line, index) => {
-    const [login = "", fullName = "", jobTitle = "", password = "", admin = "", managerLogin = ""] = line.split(";").map((cell) => cell.trim());
-    return { line: index + 2, login, fullName, jobTitle, password, isAdmin: YES.has(admin.toLowerCase()), managerLogin };
+    const cells = line.split(";").map((cell) => cell.trim());
+    const [login = "", fullName = "", jobTitle = "", password = "", admin = "", managerLogin = "", department = "", prospector = ""] = cells;
+    return {
+      line: index + 2,
+      login,
+      fullName,
+      jobTitle,
+      password,
+      isAdmin: YES.has(admin.toLowerCase()),
+      managerLogin,
+      department,
+      isProspector: prospector === "" || YES.has(prospector.toLowerCase()),
+    };
   });
 }

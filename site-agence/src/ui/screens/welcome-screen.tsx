@@ -16,11 +16,10 @@ const STEPS = [
   { icon: TrophyIcon, title: "Classement", text: "Tes ajouts comptent dans le classement du jour, de la semaine et du mois." },
 ];
 
-/** Première connexion : on confirme le nom affiché et le poste, puis on présente l'outil. */
+/** Première connexion : on confirme le nom affiché (le poste est fixé par la direction), puis on présente l'outil. */
 export function WelcomeScreen({ member }: { member: MemberSummary }) {
   const { actions, reload } = usePlatform();
   const [fullName, setFullName] = useState(member.fullName);
-  const [jobTitle, setJobTitle] = useState(member.jobTitle);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -28,7 +27,7 @@ export function WelcomeScreen({ member }: { member: MemberSummary }) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     start(async () => {
-      const result = await actions.completeWelcome({ fullName, jobTitle });
+      const result = await actions.completeWelcome({ fullName });
       if (!result.ok) {
         setErrors(result.errors ?? {});
         setMessage(result.message ?? null);
@@ -64,9 +63,13 @@ export function WelcomeScreen({ member }: { member: MemberSummary }) {
           <p className="mt-0.5 text-sm text-subtle">Ton nom s&apos;affiche dans le classement et l&apos;organigramme de {site.name}.</p>
         </div>
         <FormMessage>{message}</FormMessage>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
           <Field label="Prénom et nom" value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" error={errors.fullName} />
-          <Field label="Poste" value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} error={errors.jobTitle} />
+          {/* Le poste est fixé par la direction : affiché pour information. */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-sm font-medium text-fg">Poste</p>
+            <p className="flex h-11 items-center rounded-xl bg-surface-2 px-3.5 text-[0.9375rem] text-muted">{member.jobTitle}</p>
+          </div>
         </div>
         <button type="submit" disabled={pending} className={buttonClasses({ size: "lg", className: "sm:w-fit" })}>
           {pending ? "Un instant…" : "C'est parti"}

@@ -32,7 +32,7 @@ export async function authenticate(
 export async function completeWelcome(
   repository: Repository,
   actor: Member,
-  input: { fullName: string; jobTitle: string },
+  input: { fullName: string },
   now: string,
 ): Promise<ActionResult> {
   // Une seule fois : ensuite, le nom et le poste sont gérés par les admins.

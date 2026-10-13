@@ -102,7 +102,7 @@ const clock = () => ({ today: todayIso(), now: new Date().toISOString() });
 /* Actions de l'application                                            */
 /* ------------------------------------------------------------------ */
 
-export async function completeWelcome(input: { fullName: string; jobTitle: string }): Promise<ActionResult> {
+export async function completeWelcome(input: { fullName: string }): Promise<ActionResult> {
   return withMember(async (actor) => members.completeWelcome(await getRepository(), actor, input, clock().now), {
     allowFirstLogin: true,
   });

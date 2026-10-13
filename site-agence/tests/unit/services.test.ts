@@ -184,14 +184,14 @@ describe("première connexion", () => {
   test("enregistre le nom choisi et la date de bienvenue", async () => {
     const repo = await repositoryWith();
     const newcomer: Member = { ...theo, welcomedAt: null };
-    expect((await members.completeWelcome(repo, newcomer, { fullName: "Théo G.", jobTitle: "Prospecteur" }, clock.now)).ok).toBe(true);
+    expect((await members.completeWelcome(repo, newcomer, { fullName: "Théo G." }, clock.now)).ok).toBe(true);
     const saved = (await repo.getCredentialsById("theo"))!.member;
     expect(saved).toMatchObject({ fullName: "Théo G.", welcomedAt: clock.now });
   });
 
   test("ne sert qu'une fois : ensuite, le nom est géré par les admins", async () => {
     const repo = await repositoryWith();
-    const result = await members.completeWelcome(repo, theo, { fullName: "Lea Fontaine", jobTitle: "Prospecteur" }, clock.now);
+    const result = await members.completeWelcome(repo, theo, { fullName: "Lea Fontaine" }, clock.now);
     expect(result.ok).toBe(false);
     expect((await repo.getCredentialsById("theo"))!.member.fullName).toBe("Théo Garnier");
   });

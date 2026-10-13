@@ -48,10 +48,10 @@ async function agencyMembers(rows: MemberCsvRow[]): Promise<SeedDoc[]> {
         login: row.login,
         fullName: row.fullName,
         jobTitle: row.jobTitle || "Membre de l'équipe",
-        department: null,
+        department: row.department || null,
         managerId: row.managerLogin ? (ids.get(loginKey(row.managerLogin)) ?? null) : null,
         avatarUrl: null,
-        isProspector: true,
+        isProspector: row.isProspector,
         isAdmin: row.isAdmin,
         active: true,
         sortOrder: index,
@@ -67,11 +67,13 @@ async function agencyMembers(rows: MemberCsvRow[]): Promise<SeedDoc[]> {
   return docs.flat();
 }
 
-/** Historique d'exemple : les rythmes de l'équipe fictive, attribués aux membres donnés (admins d'abord). */
+/** Historique d'exemple : les rythmes les plus soutenus de l'équipe fictive, attribués aux prospecteurs donnés. */
 function exampleProspects(today: IsoDate, memberIds: string[] | null): Prospect[] {
   const generated = generateDemoProspects(today);
   if (!memberIds) return generated;
-  const profiles = [...new Set(generated.map((prospect) => prospect.memberId))];
+  const volume = new Map<string, number>();
+  for (const prospect of generated) volume.set(prospect.memberId, (volume.get(prospect.memberId) ?? 0) + 1);
+  const profiles = [...volume.keys()].sort((a, b) => volume.get(b)! - volume.get(a)!);
   const owner = new Map(profiles.slice(0, memberIds.length).map((profile, index) => [profile, memberIds[index]]));
   return generated.flatMap((prospect) => {
     const memberId = owner.get(prospect.memberId);
@@ -85,7 +87,7 @@ export async function buildSeed(
 ): Promise<SeedDoc[]> {
   const people = members ? await agencyMembers(members) : await fictionalMembers(iterations);
   const profiles = people.filter((doc) => doc.collection === "members");
-  const ordered = members ? [...profiles].sort((a, b) => Number(b.data.isAdmin) - Number(a.data.isAdmin)).map((doc) => doc.id) : null;
+  const ordered = members ? profiles.filter((doc) => doc.data.isProspector === true).map((doc) => doc.id) : null;
 
   const months = new Map<string, { memberId: string; month: string; items: Omit<Prospect, "memberId">[] }>();
   for (const { memberId, ...item } of exampleProspects(today, ordered)) {
