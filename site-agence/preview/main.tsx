@@ -57,8 +57,8 @@ async function boot() {
   if (!db) {
     root.render(
       <Notice title="Connecte-toi à claude.ai pour ouvrir l'espace.">
-        L&apos;espace équipe s&apos;ouvre avec ton compte claude.ai (gratuit) : connecte-toi avec l&apos;adresse à laquelle Paul a
-        partagé la page, puis rouvre ce lien.
+        Clique sur « Connexion » en haut à droite de la page (crée un compte claude.ai gratuit si tu n&apos;en as pas, avec l&apos;adresse
+        que tu as donnée à Paul), puis rouvre ce lien : tu pourras alors te connecter avec ton identifiant et ton mot de passe Astrinova.
       </Notice>,
     );
     return;
