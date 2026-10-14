@@ -4,7 +4,8 @@
  * ne connaissent que ce contrat.
  */
 import type { DuplicateCheck, Establishment } from "./establishments";
-import type { Prospect } from "./types";
+import type { Attachment, Prospect } from "./types";
+import type { MessagesView } from "./views";
 
 export type ActionResult<T = null> =
   | { ok: true; data: T; message?: string }
@@ -80,7 +81,19 @@ export type AppActions = {
   deleteContract(id: string): Promise<ActionResult>;
 
   exportCsv(input: { month: string; kind: "bilan" | "prospects" }): Promise<ActionResult<CsvExport>>;
+
+  /** Échange : `null` si la session a expiré. */
+  listMessages(): Promise<MessagesView | null>;
+  /** Un fichier par appel (champ `file`), envoyé dès qu'il est choisi. */
+  uploadAttachment(form: FormData): Promise<ActionResult<Attachment>>;
+  discardAttachment(id: string): Promise<ActionResult>;
+  sendMessage(input: { text: string; attachmentIds: string[] }): Promise<ActionResult>;
+  deleteMessage(id: string): Promise<ActionResult>;
+  chatStatus(): Promise<ChatStatus>;
 };
+
+/** Dernier message de l'échange, pour signaler les nouveaux messages. */
+export type ChatStatus = { latestAt: string | null; latestAuthorId: string | null };
 
 export const GENERIC_ERROR = "L'opération a échoué. Réessaie dans un instant.";
 export const SESSION_EXPIRED = "Ta session a expiré : reconnecte-toi.";

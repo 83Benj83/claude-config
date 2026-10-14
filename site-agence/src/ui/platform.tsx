@@ -25,6 +25,8 @@ export type Platform = {
   reload(href: string): void;
   actions: AppActions;
   download(file: CsvExport): Promise<void>;
+  /** Adresse d'affichage ou de téléchargement d'un fichier de l'échange. */
+  fileUrl(id: string): string;
 };
 
 const PlatformContext = createContext<Platform | null>(null);

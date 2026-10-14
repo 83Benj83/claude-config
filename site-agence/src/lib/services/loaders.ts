@@ -1,5 +1,6 @@
 import type { Repository } from "../data/repository";
 import { isMonthKey, monthKeyOf } from "../dates";
+import { MESSAGES_SHOWN } from "../rules";
 import type { IsoDate, LoginChoice, Member } from "../types";
 import {
   buildAdminView,
@@ -10,6 +11,7 @@ import {
   buildRankingView,
   buildReportView,
   buildResourcesView,
+  buildMessagesView,
   buildTeamView,
   countedSince,
   DATA_WINDOWS,
@@ -97,4 +99,9 @@ export async function loadAdminView(repository: Repository, me: Member, today: I
     repository.listProspects(DATA_WINDOWS.month(monthKeyOf(today))),
   ]);
   return buildAdminView({ members, me, stats: { since, establishments, countedThisMonth: countedSince(month, since).length } });
+}
+
+export async function loadMessagesView(repository: Repository, me: Member, now: string) {
+  const [messages, members] = await Promise.all([repository.listMessages(MESSAGES_SHOWN), repository.listMembers()]);
+  return buildMessagesView({ messages, members, me, now });
 }

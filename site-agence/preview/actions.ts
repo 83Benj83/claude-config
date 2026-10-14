@@ -11,19 +11,25 @@ import {
 import type { Repository } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
 import * as contracts from "@/lib/services/contracts";
+import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
+import * as messages from "@/lib/services/messages";
 import * as prospects from "@/lib/services/prospects";
 import type { Member } from "@/lib/types";
 import type { PreviewSession } from "./session";
 
 const READ_ONLY = "Ton accès à cet aperçu est en lecture seule : demande à son propriétaire de t'ajouter comme contributeur.";
 const STORAGE_FULL = "Le stockage de l'aperçu est plein : supprime quelques éléments puis réessaie.";
+const FILES_UNAVAILABLE = "L'envoi de fichiers n'est pas disponible avec ton accès à l'aperçu : tu peux envoyer du texte.";
+const FILE_TYPE_REFUSED = "Dans l'aperçu, seuls les photos, les PDF et les fichiers texte peuvent être envoyés (Word, Excel et PowerPoint le seront sur le site).";
 
 /** Message lisible pour une écriture refusée par la base partagée. */
 function failure(error: unknown): ActionResult<never> {
   const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : "";
   if (code === "invalid_argument" || code === "not_granted") return { ok: false, message: READ_ONLY };
-  if (code === "quota_exceeded") return { ok: false, message: STORAGE_FULL };
+  if (code === "quota_exceeded" || code === "quota_or_state") return { ok: false, message: STORAGE_FULL };
+  if (code === "files_unavailable" || code === "capability_disabled" || code === "capability_removed") return { ok: false, message: FILES_UNAVAILABLE };
+  if (code === "unsupported_type") return { ok: false, message: FILE_TYPE_REFUSED };
   console.error("[aperçu]", error);
   return { ok: false, message: GENERIC_ERROR };
 }
@@ -83,6 +89,22 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     saveContract: (input) => withMember((actor) => contracts.saveContract(repository, actor, input, clock())),
     deleteContract: (id) => withMember((actor) => contracts.deleteContract(repository, actor, String(id))),
     resetStatistics: (input) => withMember((actor) => members.resetStatistics(repository, actor, String(input?.confirmation ?? ""), clock().now)),
+
+    async listMessages() {
+      const actor = await currentMemberOf(repository, session);
+      if (!actor?.welcomedAt) return null;
+      return loadMessagesView(repository, actor, clock().now);
+    },
+    uploadAttachment: (form) =>
+      withMember((actor) => messages.uploadAttachment(repository, actor, form instanceof FormData ? form.get("file") : null, clock().now)),
+    discardAttachment: (id) => withMember((actor) => messages.discardAttachment(repository, actor, String(id))),
+    sendMessage: (input) => withMember((actor) => messages.sendMessage(repository, actor, { text: input?.text, attachmentIds: input?.attachmentIds }, clock().now)),
+    deleteMessage: (id) => withMember((actor) => messages.deleteMessage(repository, actor, String(id))),
+    async chatStatus() {
+      const actor = await currentMemberOf(repository, session);
+      if (!actor?.welcomedAt) return { latestAt: null, latestAuthorId: null };
+      return messages.chatStatus(repository);
+    },
 
     exportCsv: (input) =>
       withMember((actor) =>

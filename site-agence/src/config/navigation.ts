@@ -12,6 +12,7 @@ export type NavIcon =
   | "resources"
   | "team"
   | "agency"
+  | "chat"
   | "admin";
 
 export type NavItem = {
@@ -56,6 +57,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Équipe",
     items: [
+      { href: "/echange", label: "Échange", icon: "chat", tone: "coral", hint: "Messages, photos et fichiers" },
       { href: "/equipe", label: "Organigramme", icon: "team", tone: "coral", hint: "Qui fait quoi" },
       { href: "/agence", label: "L'agence", icon: "agency", tone: "coral", hint: "Astrinova en bref" },
     ],

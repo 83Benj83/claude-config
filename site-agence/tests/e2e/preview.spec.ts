@@ -41,6 +41,11 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await openSection(page, "Contrats");
   await expect(page.getByRole("heading", { level: 1, name: "Contrats" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Nouveau contrat" })).toHaveCount(0);
+  // Échange : un message part et s'affiche dans la discussion.
+  await openSection(page, "Échange");
+  await page.getByRole("textbox", { name: "Message" }).fill("Bonjour depuis l'aperçu");
+  await page.getByRole("button", { name: "Envoyer" }).click();
+  await expect(page.getByRole("log", { name: "Messages" }).getByText("Bonjour depuis l'aperçu")).toBeVisible();
   await openSection(page, "Guide du prospecteur");
   await expect(page.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
   await signOut(page);

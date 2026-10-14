@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  experimental: {
+    // Échange : un fichier de 4 Mo au plus par envoi (marge pour l'enveloppe multipart).
+    serverActions: { bodySizeLimit: "5mb" },
+    proxyClientMaxBodySize: "5mb",
+  },
   turbopack: {
     rules: {
       "*.css": {

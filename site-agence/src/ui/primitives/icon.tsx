@@ -6,6 +6,7 @@ import {
   BrowserIcon,
   BuildingsIcon,
   ChartBarIcon,
+  ChatsCircleIcon,
   DotsThreeCircleIcon,
   EnvelopeSimpleIcon,
   EyeIcon,
@@ -57,6 +58,7 @@ const ICONS: Record<IconName | NavIcon | `channel-${Channel}`, PhosphorIcon> = {
   resources: BookmarkSimpleIcon,
   team: UsersThreeIcon,
   agency: BuildingsIcon,
+  chat: ChatsCircleIcon,
   admin: ShieldStarIcon,
   // moyens de contact
   "channel-telephone": PhoneIcon,

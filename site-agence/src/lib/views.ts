@@ -9,7 +9,7 @@ import { addDays, eachDay, endOfMonth, formatRelativeDay, monthKeyOf, periodWind
 import { groupEstablishments, knownCities, type Establishment } from "./establishments";
 import { EDITABLE_PAST_DAYS } from "./rules";
 import { buildMonthReport, buildRanking, currentStreak, sumEntries, type MonthReport, type RankingRow } from "./stats";
-import type { Channel, Contract, Entry, IsoDate, Member, MonthKey, Period, Prospect, Resource } from "./types";
+import type { Channel, Contract, Entry, IsoDate, Member, Message, MonthKey, Period, Prospect, Resource } from "./types";
 
 /** Nombre de prospections par membre et par jour, à partir des prospects. */
 export function entriesFromProspects(prospects: readonly Prospect[]): Entry[] {
@@ -353,4 +353,42 @@ export function buildContractsView(input: { contracts: Contract[]; members: Memb
       monthly: done.reduce((sum, contract) => sum + (contract.monthly ?? 0), 0),
     },
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Échange                                                             */
+/* ------------------------------------------------------------------ */
+
+export type MessageRow = Message & {
+  authorName: string;
+  authorAvatarUrl: string | null;
+  mine: boolean;
+  /** L'auteur et les admins peuvent supprimer un message. */
+  canDelete: boolean;
+};
+
+export type MessagesView = {
+  meId: string;
+  /** Instant du chargement : la vue la plus récente l'emporte à l'écran. */
+  loadedAt: string;
+  /** Du plus ancien au plus récent, comme dans une discussion. */
+  messages: MessageRow[];
+};
+
+export function buildMessagesView(input: { messages: Message[]; members: Member[]; me: Member; now: string }): MessagesView {
+  const byId = new Map(input.members.map((member) => [member.id, member]));
+  const messages = [...input.messages]
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((message) => {
+      const author = byId.get(message.authorId);
+      const mine = message.authorId === input.me.id;
+      return {
+        ...message,
+        authorName: author?.fullName ?? "Ancien membre",
+        authorAvatarUrl: author?.avatarUrl ?? null,
+        mine,
+        canDelete: mine || input.me.isAdmin,
+      };
+    });
+  return { meId: input.me.id, loadedAt: input.now, messages };
 }

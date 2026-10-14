@@ -7,9 +7,11 @@ import { site } from "@/config/site";
 import { formatDayLong } from "@/lib/dates";
 import { firstName } from "@/lib/format";
 import type { HomeView } from "@/lib/views";
+import { useChatUnread } from "../chat/unread";
 import { usePlatform } from "../platform";
 import { NovaLogo } from "../primitives/brand-mark";
 import { Icon } from "../primitives/icon";
+import { NewBadge } from "../shell/app-shell";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -64,18 +66,23 @@ export function HomeScreen({ view }: { view: HomeView }) {
 function SectionTile({ item }: { item: NavItem }) {
   const { Link } = usePlatform();
   const hintId = useId();
+  const badgeId = useId();
+  const unread = useChatUnread() && item.href === "/echange";
   return (
     <Link
       href={item.href}
       aria-label={item.label}
-      aria-describedby={hintId}
+      aria-describedby={unread ? `${hintId} ${badgeId}` : hintId}
       className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--tone)] min-[340px]:flex-col min-[340px]:items-start min-[340px]:gap-3 sm:flex-row sm:items-center sm:gap-4"
     >
       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--tone-soft)] text-[var(--tone-ink)]">
         <Icon name={item.icon} size={23} weight="fill" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block font-display text-[0.9375rem] font-bold tracking-tight text-fg">{item.label}</span>
+        <span className="flex items-center gap-2">
+          <span className="font-display text-[0.9375rem] font-bold tracking-tight text-fg">{item.label}</span>
+          {unread && <NewBadge id={badgeId} />}
+        </span>
         <span id={hintId} className="block text-xs text-subtle">
           {item.hint}
         </span>

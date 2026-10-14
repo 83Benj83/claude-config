@@ -12,6 +12,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | **Contrats** (`/contrats`) | Contrats en cours (maquette, développement, validation) et effectués (en ligne), avec les totaux |
 | **Guide du prospecteur** (`/guide`) | Le guide complet en 15 sections : packs, abonnement, devis, messages, FAQ, objections, règles |
 | **Mails et liens** (`/ressources`) | E-mail et téléphones de l'équipe, liens utiles et modèles de message du guide, copiables en un clic |
+| **Échange** (`/echange`) | La discussion de l'équipe : messages, photos et fichiers, visibles par tous en direct ; une pastille signale les nouveaux messages |
 | **Organigramme** (`/equipe`) | Organigramme et annuaire : qui fait quoi |
 | **L'agence** (`/agence`) | Présentation : packs, parcours client, engagements |
 | **Panel admin** (`/admin`) | Admins : identifiants et mots de passe, statistiques et remise à zéro des compteurs |
@@ -22,6 +23,8 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | --- | --- | --- |
 | Ajouter des prospects, chercher, voir le classement et le bilan | oui | oui |
 | Gérer les mails, liens et modèles | oui | oui |
+| Écrire dans l'échange, envoyer photos et fichiers | oui | oui |
+| Supprimer un message de l'échange | les siens | tous |
 | Consulter les contrats | oui | oui |
 | Ajouter, modifier ou supprimer un contrat | non | oui |
 | Panel admin : identifiants, mots de passe, remise à zéro des statistiques | non | oui |
@@ -53,7 +56,7 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 ### 1. Créer la base Supabase (gratuit)
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécute le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), puis celui de [`0002_contracts_settings.sql`](supabase/migrations/0002_contracts_settings.sql). Base déjà en service : exécute seulement le second (contrats, remise à zéro, téléphones).
+2. Dans **SQL Editor**, exécute le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), puis [`0002_contracts_settings.sql`](supabase/migrations/0002_contracts_settings.sql) et [`0003_echange.sql`](supabase/migrations/0003_echange.sql). Base déjà en service : exécute seulement les fichiers qui manquent, dans l'ordre (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers).
 3. Récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 
 Supabase sert uniquement de base Postgres, interrogée par le serveur avec la clé secrète. Les tables ont la Row Level Security activée **sans aucune règle d'accès public** : depuis Internet, sans la clé secrète, la base ne renvoie rien.
@@ -104,6 +107,7 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 - « Déjà contacté ? » ignore les majuscules, les accents, la ponctuation, les articles (le, la, chez…) et le mot « restaurant » : « Le Café des Arts » et « cafe des arts » sont le même établissement. Un même nom dans une autre ville est signalé à part.
 - Chacun peut supprimer ses propres prospects des 7 derniers jours ; un admin peut tout supprimer.
 - **Remise à zéro des statistiques** (Panel admin > Statistiques, confirmer en tapant « zéro ») : l'accueil, le classement, le bilan et l'organigramme ne comptent plus que les prospects ajoutés depuis. Rien n'est effacé : « Déjà contacté ? » garde tout l'historique, pour ne jamais rappeler un commerce déjà contacté.
+- **Échange** : texte jusqu'à 2 000 caractères et 4 fichiers par message, 4 Mo par fichier (les photos sont réduites avant l'envoi). Fichiers acceptés : photos (JPEG, PNG, WebP, GIF), PDF, Word, Excel, PowerPoint, texte et CSV ; le type est vérifié sur le contenu du fichier. Les fichiers sont dans un espace de stockage privé et ne sont servis qu'aux membres connectés.
 - Un contrat passe de **maquette** à **développement**, **validation**, puis **en ligne** (effectué) ; la date de mise en ligne est celle du jour si elle n'est pas précisée.
 - La variation du classement compare à la même durée de la période précédente.
 

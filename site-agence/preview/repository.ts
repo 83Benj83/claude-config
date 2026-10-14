@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
-import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Contract, DateRange, Member, Prospect, Resource } from "@/lib/types";
+import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
+import type { Contract, DateRange, Member, Message, Prospect, Resource, StoredFile } from "@/lib/types";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
 const toMember = ({ passwordHash, sessionVersion, ...member }: StoredMember): Member => ({ ...member });
@@ -12,9 +12,30 @@ const toCredentials = (stored: StoredMember): Credentials => ({
 });
 const inRange = (date: string, range?: DateRange) => !range || (date >= range.from && date <= range.to);
 
+/**
+ * Fichiers de l'aperçu : ceux de l'Artifact (capacité `assets`), ou un
+ * stockage en mémoire pour les tests locaux. `null` : envoi indisponible.
+ */
+export type PreviewFiles = {
+  upload(blob: Blob, type: string): Promise<string>;
+  remove(id: string): Promise<void>;
+  url(id: string): string;
+};
+
+/** Erreur lisible quand l'aperçu ne peut pas stocker de fichiers pour cette personne. */
+export class FilesUnavailableError extends Error {
+  readonly code = "files_unavailable";
+}
+
 /** Le contrat de données du site, servi par la base partagée de l'aperçu. */
 export class PreviewRepository implements Repository {
-  constructor(private readonly store: PreviewStore) {}
+  /** Fichiers envoyés dans cette page et pas encore publiés avec un message. */
+  private pending = new Map<string, StoredFile>();
+
+  constructor(
+    private readonly store: PreviewStore,
+    private readonly files: PreviewFiles | null = null,
+  ) {}
 
   async listMembers(): Promise<Member[]> {
     return [...this.store.members.values()].map(toMember);
@@ -121,5 +142,64 @@ export class PreviewRepository implements Repository {
 
   async setStatsSince(at: string): Promise<void> {
     await this.store.putStatsSince(at);
+  }
+
+  async listMessages(limit: number): Promise<Message[]> {
+    return [...this.store.messages.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  }
+
+  async getMessage(id: string): Promise<Message | null> {
+    return this.store.messages.get(id) ?? null;
+  }
+
+  async addMessage(message: Message): Promise<void> {
+    await this.store.putMessage(message);
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    await this.store.removeMessage(id);
+  }
+
+  async storeFile({ blob, ...meta }: NewFile): Promise<StoredFile> {
+    if (!this.files) throw new FilesUnavailableError("Envoi de fichiers indisponible");
+    const id = await this.files.upload(blob, meta.type);
+    const file: StoredFile = { ...meta, id, messageId: null };
+    this.pending.set(id, file);
+    return file;
+  }
+
+  /** Un fichier publié est connu par son message ; un fichier en attente, par cette page. */
+  async getFile(id: string): Promise<StoredFile | null> {
+    const pending = this.pending.get(id);
+    if (pending) return pending;
+    for (const message of this.store.messages.values()) {
+      const attachment = message.attachments.find((item) => item.id === id);
+      if (attachment) return { ...attachment, uploaderId: message.authorId, messageId: message.id, createdAt: message.createdAt };
+    }
+    return null;
+  }
+
+  async readFile(): Promise<Uint8Array | null> {
+    // Les fichiers de l'aperçu sont servis directement par l'Artifact.
+    return null;
+  }
+
+  async listPendingFiles(uploaderId: string): Promise<StoredFile[]> {
+    return [...this.pending.values()].filter((file) => file.uploaderId === uploaderId);
+  }
+
+  async linkFiles(ids: string[], _messageId: string, uploaderId: string): Promise<number> {
+    let linked = 0;
+    for (const id of ids) {
+      if (this.pending.get(id)?.uploaderId !== uploaderId) continue;
+      this.pending.delete(id);
+      linked += 1;
+    }
+    return linked;
+  }
+
+  async deleteFile(id: string): Promise<void> {
+    this.pending.delete(id);
+    await this.files?.remove(id);
   }
 }

@@ -13,6 +13,7 @@ import { AdminScreen } from "@/ui/screens/admin-screen";
 import { AgencyScreen } from "@/ui/screens/agency-screen";
 import { ContractsScreen } from "@/ui/screens/contracts-screen";
 import { GuideScreen } from "@/ui/screens/guide-screen";
+import { ChatScreen } from "@/ui/screens/chat-screen";
 import { HomeScreen } from "@/ui/screens/home-screen";
 import { LoginScreen } from "@/ui/screens/login-screen";
 import { ProspectionScreen } from "@/ui/screens/prospection-screen";
@@ -122,6 +123,8 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
       return { kind: "screen", me, screen: <ContractsScreen view={await loaders.loadContractsView(repository, me, today)} /> };
     case "/guide":
       return { kind: "screen", me, screen: <GuideScreen /> };
+    case "/echange":
+      return { kind: "screen", me, screen: <ChatScreen view={await loaders.loadMessagesView(repository, me, new Date().toISOString())} /> };
     case "/admin":
       if (!me.isAdmin) return { kind: "redirect", to: "/" };
       return { kind: "screen", me, screen: <AdminScreen view={await loaders.loadAdminView(repository, me, today)} /> };
@@ -139,9 +142,10 @@ type Props = {
   repository: Repository;
   session: PreviewSession;
   download: (file: CsvExport) => Promise<void>;
+  fileUrl: (id: string) => string;
 };
 
-export function PreviewApp({ store, repository, session, download }: Props) {
+export function PreviewApp({ store, repository, session, download, fileUrl }: Props) {
   const revision = useSyncExternalStore(store.subscribe, store.getRevision);
   const [route, setRoute] = useState<Route>(initialRoute);
   // Connexion et déconnexion repartent de zéro : aucun état d'écran ne passe d'un membre à l'autre.
@@ -194,8 +198,9 @@ export function PreviewApp({ store, repository, session, download }: Props) {
       reload,
       actions,
       download,
+      fileUrl,
     }),
-    [me, route, go, reload, actions, download],
+    [me, route, go, reload, actions, download, fileUrl],
   );
 
   if (store.status === "error") return <Notice title="L'aperçu n'a pas pu charger ses données.">Recharge la page dans un instant.</Notice>;
@@ -234,7 +239,7 @@ export function PreviewApp({ store, repository, session, download }: Props) {
 
 export function Loading() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[84rem] flex-col gap-8 px-4 pt-6 sm:px-6 md:pl-[7rem] lg:pl-[19rem]">
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-4 pt-5 sm:px-6 lg:px-8">
       <span className="opacity-60">
         <BrandMark href={null} />
       </span>

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, openMenu, openSection, signIn, unique } from "./helpers";
+import { loginAs, newContextLike, openMenu, openSection, signIn, unique } from "./helpers";
 
 test.describe("accès", () => {
   test("un visiteur non connecté est renvoyé vers la connexion", async ({ page }) => {
@@ -26,7 +26,7 @@ test.describe("navigation", () => {
     await loginAs(page, "theo", "Théo Garnier");
     await expect(page.getByRole("heading", { level: 1, name: /Théo/ })).toBeVisible();
     const sections = page.getByRole("region", { name: "Les rubriques" });
-    await expect(sections.getByRole("link")).toHaveCount(9);
+    await expect(sections.getByRole("link")).toHaveCount(10);
     await expect(sections.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
     await expect(page.getByText(/Podium|Rang du jour/)).toHaveCount(0);
 
@@ -207,4 +207,52 @@ test("l'admin ajoute un contrat et le fait avancer jusqu'à la mise en ligne", a
   await card.getByRole("button", { name: "Marquer en ligne" }).click();
   await page.getByRole("button", { name: /Effectués/ }).click();
   await expect(page.getByRole("article").filter({ hasText: client })).toContainText("En ligne depuis");
+});
+
+test.describe("échange", () => {
+  const PIXEL = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "base64");
+
+  test("un message avec photo est vu par l'équipe ; l'auteur peut le supprimer", async ({ page, browser }) => {
+    const text = `Bonjour l'équipe ${unique()}`;
+    await loginAs(page, "lea", "Léa Fontaine");
+    await openSection(page, "Échange");
+    await expect(page.getByRole("heading", { level: 1, name: "Échange" })).toBeVisible();
+
+    await page.getByLabel("Photos à envoyer").setInputFiles({ name: "vitrine.png", mimeType: "image/png", buffer: PIXEL });
+    const chips = page.getByRole("list", { name: "Fichiers à envoyer" });
+    await expect(chips.getByText("vitrine.png")).toBeVisible();
+    await expect(chips.getByLabel("Envoi en cours")).toHaveCount(0);
+    await page.getByRole("textbox", { name: "Message" }).fill(text);
+    await page.getByRole("button", { name: "Envoyer" }).click();
+
+    const log = page.getByRole("log", { name: "Messages" });
+    const mine = log.getByRole("listitem").filter({ hasText: text });
+    await expect(mine).toBeVisible();
+    await expect(mine.getByRole("img", { name: "vitrine.png" })).toBeVisible();
+    await expect(chips).toHaveCount(0);
+
+    // Un collègue voit la nouveauté, puis le message et la photo (servie après vérification de la session).
+    const otherContext = await newContextLike(browser);
+    const other = await otherContext.newPage();
+    await loginAs(other, "theo", "Théo Garnier");
+    await expect(other.getByRole("region", { name: "Les rubriques" }).getByText("Nouveau")).toBeVisible();
+    await openSection(other, "Échange");
+    const otherLog = other.getByRole("log", { name: "Messages" });
+    const message = otherLog.getByRole("listitem").filter({ hasText: text });
+    await expect(message).toBeVisible();
+    await expect.poll(() => message.getByRole("img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
+    await expect(message.getByRole("button", { name: "Supprimer" })).toHaveCount(0);
+    await otherContext.close();
+
+    // Sans session, le fichier n'est pas servi.
+    const src = await mine.getByRole("img", { name: "vitrine.png" }).getAttribute("src");
+    const anonymous = await newContextLike(browser);
+    const response = await anonymous.request.get(src!, { maxRedirects: 0 });
+    expect(response.status()).not.toBe(200);
+    await anonymous.close();
+
+    await mine.getByRole("button", { name: "Supprimer" }).click();
+    await mine.getByRole("button", { name: "Oui" }).click();
+    await expect(log.getByText(text)).toHaveCount(0);
+  });
 });

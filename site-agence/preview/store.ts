@@ -10,14 +10,18 @@
  * - `prospects/<membre>_<mois>` : les prospects d'un membre pour un mois ;
  * - `resources/<id>`    : adresses e-mail, modèles et liens ;
  * - `settings/app`      : réglages (date de remise à zéro des statistiques) ;
- * - `contracts/<id>`    : contrats en cours et effectués.
+ * - `contracts/<id>`    : contrats en cours et effectués ;
+ * - `messages/<id>`     : messages de l'échange (les fichiers joints sont des
+ *   fichiers de l'Artifact, désignés par leur identifiant).
  *
  * Tout ce qui vient de la base est relu et filtré : un document mal formé
  * est ignoré plutôt que d'interrompre l'affichage.
  */
 import { isChannel } from "@/lib/channels";
 import { isIsoDate } from "@/lib/dates";
-import type { Contract, ContractPack, ContractStatus, Member, Prospect, Resource, ResourceKind } from "@/lib/types";
+import { FILE_TYPES } from "@/lib/attachments";
+import { ATTACHMENT_MAX_BYTES, MESSAGE_MAX_FILES, MESSAGE_MAX_LENGTH, MESSAGES_SHOWN } from "@/lib/rules";
+import type { Attachment, Contract, ContractPack, ContractStatus, Member, Message, Prospect, Resource, ResourceKind } from "@/lib/types";
 
 export type DbError = { code: string; message: string };
 type DocSnapshot = { id: string; exists: boolean; data(): Record<string, unknown> | undefined };
@@ -153,6 +157,34 @@ function readContract(id: string, data: Record<string, unknown>): Contract | nul
   };
 }
 
+/** Identifiant de fichier de l'Artifact (32 caractères) ou du stockage local de test. */
+const FILE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const KNOWN_TYPES = new Map(FILE_TYPES.map((fileType) => [fileType.type, fileType.kind] as const));
+
+function readAttachment(value: unknown): Attachment | null {
+  if (typeof value !== "object" || value === null) return null;
+  const data = value as Record<string, unknown>;
+  const id = text(data.id, 64);
+  const name = text(data.name, 120);
+  const type = text(data.type, 120);
+  const size = data.size;
+  const kind = type ? KNOWN_TYPES.get(type) : undefined;
+  if (!id || !FILE_ID.test(id) || !name || !type || !kind) return null;
+  if (typeof size !== "number" || !Number.isInteger(size) || size < 1 || size > ATTACHMENT_MAX_BYTES) return null;
+  return { id, name, type, size, kind };
+}
+
+function readMessage(id: string, data: Record<string, unknown>): Message | null {
+  const authorId = text(data.authorId, 64);
+  const body = text(data.text, MESSAGE_MAX_LENGTH) ?? "";
+  const createdAt = isoTimestamp(data.createdAt);
+  const attachments = Array.isArray(data.attachments)
+    ? data.attachments.slice(0, MESSAGE_MAX_FILES).flatMap((item) => readAttachment(item) ?? [])
+    : [];
+  if (!authorId || !createdAt || (!body && attachments.length === 0)) return null;
+  return { id, authorId, text: body, attachments, createdAt };
+}
+
 export const monthDocId = (memberId: string, month: string) => `${memberId}_${month}`;
 
 type Status = "loading" | "ready" | "error";
@@ -168,6 +200,8 @@ export class PreviewStore {
   months = new Map<string, MonthDoc>();
   resources = new Map<string, Resource>();
   contracts = new Map<string, Contract>();
+  /** Derniers messages de l'échange. */
+  messages = new Map<string, Message>();
   /** Depuis quand les prospects comptent dans les statistiques (`null` : depuis toujours). */
   statsSince: string | null = null;
   status: Status = "loading";
@@ -191,7 +225,7 @@ export class PreviewStore {
     };
     const loadedOne = (name: string) => {
       this.loaded.add(name);
-      if (this.loaded.size === 6 && this.status === "loading") this.status = "ready";
+      if (this.loaded.size === 7 && this.status === "loading") this.status = "ready";
       this.emit();
     };
 
@@ -239,6 +273,19 @@ export class PreviewStore {
         this.statsSince = isoTimestamp(app?.statsSince);
         loadedOne("settings");
       }, fail),
+      this.db
+        .collection("messages")
+        .orderBy("createdAt", "desc")
+        .limit(MESSAGES_SHOWN)
+        .onSnapshot((snap) => {
+          this.messages = new Map(
+            snap.docs.flatMap((doc) => {
+              const message = doc.exists ? readMessage(doc.id, doc.data() ?? {}) : null;
+              return message ? [[doc.id, message] as const] : [];
+            }),
+          );
+          loadedOne("messages");
+        }, fail),
       this.db.collection("resources").onSnapshot((snap) => {
         this.resources = new Map(
           snap.docs.flatMap((doc) => {
@@ -340,6 +387,21 @@ export class PreviewStore {
     this.statsSince = at;
     this.emit();
     await this.enqueue("settings/app", () => this.db.collection("settings").doc("app").set({ statsSince: at }));
+  }
+
+  async putMessage(message: Message): Promise<void> {
+    this.messages = new Map(this.messages).set(message.id, message);
+    this.emit();
+    const { id, ...body } = message;
+    await this.enqueue(`messages/${id}`, () => this.db.collection("messages").doc(id).set(body));
+  }
+
+  async removeMessage(id: string): Promise<void> {
+    const messages = new Map(this.messages);
+    messages.delete(id);
+    this.messages = messages;
+    this.emit();
+    await this.enqueue(`messages/${id}`, () => this.db.collection("messages").doc(id).delete());
   }
 
   async putResource(resource: Resource): Promise<void> {

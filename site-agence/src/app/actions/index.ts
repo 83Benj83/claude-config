@@ -11,6 +11,7 @@ import {
   GENERIC_ERROR,
   SESSION_EXPIRED,
   type ActionResult,
+  type ChatStatus,
   type ContractFormValues,
   type CsvExport,
   type MemberFormValues,
@@ -24,9 +25,12 @@ import { todayIso } from "@/lib/dates";
 import type { DuplicateCheck, Establishment } from "@/lib/establishments";
 import { createRateLimiter } from "@/lib/rate-limit";
 import * as contracts from "@/lib/services/contracts";
+import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
+import * as messages from "@/lib/services/messages";
 import * as prospects from "@/lib/services/prospects";
-import type { Member, Prospect } from "@/lib/types";
+import type { Attachment, Member, Prospect } from "@/lib/types";
+import type { MessagesView } from "@/lib/views";
 
 /* ------------------------------------------------------------------ */
 /* Connexion                                                           */
@@ -84,13 +88,13 @@ export async function signOut(): Promise<void> {
 
 async function withMember<T>(
   run: (actor: Member) => Promise<ActionResult<T>>,
-  { allowFirstLogin = false } = {},
+  { allowFirstLogin = false, refreshAfter = true } = {},
 ): Promise<ActionResult<T>> {
   const actor = await getCurrentMember();
   if (!actor || (!actor.welcomedAt && !allowFirstLogin)) return { ok: false, message: SESSION_EXPIRED };
   try {
     const result = await run(actor);
-    if (result.ok) refresh();
+    if (result.ok && refreshAfter) refresh();
     return result;
   } catch (error) {
     console.error("[action]", error);
@@ -159,4 +163,37 @@ export async function exportCsv(input: { month: string; kind: "bilan" | "prospec
   if (!actor?.welcomedAt) return { ok: false, message: SESSION_EXPIRED };
   const kind = input?.kind === "prospects" ? "prospects" : "bilan";
   return prospects.exportCsv(await getRepository(), actor, { month: String(input?.month ?? ""), kind }, clock().today);
+}
+
+/* ------------------------------------------------------------------ */
+/* Échange                                                             */
+/* ------------------------------------------------------------------ */
+
+export async function listMessages(): Promise<MessagesView | null> {
+  const actor = await getCurrentMember();
+  if (!actor?.welcomedAt) return null;
+  return loadMessagesView(await getRepository(), actor, clock().now);
+}
+
+export async function uploadAttachment(form: FormData): Promise<ActionResult<Attachment>> {
+  const file = form instanceof FormData ? form.get("file") : null;
+  return withMember(async (actor) => messages.uploadAttachment(await getRepository(), actor, file, clock().now), { refreshAfter: false });
+}
+
+export async function discardAttachment(id: string): Promise<ActionResult> {
+  return withMember(async (actor) => messages.discardAttachment(await getRepository(), actor, String(id)), { refreshAfter: false });
+}
+
+export async function sendMessage(input: { text: string; attachmentIds: string[] }): Promise<ActionResult> {
+  return withMember(async (actor) => messages.sendMessage(await getRepository(), actor, { text: input?.text, attachmentIds: input?.attachmentIds }, clock().now));
+}
+
+export async function deleteMessage(id: string): Promise<ActionResult> {
+  return withMember(async (actor) => messages.deleteMessage(await getRepository(), actor, String(id)));
+}
+
+export async function chatStatus(): Promise<ChatStatus> {
+  const actor = await getCurrentMember();
+  if (!actor?.welcomedAt) return { latestAt: null, latestAuthorId: null };
+  return messages.chatStatus(await getRepository());
 }

@@ -1,9 +1,9 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { Contract, DateRange, IsoDate, Member, Prospect, Resource } from "../types";
+import type { Contract, DateRange, IsoDate, Member, Message, Prospect, Resource, StoredFile } from "../types";
 import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "./demo-seed";
-import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "./repository";
+import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
 type StoredMember = { member: Member; passwordHash: string | null; sessionVersion: number };
 
@@ -13,6 +13,8 @@ type DemoState = {
   resources: Resource[];
   contracts: Contract[];
   statsSince?: string | null;
+  messages?: Message[];
+  files?: Map<string, { file: StoredFile; bytes: Uint8Array }>;
 };
 
 /** Peu d'itérations en démo : démarrage rapide, mots de passe publics de toute façon. */
@@ -145,6 +147,66 @@ export class DemoRepository implements Repository {
 
   async setStatsSince(at: string): Promise<void> {
     this.state.statsSince = at;
+  }
+
+  private get messages(): Message[] {
+    return (this.state.messages ??= []);
+  }
+
+  private get files() {
+    return (this.state.files ??= new Map());
+  }
+
+  async listMessages(limit: number): Promise<Message[]> {
+    return [...this.messages].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit).map(clone);
+  }
+
+  async getMessage(id: string): Promise<Message | null> {
+    const message = this.messages.find((m) => m.id === id);
+    return message ? clone(message) : null;
+  }
+
+  async addMessage(message: Message): Promise<void> {
+    this.messages.push(clone(message));
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    this.state.messages = this.messages.filter((m) => m.id !== id);
+    for (const stored of this.files.values()) if (stored.file.messageId === id) stored.file = { ...stored.file, messageId: null };
+  }
+
+  async storeFile({ blob, ...meta }: NewFile): Promise<StoredFile> {
+    const file: StoredFile = { ...meta, id: crypto.randomUUID(), messageId: null };
+    this.files.set(file.id, { file, bytes: new Uint8Array(await blob.arrayBuffer()) });
+    return clone(file);
+  }
+
+  async getFile(id: string): Promise<StoredFile | null> {
+    const stored = this.files.get(id);
+    return stored ? clone(stored.file) : null;
+  }
+
+  async readFile(id: string): Promise<Uint8Array | null> {
+    return this.files.get(id)?.bytes ?? null;
+  }
+
+  async listPendingFiles(uploaderId: string): Promise<StoredFile[]> {
+    return [...this.files.values()].filter(({ file }) => file.uploaderId === uploaderId && !file.messageId).map(({ file }) => clone(file));
+  }
+
+  async linkFiles(ids: string[], messageId: string, uploaderId: string): Promise<number> {
+    let linked = 0;
+    for (const id of ids) {
+      const stored = this.files.get(id);
+      if (!stored || stored.file.uploaderId !== uploaderId || stored.file.messageId) continue;
+      stored.file = { ...stored.file, messageId };
+      linked += 1;
+    }
+    return linked;
+  }
+
+  async deleteFile(id: string): Promise<void> {
+    this.files.delete(id);
   }
 }
 

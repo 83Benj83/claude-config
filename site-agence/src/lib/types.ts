@@ -137,3 +137,34 @@ export type DateRange = {
   from: IsoDate;
   to: IsoDate;
 };
+
+/* ------------------------------------------------------------------ */
+/* Échange                                                             */
+/* ------------------------------------------------------------------ */
+
+/** Photo (affichée en vignette) ou fichier (à télécharger). */
+export type AttachmentKind = "image" | "file";
+
+/** Pièce jointe d'un message. `id` : clé du fichier dans le stockage. */
+export type Attachment = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  kind: AttachmentKind;
+};
+
+export type Message = {
+  id: string;
+  authorId: string;
+  text: string;
+  attachments: Attachment[];
+  createdAt: string;
+};
+
+/** Fichier envoyé : d'abord en attente, puis rattaché au message publié. */
+export type StoredFile = Attachment & {
+  uploaderId: string;
+  messageId: string | null;
+  createdAt: string;
+};

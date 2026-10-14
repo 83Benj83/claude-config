@@ -42,6 +42,7 @@ export function NextPlatform({ me, isDemo, children }: { me: MemberSummary | nul
       reload: (href: string) => window.location.assign(href),
       actions,
       download: downloadInBrowser,
+      fileUrl: (id: string) => `/fichiers/${encodeURIComponent(id)}`,
     }),
     [isDemo, me, pathname, searchParams, router],
   );

@@ -3,6 +3,7 @@
 import { InfoIcon, ListIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useId, useState, useTransition, type ReactNode } from "react";
 import { HOME_ITEM, navGroupsFor, type NavItem } from "@/config/navigation";
+import { ChatUnreadProvider, useChatUnread } from "../chat/unread";
 import { isActivePath, usePlatform } from "../platform";
 import { Avatar } from "../primitives/avatar";
 import { BrandMark } from "../primitives/brand-mark";
@@ -25,22 +26,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeMenu = () => setOpenedAt(null);
 
   return (
-    <div className="min-h-dvh">
-      <a
-        href="#contenu"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-full focus:bg-inverse focus:px-4 focus:py-2 focus:text-sm focus:text-on-inverse"
-      >
-        Aller au contenu
-      </a>
-      <TopBar menuOpen={menuOpen} onOpenMenu={() => setOpenedAt(pathname)} />
+    <ChatUnreadProvider>
+      <div className="min-h-dvh">
+        <a
+          href="#contenu"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-full focus:bg-inverse focus:px-4 focus:py-2 focus:text-sm focus:text-on-inverse"
+        >
+          Aller au contenu
+        </a>
+        <TopBar menuOpen={menuOpen} onOpenMenu={() => setOpenedAt(pathname)} />
 
-      <main id="contenu" className="mx-auto w-full max-w-6xl px-4 pt-5 pb-16 sm:px-6 md:pt-8 lg:px-8">
-        {isDemo && <DemoNotice />}
-        {children}
-      </main>
+        <main id="contenu" className="mx-auto w-full max-w-6xl px-4 pt-5 pb-16 sm:px-6 md:pt-8 lg:px-8">
+          {isDemo && <DemoNotice />}
+          {children}
+        </main>
 
-      {me && <MenuDrawer open={menuOpen} onClose={closeMenu} />}
-    </div>
+        {me && <MenuDrawer open={menuOpen} onClose={closeMenu} />}
+      </div>
+    </ChatUnreadProvider>
+  );
+}
+
+/** Pastille « Nouveau » : quelqu'un a écrit dans l'échange depuis la dernière visite. */
+export function NewBadge({ id }: { id: string }) {
+  return (
+    <span id={id} className="tone-coral shrink-0 rounded-full bg-[var(--tone)] px-2 py-0.5 text-[0.6875rem] font-semibold text-white">
+      Nouveau
+    </span>
   );
 }
 
@@ -62,6 +74,7 @@ function DemoNotice() {
 /** Barre du haut : le menu à gauche, le nom de l'espace, le thème à droite. */
 function TopBar({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenMenu: () => void }) {
   const { me } = usePlatform();
+  const unread = useChatUnread();
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 before:absolute before:inset-0 before:-z-10 before:bg-bg/85 before:backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-3 sm:px-5 lg:px-7">
@@ -71,11 +84,18 @@ function TopBar({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenMenu: () =>
             onClick={onOpenMenu}
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-fg shadow-card transition-colors hover:border-accent hover:text-accent-ink"
+            aria-describedby={unread ? "menu-nouveaux" : undefined}
+            className="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-fg shadow-card transition-colors hover:border-accent hover:text-accent-ink"
           >
             <ListIcon size={22} weight="bold" aria-hidden />
             Menu
+            {unread && <span className="tone-coral absolute -top-1 -right-1 size-3 rounded-full bg-[var(--tone)] ring-2 ring-bg" aria-hidden />}
           </button>
+        )}
+        {unread && (
+          <span id="menu-nouveaux" className="sr-only">
+            Nouveaux messages dans l&apos;échange
+          </span>
         )}
         <BrandMark />
         <ThemeToggle className="ml-auto shrink-0" />
@@ -115,13 +135,15 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
   const { Link, pathname } = usePlatform();
   const active = isActivePath(pathname, item.href);
   const hintId = useId();
+  const badgeId = useId();
+  const unread = useChatUnread() && item.href === "/echange";
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       aria-label={item.label}
-      aria-describedby={hintId}
+      aria-describedby={unread ? `${hintId} ${badgeId}` : hintId}
       className={`tone-${item.tone} flex items-center gap-3 rounded-2xl px-2.5 py-2 transition-colors ${
         active ? "bg-[var(--tone-soft)]" : "hover:bg-surface-2"
       }`}
@@ -131,12 +153,13 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
       >
         <Icon name={item.icon} size={21} weight="fill" />
       </span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className={`block text-[0.9375rem] font-semibold ${active ? "text-[var(--tone-ink)]" : "text-fg"}`}>{item.label}</span>
         <span id={hintId} className="block truncate text-xs text-subtle">
           {item.hint}
         </span>
       </span>
+      {unread && <NewBadge id={badgeId} />}
     </Link>
   );
 }

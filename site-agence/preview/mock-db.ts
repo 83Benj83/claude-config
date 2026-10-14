@@ -61,3 +61,21 @@ export async function createMockDb(): Promise<Db> {
     }),
   } as Db;
 }
+
+/** Fichiers de test locaux : gardés en mémoire, affichés par des adresses `blob:`. */
+export function createMockFiles() {
+  const urls = new Map<string, string>();
+  return {
+    async upload(blob: Blob) {
+      const id = crypto.randomUUID().replaceAll("-", "");
+      urls.set(id, URL.createObjectURL(blob));
+      return id;
+    },
+    async remove(id: string) {
+      const url = urls.get(id);
+      if (url) URL.revokeObjectURL(url);
+      urls.delete(id);
+    },
+    url: (id: string) => urls.get(id) ?? "",
+  };
+}

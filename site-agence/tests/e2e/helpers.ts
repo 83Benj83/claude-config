@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContextOptions, type Page } from "@playwright/test";
 
 /** Mot de passe des comptes de démonstration : identifiant + « 2026 ». */
 export const demoPassword = (login: string) => `${login}2026`;
@@ -6,8 +6,12 @@ export const demoPassword = (login: string) => `${login}2026`;
 /** Suffixe unique : le serveur de démo garde ses données entre les tests. */
 export const unique = () => `${Date.now().toString(36)}${Math.floor(Math.random() * 1e4).toString(36)}`;
 
+/** Adresse IP simulée, propre à chaque connexion de test : le frein par adresse (30 essais) ne bloque pas la suite entière. */
+const fakeClientIp = () => `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250) + 1}`;
+
 /** Connexion : choix de l'identifiant dans la liste, puis mot de passe. */
 export async function signIn(page: Page, fullName: string, password: string) {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": fakeClientIp() });
   await page.goto("/connexion");
   const filter = page.getByRole("searchbox", { name: "Filtrer les identifiants" });
   if (await filter.isVisible()) await filter.fill(fullName);
@@ -42,4 +46,11 @@ export async function openSection(page: Page, label: string) {
 export async function signOut(page: Page) {
   await openMenu(page);
   await page.getByRole("button", { name: "Se déconnecter" }).click();
+}
+
+/** Seconde personne connectée en même temps : nouveau navigateur, mêmes réglages que le projet (écran, langue, adresse). */
+export async function newContextLike(browser: Browser) {
+  const { baseURL, locale, timezoneId, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = test.info().project.use;
+  const options: BrowserContextOptions = { baseURL, locale, timezoneId, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch };
+  return browser.newContext(options);
 }

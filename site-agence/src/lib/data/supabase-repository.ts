@@ -1,8 +1,22 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cityKey, nameKey } from "../establishments";
-import type { Channel, Contract, ContractPack, ContractStatus, DateRange, Member, Prospect, Resource, ResourceKind } from "../types";
-import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "./repository";
+import type {
+  Attachment,
+  AttachmentKind,
+  Channel,
+  Contract,
+  ContractPack,
+  ContractStatus,
+  DateRange,
+  Member,
+  Message,
+  Prospect,
+  Resource,
+  ResourceKind,
+  StoredFile,
+} from "../types";
+import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
 type MemberRow = {
   id: string;
@@ -52,6 +66,43 @@ type ContractRow = {
   created_at: string;
   updated_at: string;
 };
+
+type MessageRow = { id: string; author_id: string; body: string; attachments: Attachment[]; created_at: string };
+
+type FileRow = {
+  id: string;
+  uploader_id: string;
+  message_id: string | null;
+  name: string;
+  type: string;
+  size: number;
+  kind: AttachmentKind;
+  created_at: string;
+};
+
+const MESSAGE_COLUMNS = "id, author_id, body, attachments, created_at";
+const FILE_COLUMNS = "id, uploader_id, message_id, name, type, size, kind, created_at";
+/** Espace de stockage privé des fichiers de l'échange (lu par le serveur uniquement). */
+const FILES_BUCKET = "echange";
+
+const toMessage = (row: MessageRow): Message => ({
+  id: row.id,
+  authorId: row.author_id,
+  text: row.body,
+  attachments: row.attachments ?? [],
+  createdAt: row.created_at,
+});
+
+const toStoredFile = (row: FileRow): StoredFile => ({
+  id: row.id,
+  uploaderId: row.uploader_id,
+  messageId: row.message_id,
+  name: row.name,
+  type: row.type,
+  size: row.size,
+  kind: row.kind,
+  createdAt: row.created_at,
+});
 
 const CONTRACT_COLUMNS =
   "id, client, city, contact, pack, options, amount, monthly, status, signed_on, delivered_on, site_url, brought_by, note, created_at, updated_at";
@@ -367,5 +418,96 @@ export class SupabaseRepository implements Repository {
 
   async deleteResource(id: string): Promise<void> {
     check("la suppression de la ressource", await this.db.from("resources").delete().eq("id", id));
+  }
+
+  async listMessages(limit: number): Promise<Message[]> {
+    const rows = check(
+      "la lecture des messages",
+      await this.db.from("messages").select(MESSAGE_COLUMNS).order("created_at", { ascending: false }).limit(limit),
+    );
+    return (rows as MessageRow[]).map(toMessage);
+  }
+
+  async getMessage(id: string): Promise<Message | null> {
+    const row = check("la lecture du message", await this.db.from("messages").select(MESSAGE_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toMessage(row as MessageRow) : null;
+  }
+
+  async addMessage(message: Message): Promise<void> {
+    check(
+      "l'envoi du message",
+      await this.db.from("messages").insert({
+        id: message.id,
+        author_id: message.authorId,
+        body: message.text,
+        attachments: message.attachments,
+        created_at: message.createdAt,
+      }),
+    );
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    check("la suppression du message", await this.db.from("messages").delete().eq("id", id));
+  }
+
+  async storeFile({ blob, ...meta }: NewFile): Promise<StoredFile> {
+    const id = crypto.randomUUID();
+    check("l'envoi du fichier", await this.db.storage.from(FILES_BUCKET).upload(id, blob, { contentType: meta.type, upsert: false }));
+    const row = {
+      id,
+      uploader_id: meta.uploaderId,
+      message_id: null,
+      name: meta.name,
+      type: meta.type,
+      size: meta.size,
+      kind: meta.kind,
+      created_at: meta.createdAt,
+    };
+    const inserted = await this.db.from("message_files").insert(row);
+    if (inserted.error) {
+      await this.db.storage.from(FILES_BUCKET).remove([id]);
+      check("l'enregistrement du fichier", inserted);
+    }
+    return toStoredFile(row);
+  }
+
+  async getFile(id: string): Promise<StoredFile | null> {
+    const row = check("la lecture du fichier", await this.db.from("message_files").select(FILE_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toStoredFile(row as FileRow) : null;
+  }
+
+  async readFile(id: string): Promise<Uint8Array | null> {
+    const { data, error } = await this.db.storage.from(FILES_BUCKET).download(id);
+    if (error || !data) return null;
+    return new Uint8Array(await data.arrayBuffer());
+  }
+
+  async listPendingFiles(uploaderId: string): Promise<StoredFile[]> {
+    const rows = check(
+      "la lecture des fichiers en attente",
+      await this.db.from("message_files").select(FILE_COLUMNS).eq("uploader_id", uploaderId).is("message_id", null),
+    );
+    return (rows as FileRow[]).map(toStoredFile);
+  }
+
+  async linkFiles(ids: string[], messageId: string, uploaderId: string): Promise<number> {
+    if (ids.length === 0) return 0;
+    // Conditions dans la requête : deux envois simultanés ne rattachent pas le même fichier deux fois.
+    const rows = check(
+      "le rattachement des fichiers",
+      await this.db
+        .from("message_files")
+        .update({ message_id: messageId })
+        .in("id", ids)
+        .eq("uploader_id", uploaderId)
+        .is("message_id", null)
+        .select("id"),
+    );
+    return (rows as { id: string }[]).length;
+  }
+
+  async deleteFile(id: string): Promise<void> {
+    check("la suppression du fichier", await this.db.storage.from(FILES_BUCKET).remove([id]));
+    check("la suppression du fichier", await this.db.from("message_files").delete().eq("id", id));
   }
 }
