@@ -104,14 +104,16 @@ function buildRows(input: ActivityInput, days: IsoDate[]): ActivityRow[] {
   const rows = input.members
     .filter((member) => member.active)
     .map((member): ActivityRow => {
-      const seenToday = presence.get(`${member.id}|${today}`);
-      const lastSeenAt = latest(member.lastSeenAt, member.lastLoginAt, seenToday?.lastSeenAt ?? null);
+      const recorded = presence.get(`${member.id}|${today}`);
+      const lastSeenAt = latest(member.lastSeenAt, member.lastLoginAt, recorded?.lastSeenAt ?? null);
+      // Sans visite notée (connexion juste avant le suivi, écriture perdue), une activité du jour compte quand même.
+      const seenToday = recorded ?? (lastSeenAt && dayOf(lastSeenAt) === today ? { firstSeenAt: lastSeenAt, lastSeenAt } : undefined);
       return {
         member: summarize(member),
         today: seenToday ? { firstSeenAt: seenToday.firstSeenAt, lastSeenAt: seenToday.lastSeenAt } : null,
         lastSeenAt,
         neverSeen: !member.welcomedAt && !lastSeenAt,
-        days: days.map((day) => presence.has(`${member.id}|${day}`)),
+        days: days.map((day) => presence.has(`${member.id}|${day}`) || (day === today && Boolean(seenToday))),
         prospectsToday: prospects(member.id).today,
         prospectsWeek: prospects(member.id).week,
         messagesToday: messages(member.id).today,

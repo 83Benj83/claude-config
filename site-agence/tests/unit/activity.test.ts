@@ -90,6 +90,16 @@ describe("activity view", () => {
     expect(max.days.filter(Boolean)).toHaveLength(1);
   });
 
+  test("a sign-in today counts as a visit, even without a recorded visit", () => {
+    const view = buildActivityView({
+      ...{ presence: [], logins: [], prospects: [], messages: [], contracts: [], storage: { files: 0, bytes: 0 }, establishments: 0, statsSince: null, today },
+      members: [makeMember("x", { lastLoginAt: "2026-10-14T11:23:00.000Z", lastSeenAt: null })],
+    });
+    expect(view.rows[0].today).toEqual({ firstSeenAt: "2026-10-14T11:23:00.000Z", lastSeenAt: "2026-10-14T11:23:00.000Z" });
+    expect(view.rows[0].days.at(-1)).toBe(true);
+    expect(view.totals.presentToday).toBe(1);
+  });
+
   test("last visit falls back on the last sign-in", () => {
     const view = buildActivityView({
       ...{ presence: [], logins: [], prospects: [], messages: [], contracts: [], storage: { files: 0, bytes: 0 }, establishments: 0, statsSince: null, today },
