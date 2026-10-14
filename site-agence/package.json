@@ -14,7 +14,8 @@
     "preview:build": "vite build --config preview/vite.config.mts && node preview/inline.mjs dist",
     "preview:local": "PREVIEW_MOCK=1 vite build --config preview/vite.config.mts && node preview/inline.mjs dist-local",
     "preview:seed": "vite build --config preview/vite.config.mts --ssr seed-cli.ts --outDir .seed-build && node preview/.seed-build/seed-cli.mjs",
-    "members:import": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-members.mjs"
+    "members:import": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-members.mjs",
+    "members:from-preview": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-preview.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
