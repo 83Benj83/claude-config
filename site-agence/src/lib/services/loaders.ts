@@ -1,7 +1,7 @@
 import { buildActivityView } from "../activity";
 import type { Repository } from "../data/repository";
 import { addDays, isMonthKey, monthKeyOf } from "../dates";
-import { ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_SHOWN, MESSAGES_SHOWN } from "../rules";
+import { ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_READ, MESSAGES_SHOWN } from "../rules";
 import type { IsoDate, LoginChoice, Member } from "../types";
 import {
   buildAdminView,
@@ -28,6 +28,14 @@ export { countedSince };
 /** Derniers prospects lus pour l'annuaire (les plus récents d'abord). */
 const DIRECTORY_RECENT = 600;
 
+/**
+ * Membres pour les écrans de toute l'équipe : sans les heures de visite et de
+ * connexion, réservées aux admins (rubrique Activité).
+ */
+async function listTeam(repository: Repository): Promise<Member[]> {
+  return (await repository.listMembers()).map((member) => ({ ...member, lastLoginAt: null, lastSeenAt: null }));
+}
+
 export async function loadLoginChoices(repository: Repository): Promise<LoginChoice[]> {
   const members = await repository.listMembers();
   return members
@@ -47,7 +55,7 @@ export async function loadProspectionView(repository: Repository, me: Member, to
 
 export async function loadDirectoryView(repository: Repository, today: IsoDate) {
   const [members, prospects, total] = await Promise.all([
-    repository.listMembers(),
+    listTeam(repository),
     repository.listRecentProspects(DIRECTORY_RECENT),
     repository.countEstablishments(),
   ]);
@@ -55,19 +63,18 @@ export async function loadDirectoryView(repository: Repository, today: IsoDate) 
 }
 
 export async function loadRankingView(repository: Repository, me: Member, today: IsoDate) {
-  const [members, prospects, since] = await Promise.all([
-    repository.listMembers(),
-    repository.listProspects(DATA_WINDOWS.ranking(today)),
-    repository.getStatsSince(),
+  const [members, entries] = await Promise.all([
+    listTeam(repository),
+    repository.getStatsSince().then((since) => repository.listEntries(DATA_WINDOWS.ranking(today), since)),
   ]);
-  return buildRankingView({ members, prospects: countedSince(prospects, since), me, today });
+  return buildRankingView({ members, entries, me, today });
 }
 
 export async function loadReportView(repository: Repository, me: Member, today: IsoDate, requestedMonth: unknown) {
   const current = monthKeyOf(today);
   const month = isMonthKey(requestedMonth) && requestedMonth <= current ? requestedMonth : current;
   const [members, prospects, since] = await Promise.all([
-    repository.listMembers(),
+    listTeam(repository),
     repository.listProspects(DATA_WINDOWS.month(month)),
     repository.getStatsSince(),
   ]);
@@ -75,11 +82,11 @@ export async function loadReportView(repository: Repository, me: Member, today: 
 }
 
 export async function loadTeamView(repository: Repository, me: Member) {
-  return buildTeamView({ members: await repository.listMembers(), me });
+  return buildTeamView({ members: await listTeam(repository), me });
 }
 
 export async function loadContractsView(repository: Repository, me: Member, today: IsoDate) {
-  const [contracts, members] = await Promise.all([repository.listContracts(), repository.listMembers()]);
+  const [contracts, members] = await Promise.all([repository.listContracts(), listTeam(repository)]);
   return buildContractsView({ contracts, members, me, today });
 }
 
@@ -103,7 +110,7 @@ export async function loadActivityView(repository: Repository, today: IsoDate, n
   const [members, presence, logins, prospects, messages, contracts, storage, establishments, statsSince] = await Promise.all([
     repository.listMembers(),
     repository.listPresence({ from, to: today }),
-    repository.listLoginEvents(new Date(now.getTime() - ACTIVITY_DAYS * 24 * 60 * 60_000).toISOString(), LOGIN_EVENTS_SHOWN),
+    repository.listLoginEvents(new Date(now.getTime() - ACTIVITY_DAYS * 24 * 60 * 60_000).toISOString(), LOGIN_EVENTS_READ),
     // Ajoutés ces 7 derniers jours : leur date de contact peut remonter jusqu'à 7 jours plus tôt.
     repository.listProspects({ from: addDays(from, -EDITABLE_PAST_DAYS), to: today }),
     repository.listMessages(ACTIVITY_MESSAGES),
@@ -116,6 +123,6 @@ export async function loadActivityView(repository: Repository, today: IsoDate, n
 }
 
 export async function loadMessagesView(repository: Repository, me: Member, now: string) {
-  const [messages, members] = await Promise.all([repository.listMessages(MESSAGES_SHOWN), repository.listMembers()]);
+  const [messages, members] = await Promise.all([repository.listMessages(MESSAGES_SHOWN), listTeam(repository)]);
   return buildMessagesView({ messages, members, me, now });
 }

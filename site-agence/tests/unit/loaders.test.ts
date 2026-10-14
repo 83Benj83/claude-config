@@ -85,6 +85,29 @@ describe("activité (admins)", () => {
     ]);
     expect(view.site.files).toBe(0);
   });
+
+  test("les écrans de toute l'équipe ne montrent pas les heures de visite et de connexion", async () => {
+    const { repository, me } = await demo();
+    await repository.recordPresence("karim", TODAY, "2026-10-14T08:00:00.000Z");
+    await repository.updateMember("karim", { lastLoginAt: "2026-10-14T07:59:00.000Z" });
+    const team = await loaders.loadTeamView(repository, me);
+    const karim = team.members.find((member) => member.id === "karim")!;
+    expect([karim.lastSeenAt, karim.lastLoginAt]).toEqual([null, null]);
+    const ranking = await loaders.loadRankingView(repository, me, TODAY);
+    expect(ranking.periods.annee.rows.every((row) => row.member.lastSeenAt === null && row.member.lastLoginAt === null)).toBe(true);
+    // L'activité (admins) les garde.
+    const activity = await loaders.loadActivityView(repository, TODAY, new Date("2026-10-14T09:00:00.000Z"));
+    expect(activity.rows.find((row) => row.member.id === "karim")?.lastSeenAt).toBe("2026-10-14T08:00:00.000Z");
+  });
+
+  test("le classement compte par jour, depuis la remise à zéro", async () => {
+    const { repository, me } = await demo();
+    const before = await loaders.loadRankingView(repository, me, TODAY);
+    expect(before.periods.annee.teamTotal).toBeGreaterThan(0);
+    await repository.setStatsSince("2999-01-01T00:00:00.000Z");
+    const after = await loaders.loadRankingView(repository, me, TODAY);
+    expect(after.periods.annee.teamTotal).toBe(0);
+  });
 });
 
 describe("formats", () => {

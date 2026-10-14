@@ -72,7 +72,7 @@ describe("directory view", () => {
 
 describe("ranking view", () => {
   test("all periods are computed at once", () => {
-    const view = buildRankingView({ members, prospects, me, today });
+    const view = buildRankingView({ members, entries: entriesFromProspects(prospects), me, today });
     expect(Object.keys(view.periods)).toEqual(["semaine", "mois", "annee"]);
     expect(view.periods.semaine.rows.map((r) => [r.member.id, r.total])).toEqual([
       ["a", 3],

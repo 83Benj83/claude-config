@@ -1,4 +1,4 @@
-import type { Contract, DateRange, IsoDate, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, Entry, IsoDate, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 
 /** Membre avec ses informations de connexion (jamais envoyées au navigateur). */
 export type Credentials = {
@@ -37,6 +37,8 @@ export interface Repository {
 
   /** Prospects d'une période (toutes dates si absente). */
   listProspects(range?: DateRange): Promise<Prospect[]>;
+  /** Prospects comptés par membre et par jour de contact, ajoutés depuis `since` (tous si `null`). */
+  listEntries(range: DateRange, since: string | null): Promise<Entry[]>;
   /** Derniers prospects saisis, tous membres confondus. */
   listRecentProspects(limit: number): Promise<Prospect[]>;
   /** Candidats dont le nom normalisé contient ce mot (pour la recherche et les doublons). */

@@ -182,9 +182,10 @@ export type RankingView = {
   myStreak: number;
 };
 
-export function buildRankingView(input: { members: Member[]; prospects: Prospect[]; me: Member; today: IsoDate }): RankingView {
+/** `entries` : prospects comptés par membre et par jour (déjà limités à ce qui compte dans les statistiques). */
+export function buildRankingView(input: { members: Member[]; entries: Entry[]; me: Member; today: IsoDate }): RankingView {
   const members = visibleMembers(input.members);
-  const entries = entriesFromProspects(input.prospects);
+  const { entries } = input;
   const period = (value: Period): PeriodRanking => {
     const window = periodWindow(value, input.today);
     const rows = buildRanking(members, entries, window.current, window.previous);

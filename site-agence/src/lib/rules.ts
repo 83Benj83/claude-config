@@ -23,8 +23,10 @@ export const MESSAGES_SHOWN = 200;
 /** Activité (admins) : présence notée au plus toutes les 5 minutes, suivie sur 7 jours. */
 export const PRESENCE_REFRESH_MS = 5 * 60_000;
 export const ACTIVITY_DAYS = 7;
-/** Connexions affichées dans le journal (les plus récentes). */
+/** Connexions affichées dans le journal (les plus récentes), lues pour les compter, et gardées. */
 export const LOGIN_EVENTS_SHOWN = 40;
+export const LOGIN_EVENTS_READ = 500;
+export const LOGIN_EVENTS_KEPT_DAYS = 90;
 /** Messages lus pour compter l'activité de la semaine. */
 export const ACTIVITY_MESSAGES = 500;
 /** Espace de stockage des fichiers compris dans l'offre gratuite de Supabase. */

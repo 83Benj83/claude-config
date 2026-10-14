@@ -168,7 +168,7 @@ function LoginsCard({ logins, today }: { logins: ActivityLogin[]; today: IsoDate
                 <XCircleIcon size={20} weight="fill" className="mt-px shrink-0 text-danger" aria-hidden />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-fg">{event.name ?? `« ${event.login} »`}</p>
+                <p className="truncate text-sm font-medium text-fg">{event.name ?? "Identifiant inconnu"}</p>
                 <p className={`text-xs ${event.ok ? "text-subtle" : "text-danger"}`} suppressHydrationWarning>
                   {event.ok ? "Connecté" : "Mot de passe refusé"} · {when(event.at, today)}
                 </p>

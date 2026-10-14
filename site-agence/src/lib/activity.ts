@@ -42,7 +42,7 @@ export type ActivityLogin = {
   id: string;
   at: string;
   ok: boolean;
-  /** Nom de la personne (retrouvé d'après l'identifiant saisi), `null` si inconnu. */
+  /** Nom de la personne, `null` si l'identifiant n'existe pas. */
   name: string | null;
   login: string;
 };

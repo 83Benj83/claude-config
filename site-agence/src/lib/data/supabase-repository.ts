@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cityKey, nameKey } from "../establishments";
+import { LOGIN_EVENTS_KEPT_DAYS } from "../rules";
 import type {
   Attachment,
   AttachmentKind,
@@ -9,6 +10,7 @@ import type {
   ContractPack,
   ContractStatus,
   DateRange,
+  Entry,
   IsoDate,
   LoginEvent,
   Member,
@@ -316,6 +318,23 @@ export class SupabaseRepository implements Repository {
     }
   }
 
+  async listEntries(range: DateRange, since: string | null): Promise<Entry[]> {
+    // Comptés dans la base (fonction SQL) : quelques lignes par membre et par jour, au lieu de chaque prospect.
+    const entries: Entry[] = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const rows = check(
+        "la lecture du classement",
+        await this.db
+          .rpc("prospect_entries", { p_from: range.from, p_to: range.to, p_since: since })
+          .order("member_id")
+          .order("day")
+          .range(offset, offset + PAGE_SIZE - 1),
+      ) as { member_id: string; day: IsoDate; count: number }[];
+      entries.push(...rows.map((row) => ({ memberId: row.member_id, date: row.day, count: row.count })));
+      if (rows.length < PAGE_SIZE) return entries;
+    }
+  }
+
   async listRecentProspects(limit: number): Promise<Prospect[]> {
     const rows = check(
       "la lecture des derniers prospects",
@@ -557,6 +576,8 @@ export class SupabaseRepository implements Repository {
       "le journal des connexions",
       await this.db.from("login_events").insert({ member_id: event.memberId, login: event.login, ok: event.ok, at: event.at }),
     );
+    const cutoff = new Date(Date.parse(event.at) - LOGIN_EVENTS_KEPT_DAYS * 24 * 60 * 60_000).toISOString();
+    check("le nettoyage du journal des connexions", await this.db.from("login_events").delete().lt("at", cutoff));
   }
 
   async listLoginEvents(since: string, limit: number): Promise<LoginEvent[]> {

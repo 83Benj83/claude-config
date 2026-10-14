@@ -98,6 +98,24 @@ describe("activity view", () => {
     expect(view.rows[0].lastSeenAt).toBe("2026-10-02T10:00:00.000Z");
   });
 
+  test("the log shows the latest attempts, the count covers the whole day", () => {
+    const refused: LoginEvent[] = Array.from({ length: 45 }, (_, index) => ({
+      id: `r${index}`,
+      memberId: null,
+      login: "",
+      ok: false,
+      at: `2026-10-14T09:${String(index).padStart(2, "0")}:00.000Z`,
+    }));
+    const view = buildActivityView({
+      ...{ presence: [], prospects: [], messages: [], contracts: [], storage: { files: 0, bytes: 0 }, establishments: 0, statsSince: null, today },
+      members,
+      logins: refused,
+    });
+    expect(view.logins).toHaveLength(40);
+    expect(view.logins[0]).toMatchObject({ id: "r44", name: null });
+    expect(view.totals.refusedToday).toBe(45);
+  });
+
   test("sign-in log, newest first, with names found from the typed identifier", () => {
     const view = build();
     expect(view.logins.map((event) => [event.ok, event.name, event.login])).toEqual([

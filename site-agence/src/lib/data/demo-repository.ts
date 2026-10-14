@@ -1,7 +1,8 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { Contract, DateRange, IsoDate, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, Entry, IsoDate, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import { countedSince, entriesFromProspects } from "../views";
 import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
@@ -80,6 +81,10 @@ export class DemoRepository implements Repository {
 
   async listProspects(range?: DateRange): Promise<Prospect[]> {
     return this.state.prospects.filter((p) => inRange(p.date, range)).map(clone);
+  }
+
+  async listEntries(range: DateRange, since: string | null): Promise<Entry[]> {
+    return entriesFromProspects(countedSince(await this.listProspects(range), since));
   }
 
   async listRecentProspects(limit: number): Promise<Prospect[]> {

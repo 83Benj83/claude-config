@@ -1,7 +1,8 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Contract, DateRange, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
+import type { Contract, DateRange, Entry, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
+import { countedSince, entriesFromProspects } from "@/lib/views";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
 const toMember = ({ passwordHash, sessionVersion, ...member }: StoredMember): Member => ({ ...member });
@@ -71,6 +72,10 @@ export class PreviewRepository implements Repository {
 
   async listProspects(range?: DateRange): Promise<Prospect[]> {
     return this.store.allProspects().filter((prospect) => inRange(prospect.date, range));
+  }
+
+  async listEntries(range: DateRange, since: string | null): Promise<Entry[]> {
+    return entriesFromProspects(countedSince(await this.listProspects(range), since));
   }
 
   async listRecentProspects(limit: number): Promise<Prospect[]> {

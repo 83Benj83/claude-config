@@ -73,7 +73,7 @@ export async function signIn(input: { login: string; password: string }): Promis
   if (!result.ok) {
     if (result.message) {
       failuresByLoginAndIp(pairKey);
-      logSignIn(repository, { memberId: null, login: String(input?.login ?? "").trim().slice(0, 60), ok: false, at });
+      logRefusedSignIn(repository, String(input?.login ?? ""), at);
     }
     return { ok: false, message: result.message, errors: result.errors };
   }
@@ -88,6 +88,21 @@ export async function signIn(input: { login: string; password: string }): Promis
 /** Journal des connexions (rubrique Activité), écrit après la réponse : une erreur n'empêche jamais de se connecter. */
 function logSignIn(repository: Repository, event: Omit<LoginEvent, "id">) {
   after(() => repository.recordLogin(event).catch((error: unknown) => console.error("[connexion]", error)));
+}
+
+/**
+ * Mot de passe refusé : seul l'identifiant d'un membre existant est gardé ; ce
+ * qui a été tapé n'est jamais enregistré (ce pourrait être un mot de passe).
+ */
+function logRefusedSignIn(repository: Repository, typedLogin: string, at: string) {
+  after(async () => {
+    try {
+      const credentials = await repository.getCredentialsByLogin(typedLogin);
+      await repository.recordLogin({ memberId: credentials?.member.id ?? null, login: credentials?.member.login ?? "", ok: false, at });
+    } catch (error) {
+      console.error("[connexion]", error);
+    }
+  });
 }
 
 export async function signOut(): Promise<void> {
