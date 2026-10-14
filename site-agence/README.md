@@ -55,9 +55,11 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 
 ### 1. Créer la base Supabase (gratuit)
 
-1. Crée un projet sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécute le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), puis [`0002_contracts_settings.sql`](supabase/migrations/0002_contracts_settings.sql) et [`0003_echange.sql`](supabase/migrations/0003_echange.sql). Base déjà en service : exécute seulement les fichiers qui manquent, dans l'ordre (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers).
-3. Récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
+Le plus simple : depuis le projet Vercel, onglet **Storage**, ajoute **Supabase** (plan Free, région **Paris**, préfixe des variables laissé vide). Vercel relie la base au projet et crée lui-même `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `POSTGRES_URL_NON_POOLING`.
+
+Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers).
+
+Base créée directement sur [supabase.com](https://supabase.com) : exécute ces fichiers dans **SQL Editor**, puis récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 
 Supabase sert uniquement de base Postgres, interrogée par le serveur avec la clé secrète. Les tables ont la Row Level Security activée **sans aucune règle d'accès public** : depuis Internet, sans la clé secrète, la base ne renvoie rien.
 
@@ -85,9 +87,11 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 
 ### 4. Déployer (Vercel)
 
-1. Importe le dépôt sur [vercel.com](https://vercel.com) (dossier racine : `site-agence`).
-2. Ajoute les 3 variables d'environnement ci-dessus.
+1. Importe le dépôt sur [vercel.com](https://vercel.com) (dossier racine : `site-agence`), ou déploie depuis ce dossier avec `npx vercel deploy --prod`.
+2. Ajoute `SESSION_SECRET` (les variables Supabase sont déjà là si la base vient de l'onglet **Storage**).
 3. Déploie, puis complète dans le **Panel admin** le pôle et le responsable de chacun : l'organigramme se construit tout seul.
+
+Les fonctions tournent à Paris, comme la base. [`.vercelignore`](.vercelignore) garde hors de l'envoi les fichiers d'identifiants, `.env*`, les tests et l'aperçu.
 
 ## Personnaliser
 

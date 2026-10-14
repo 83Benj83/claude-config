@@ -1,0 +1,18 @@
+# Fichiers jamais envoyés à Vercel : secrets, données d'équipe, tests et aperçu.
+.env*
+.vercel
+node_modules
+.next
+scripts/identifiants.csv
+scripts/.build
+preview
+tests
+test-results
+playwright-report
+coverage
+docs
+.agents
+.claude
+.claude-flow
+skills-lock.json
+*.tsbuildinfo
