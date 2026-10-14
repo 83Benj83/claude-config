@@ -24,7 +24,7 @@ const iconButton =
  * est choisi ; le message est envoyé quand tout est prêt.
  */
 export function Composer({ onSent }: { onSent: () => void }) {
-  const { actions } = usePlatform();
+  const { actions, canUpload } = usePlatform();
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Pending[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -174,24 +174,28 @@ export function Composer({ onSent }: { onSent: () => void }) {
       )}
 
       <div className="flex items-end gap-1">
-        <button
-          type="button"
-          onClick={() => photoInput.current?.click()}
-          className={iconButton}
-          aria-label="Ajouter une photo"
-          title="Ajouter une photo"
-        >
-          <ImageIcon size={22} aria-hidden />
-        </button>
-        <button
-          type="button"
-          onClick={() => fileInput.current?.click()}
-          className={iconButton}
-          aria-label="Joindre un fichier"
-          title="Joindre un fichier"
-        >
-          <PaperclipIcon size={22} aria-hidden />
-        </button>
+        {canUpload && (
+          <>
+            <button
+              type="button"
+              onClick={() => photoInput.current?.click()}
+              className={iconButton}
+              aria-label="Ajouter une photo"
+              title="Ajouter une photo"
+            >
+              <ImageIcon size={22} aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              className={iconButton}
+              aria-label="Joindre un fichier"
+              title="Joindre un fichier"
+            >
+              <PaperclipIcon size={22} aria-hidden />
+            </button>
+          </>
+        )}
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
@@ -216,8 +220,13 @@ export function Composer({ onSent }: { onSent: () => void }) {
       <p className="mt-1.5 hidden px-2 text-xs text-subtle sm:block">
         {tooLong
           ? `Message trop long : ${text.length} / ${MESSAGE_MAX_LENGTH} caractères.`
-          : `Entrée pour envoyer, Maj + Entrée pour aller à la ligne. Fichiers : ${ACCEPTED_FILES_LABEL}, 4 Mo au plus.`}
+          : canUpload
+            ? `Entrée pour envoyer, Maj + Entrée pour aller à la ligne. Fichiers : ${ACCEPTED_FILES_LABEL}, 4 Mo au plus.`
+            : "Entrée pour envoyer, Maj + Entrée pour aller à la ligne."}
       </p>
+      {!canUpload && (
+        <p className="mt-1 px-2 text-xs text-subtle">Avec ton accès à l&apos;aperçu, tu peux écrire mais pas envoyer de photos ni de fichiers.</p>
+      )}
 
       <input
         ref={photoInput}

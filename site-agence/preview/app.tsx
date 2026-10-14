@@ -143,9 +143,10 @@ type Props = {
   session: PreviewSession;
   download: (file: CsvExport) => Promise<void>;
   fileUrl: (id: string) => string;
+  canUpload: boolean;
 };
 
-export function PreviewApp({ store, repository, session, download, fileUrl }: Props) {
+export function PreviewApp({ store, repository, session, download, fileUrl, canUpload }: Props) {
   const revision = useSyncExternalStore(store.subscribe, store.getRevision);
   const [route, setRoute] = useState<Route>(initialRoute);
   // Connexion et déconnexion repartent de zéro : aucun état d'écran ne passe d'un membre à l'autre.
@@ -199,8 +200,9 @@ export function PreviewApp({ store, repository, session, download, fileUrl }: Pr
       actions,
       download,
       fileUrl,
+      canUpload,
     }),
-    [me, route, go, reload, actions, download, fileUrl],
+    [me, route, go, reload, actions, download, fileUrl, canUpload],
   );
 
   if (store.status === "error") return <Notice title="L'aperçu n'a pas pu charger ses données.">Recharge la page dans un instant.</Notice>;
@@ -209,8 +211,9 @@ export function PreviewApp({ store, repository, session, download, fileUrl }: Pr
   }
   if (store.status === "ready" && !store.canSignIn) {
     return (
-      <Notice title="Accès en consultation seulement.">
-        La connexion est réservée aux personnes autorisées à modifier cet aperçu. Demande à Paul de t&apos;ajouter, ou attends la mise en ligne du site.
+      <Notice title="Il te manque l'accès « Contributeur ».">
+        Ton lien ouvre cette page en lecture seule : tu ne peux ni te connecter ni enregistrer. Demande à Paul de t&apos;ajouter avec
+        l&apos;accès « Contributeur » (menu Partager de la page), connecte-toi à claude.ai avec la même adresse, puis recharge.
       </Notice>
     );
   }

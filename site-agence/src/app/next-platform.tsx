@@ -43,6 +43,7 @@ export function NextPlatform({ me, isDemo, children }: { me: MemberSummary | nul
       actions,
       download: downloadInBrowser,
       fileUrl: (id: string) => `/fichiers/${encodeURIComponent(id)}`,
+      canUpload: true,
     }),
     [isDemo, me, pathname, searchParams, router],
   );

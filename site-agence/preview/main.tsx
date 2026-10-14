@@ -82,6 +82,7 @@ async function boot() {
         session={createPreviewSession()}
         download={download}
         fileUrl={fileUrl}
+        canUpload={files !== null}
       />
     </StrictMode>,
   );

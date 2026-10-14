@@ -27,6 +27,8 @@ export type Platform = {
   download(file: CsvExport): Promise<void>;
   /** Adresse d'affichage ou de téléchargement d'un fichier de l'échange. */
   fileUrl(id: string): string;
+  /** Faux quand l'environnement ne permet pas à cette personne d'envoyer des fichiers (aperçu, accès limité). */
+  canUpload: boolean;
 };
 
 const PlatformContext = createContext<Platform | null>(null);

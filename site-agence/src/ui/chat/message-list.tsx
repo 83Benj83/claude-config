@@ -10,6 +10,7 @@ import {
   FilePptIcon,
   FileTextIcon,
   FileXlsIcon,
+  ImageBrokenIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
 import { useLayoutEffect, useRef, useState, useTransition } from "react";
@@ -178,12 +179,24 @@ function MessageItem({
 
 function ImageLink({ image, onLoad }: { image: Attachment; onLoad: () => void }) {
   const { fileUrl } = usePlatform();
+  const [failed, setFailed] = useState(false);
   const url = fileUrl(image.id);
+  if (failed) {
+    return (
+      <p className="flex min-h-20 min-w-40 items-center gap-2 rounded-2xl border border-dashed border-line bg-surface-2 px-3 py-2 text-xs text-muted">
+        <ImageBrokenIcon size={20} className="shrink-0" aria-hidden />
+        <span>
+          <span className="block font-medium text-fg">{image.name}</span>
+          Photo non visible depuis cet accès.
+        </span>
+      </p>
+    );
+  }
   return (
     <a href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-2xl border border-line bg-surface-2">
       {/* Fichier de l'échange, servi après vérification de la session : pas d'optimisation d'image. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={image.name} loading="lazy" onLoad={onLoad} className="max-h-72 w-full min-w-28 object-cover" />
+      <img src={url} alt={image.name} loading="lazy" onLoad={onLoad} onError={() => setFailed(true)} className="max-h-72 w-full min-w-28 object-cover" />
     </a>
   );
 }
