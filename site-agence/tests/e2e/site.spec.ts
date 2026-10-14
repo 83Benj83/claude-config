@@ -76,8 +76,23 @@ test.describe("équipe et ressources", () => {
     await expect(page.locator("main").getByText("Karim Ouali")).toBeVisible();
 
     await page.goto("/agence");
-    await page.getByRole("button", { name: "Méthode", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /Repérer/ })).toBeVisible();
+    await page.getByRole("button", { name: "Le parcours", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /Trouver/ })).toBeVisible();
+  });
+
+  test("guide du prospecteur : sections, modèles à copier, recherche dans la FAQ", async ({ page }) => {
+    await loginAs(page, "karim", "Karim Ouali");
+    await page.goto("/guide");
+    await expect(page.getByRole("heading", { level: 2, name: "Votre rôle" })).toBeVisible();
+    await page.getByRole("button", { name: /Suivant/ }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "L’essentiel en une minute" })).toBeVisible();
+    // Liste déroulante sur téléphone, sommaire latéral sur ordinateur.
+    const select = page.getByLabel("Section", { exact: true });
+    if (await select.isVisible()) await select.selectOption({ label: "11. Questions fréquentes" });
+    else await page.getByRole("navigation", { name: "Sommaire du guide" }).getByRole("button", { name: /Questions fréquentes/ }).click();
+    await page.getByRole("searchbox", { name: "Rechercher une question" }).fill("Google");
+    await expect(page.getByText("Est-ce que je serai bien visible sur Google ?")).toBeVisible();
+    await expect(page.getByText("Combien ça coûte ?")).toHaveCount(0);
   });
 
   test("un admin ajoute une ressource, visible et copiable par l'équipe", async ({ page }) => {
@@ -94,11 +109,16 @@ test.describe("équipe et ressources", () => {
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
   });
 
-  test("un membre non admin ne voit pas les boutons d'édition des ressources", async ({ page }) => {
+  test("un membre peut gérer les mails et liens, mais ni les contrats ni les identifiants", async ({ page }) => {
     await loginAs(page, "theo", "Théo Garnier");
     await page.goto("/ressources");
     await expect(page.getByRole("heading", { level: 1, name: "Mails et liens" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Ajouter" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Ajouter" })).toBeVisible();
+    await page.goto("/contrats");
+    await expect(page.getByRole("heading", { level: 1, name: "Contrats" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Nouveau contrat" })).toHaveCount(0);
+    await page.goto("/admin");
+    await expect(page).toHaveURL("/");
   });
 });
 
@@ -130,10 +150,29 @@ test("un admin crée un identifiant, la personne s'y connecte pour la première 
 
 test("aucun débordement horizontal sur les écrans principaux", async ({ page }) => {
   await loginAs(page, "mehdi", "Mehdi Belkacem");
-  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/equipe", "/ressources", "/agence", "/admin"]) {
+  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/contrats", "/guide", "/equipe", "/ressources", "/agence", "/admin"]) {
     await page.goto(path);
     await expect(page.locator("main")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `débordement sur ${path}`).toBeLessThanOrEqual(0);
   }
+});
+
+test("l'admin ajoute un contrat et le fait avancer jusqu'à la mise en ligne", async ({ page }) => {
+  const client = `Contrat test ${unique()}`;
+  await loginAs(page, "camille", "Camille Renaud");
+  await page.goto("/contrats");
+  await page.getByRole("button", { name: "Nouveau contrat" }).first().click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByLabel("Commerce").fill(client);
+  await sheet.locator("label").filter({ hasText: /^Pro$/ }).click();
+  await sheet.getByLabel("Montant (€, payé une fois)").fill("780");
+  await sheet.getByRole("button", { name: "Ajouter le contrat" }).click();
+  const card = page.getByRole("article").filter({ hasText: client });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Passer à : Développement" }).click();
+  await card.getByRole("button", { name: "Passer à : Validation client" }).click();
+  await card.getByRole("button", { name: "Marquer en ligne" }).click();
+  await page.getByRole("button", { name: /Effectués/ }).click();
+  await expect(page.getByRole("article").filter({ hasText: client })).toContainText("En ligne depuis");
 });

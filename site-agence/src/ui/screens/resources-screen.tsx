@@ -8,6 +8,7 @@ import {
   MagnifyingGlassIcon,
   NotePencilIcon,
   PencilSimpleIcon,
+  PhoneIcon,
   PlusIcon,
   TrashIcon,
 } from "@phosphor-icons/react";
@@ -16,6 +17,7 @@ import type { ResourceFormValues } from "@/lib/actions-contract";
 import { normalizeText } from "@/lib/establishments";
 import type { Resource, ResourceKind } from "@/lib/types";
 import type { ResourcesView } from "@/lib/views";
+import { Placeholders } from "../guide/blocks";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { ChipGroup, Segmented } from "../primitives/choice";
@@ -25,19 +27,23 @@ import { Sheet } from "../primitives/sheet";
 import { Card, EmptyState, ScreenHeader } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 
-type Filter = "tout" | ResourceKind;
+type Filter = "tout" | "contacts" | "template" | "link";
 
-const KINDS: { value: ResourceKind; label: string; plural: string; icon: typeof EnvelopeSimpleIcon }[] = [
-  { value: "email", label: "Adresse e-mail", plural: "E-mails", icon: EnvelopeSimpleIcon },
-  { value: "template", label: "Modèle de message", plural: "Modèles", icon: NotePencilIcon },
-  { value: "link", label: "Lien", plural: "Liens", icon: LinkSimpleIcon },
+const KINDS: { value: ResourceKind; label: string; short: string; icon: typeof EnvelopeSimpleIcon; tone: string }[] = [
+  { value: "email", label: "Adresse e-mail", short: "E-mail", icon: EnvelopeSimpleIcon, tone: "tone-violet" },
+  { value: "phone", label: "Téléphone", short: "Téléphone", icon: PhoneIcon, tone: "tone-violet" },
+  { value: "template", label: "Modèle de message", short: "Modèle", icon: NotePencilIcon, tone: "tone-mint" },
+  { value: "link", label: "Lien", short: "Lien", icon: LinkSimpleIcon, tone: "tone-gold" },
 ];
+
+const matchesFilter = (kind: ResourceKind, filter: Filter) =>
+  filter === "tout" || (filter === "contacts" ? kind === "email" || kind === "phone" : kind === filter);
 
 const kindInfo = (kind: ResourceKind) => KINDS.find((item) => item.value === kind)!;
 
 /**
  * Mails et liens : les adresses d'envoi, les modèles de message et les liens
- * utiles, copiables en un geste. Les admins les tiennent à jour.
+ * utiles, copiables en un geste. Toute l'équipe peut les tenir à jour.
  */
 export function ResourcesScreen({ view }: { view: ResourcesView }) {
   const [filter, setFilter] = useState<Filter>("tout");
@@ -47,7 +53,7 @@ export function ResourcesScreen({ view }: { view: ResourcesView }) {
   const needle = normalizeText(query);
   const shown = view.resources.filter(
     (resource) =>
-      (filter === "tout" || resource.kind === filter) &&
+      matchesFilter(resource.kind, filter) &&
       (!needle || normalizeText(`${resource.title} ${resource.value} ${resource.note ?? ""}`).includes(needle)),
   );
 
@@ -55,7 +61,7 @@ export function ResourcesScreen({ view }: { view: ResourcesView }) {
     <div className="flex flex-col gap-6">
       <ScreenHeader
         title="Mails et liens"
-        description="Les adresses, modèles de message et liens qu'on utilise pour prospecter. Un clic pour copier."
+        description="Les contacts de l'équipe, les liens à envoyer et les modèles de message. Un clic pour copier."
         actions={
           view.canEdit && (
             <button type="button" onClick={() => setEditing("new")} className={buttonClasses()}>
@@ -73,7 +79,9 @@ export function ResourcesScreen({ view }: { view: ResourcesView }) {
           onChange={setFilter}
           options={[
             { value: "tout", label: "Tout" },
-            ...KINDS.map((kind) => ({ value: kind.value, label: kind.plural })),
+            { value: "contacts", label: "Contacts" },
+            { value: "link", label: "Liens" },
+            { value: "template", label: "Modèles" },
           ]}
         />
         <div className="relative sm:w-72">
@@ -137,13 +145,13 @@ function ResourceCard({ resource, canEdit, onEdit }: { resource: Resource; canEd
   const long = resource.kind === "template" && resource.value.length > 260;
 
   return (
-    <Card as="article" className="flex h-full flex-col gap-3 p-4 sm:p-5">
+    <Card as="article" className={`${info.tone} flex h-full flex-col gap-3 p-4 sm:p-5`}>
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-ink">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--tone-soft)] text-[var(--tone-ink)]">
           <info.icon size={20} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[0.9375rem] font-semibold tracking-tight text-fg">{resource.title}</h2>
+          <h2 className="truncate font-display text-[0.9375rem] font-bold tracking-tight text-fg">{resource.title}</h2>
           <p className="text-xs text-subtle">{info.label}</p>
         </div>
         {canEdit && (
@@ -164,7 +172,7 @@ function ResourceCard({ resource, canEdit, onEdit }: { resource: Resource; canEd
             id={valueId}
             className={`rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-fg ${long && !expanded ? "line-clamp-5" : ""}`}
           >
-            {resource.value}
+            <Placeholders text={resource.value} />
           </p>
           {long && (
             <button type="button" onClick={() => setExpanded((value) => !value)} className="mt-1.5 text-sm font-medium text-accent-ink hover:underline">
@@ -186,6 +194,18 @@ function ResourceCard({ resource, canEdit, onEdit }: { resource: Resource; canEd
           <a href={resource.value} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "ghost", size: "sm" })}>
             <ArrowSquareOutIcon size={16} aria-hidden />
             Ouvrir
+          </a>
+        )}
+        {resource.kind === "phone" && (
+          <a href={`tel:${resource.value.replace(/[^\d+]/g, "")}`} className={buttonClasses({ variant: "ghost", size: "sm" })}>
+            <PhoneIcon size={16} aria-hidden />
+            Appeler
+          </a>
+        )}
+        {resource.kind === "email" && (
+          <a href={`mailto:${resource.value}`} className={buttonClasses({ variant: "ghost", size: "sm" })}>
+            <EnvelopeSimpleIcon size={16} aria-hidden />
+            Écrire
           </a>
         )}
       </div>
@@ -243,7 +263,7 @@ function ResourceForm({ resource, nextSortOrder, onDone }: { resource: Resource 
       onDone();
     });
 
-  const valueLabel = form.kind === "email" ? "Adresse e-mail" : form.kind === "link" ? "Lien" : "Texte du message";
+  const valueLabel = { email: "Adresse e-mail", phone: "Numéro de téléphone", link: "Lien", template: "Texte du message" }[form.kind as ResourceKind] ?? "Valeur";
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
@@ -254,7 +274,7 @@ function ResourceForm({ resource, nextSortOrder, onDone }: { resource: Resource 
         value={form.kind as ResourceKind}
         onChange={(value) => set("kind", value)}
         error={errors.kind}
-        options={KINDS.map((kind) => ({ value: kind.value, label: kind.plural.replace(/s$/, ""), icon: <kind.icon size={16} aria-hidden /> }))}
+        options={KINDS.map((kind) => ({ value: kind.value, label: kind.short, icon: <kind.icon size={16} aria-hidden /> }))}
       />
       <Field label="Titre" value={form.title} onChange={(event) => set("title", event.target.value)} error={errors.title} maxLength={100} autoFocus />
       {form.kind === "template" ? (
@@ -270,12 +290,12 @@ function ResourceForm({ resource, nextSortOrder, onDone }: { resource: Resource 
       ) : (
         <Field
           label={valueLabel}
-          type={form.kind === "email" ? "email" : "url"}
-          inputMode={form.kind === "email" ? "email" : "url"}
+          type={form.kind === "email" ? "email" : form.kind === "phone" ? "tel" : "url"}
+          inputMode={form.kind === "email" ? "email" : form.kind === "phone" ? "tel" : "url"}
           value={form.value}
           onChange={(event) => set("value", event.target.value)}
           error={errors.value}
-          placeholder={form.kind === "email" ? "contact@agence.fr" : "https://"}
+          placeholder={form.kind === "email" ? "contact@astrinova.fr" : form.kind === "phone" ? "06 12 34 56 78" : "https://"}
           autoComplete="off"
         />
       )}

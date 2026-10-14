@@ -1,8 +1,9 @@
 import type { Repository } from "../data/repository";
 import { isMonthKey, monthKeyOf } from "../dates";
-import type { IsoDate, LoginChoice, Member } from "../types";
+import type { IsoDate, LoginChoice, Member, Prospect } from "../types";
 import {
   buildAdminView,
+  buildContractsView,
   buildDirectoryView,
   buildHomeView,
   buildProspectionView,
@@ -29,12 +30,19 @@ export async function loadLoginChoices(repository: Repository): Promise<LoginCho
     .map(({ id, login, fullName, avatarUrl }) => ({ id, login, fullName, avatarUrl }));
 }
 
+/** Prospects comptés dans les statistiques : ceux ajoutés depuis la dernière remise à zéro. */
+export function countedSince(prospects: Prospect[], since: string | null): Prospect[] {
+  return since ? prospects.filter((prospect) => prospect.createdAt >= since) : prospects;
+}
+
+/** Membres et prospects récents, limités à ce qui compte dans les statistiques. */
 async function historyData(repository: Repository, today: IsoDate) {
-  const [members, prospects] = await Promise.all([
+  const [members, prospects, since] = await Promise.all([
     repository.listMembers(),
     repository.listProspects(DATA_WINDOWS.history(today)),
+    repository.getStatsSince(),
   ]);
-  return { members, prospects };
+  return { members, prospects: countedSince(prospects, since) };
 }
 
 export async function loadHomeView(repository: Repository, me: Member, today: IsoDate) {
@@ -63,21 +71,33 @@ export async function loadRankingView(repository: Repository, me: Member, today:
 export async function loadReportView(repository: Repository, me: Member, today: IsoDate, requestedMonth: unknown) {
   const current = monthKeyOf(today);
   const month = isMonthKey(requestedMonth) && requestedMonth <= current ? requestedMonth : current;
-  const [members, prospects] = await Promise.all([
+  const [members, prospects, since] = await Promise.all([
     repository.listMembers(),
     repository.listProspects(DATA_WINDOWS.month(month)),
+    repository.getStatsSince(),
   ]);
-  return buildReportView({ members, prospects, me, month, today });
+  return buildReportView({ members, prospects: countedSince(prospects, since), me, month, today });
 }
 
 export async function loadTeamView(repository: Repository, me: Member, today: IsoDate) {
   return buildTeamView({ ...(await historyData(repository, today)), me, today });
 }
 
+export async function loadContractsView(repository: Repository, me: Member, today: IsoDate) {
+  const [contracts, members] = await Promise.all([repository.listContracts(), repository.listMembers()]);
+  return buildContractsView({ contracts, members, me, today });
+}
+
 export async function loadResourcesView(repository: Repository, me: Member) {
   return buildResourcesView({ resources: await repository.listResources(), me });
 }
 
-export async function loadAdminView(repository: Repository, me: Member) {
-  return buildAdminView({ members: await repository.listMembers(), me });
+export async function loadAdminView(repository: Repository, me: Member, today: IsoDate) {
+  const [members, since, establishments, month] = await Promise.all([
+    repository.listMembers(),
+    repository.getStatsSince(),
+    repository.countEstablishments(),
+    repository.listProspects(DATA_WINDOWS.month(monthKeyOf(today))),
+  ]);
+  return buildAdminView({ members, me, stats: { since, establishments, countedThisMonth: countedSince(month, since).length } });
 }

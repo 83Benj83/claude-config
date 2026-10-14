@@ -53,7 +53,7 @@ function DemoNotice() {
       <span>
         <strong className="font-medium text-fg">{kind === "preview" ? "Aperçu interactif." : "Mode démo."}</strong>{" "}
         {kind === "preview"
-          ? "Les prospects déjà présents sont des exemples ; ce que tu ajoutes est enregistré et visible par toute l'équipe."
+          ? "Ce que tu ajoutes est enregistré et visible par toutes les personnes qui ont accès à cet aperçu."
           : "Données fictives, remises à zéro au redémarrage."}
       </span>
     </p>
@@ -68,11 +68,11 @@ function NavLink({ item, variant }: { item: NavItem; variant: "sidebar" | "rail"
       <Link
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={`flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[0.6875rem] font-medium transition-colors ${
-          active ? "bg-accent-soft text-accent-ink" : "text-muted hover:bg-surface-2 hover:text-fg"
+        className={`tone-${item.tone} flex w-full flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[0.6875rem] font-medium transition-colors ${
+          active ? "bg-[var(--tone-soft)] text-[var(--tone-ink)]" : "text-muted hover:bg-surface-2 hover:text-fg"
         }`}
       >
-        <Icon name={item.icon} size={22} weight={active ? "fill" : "regular"} />
+        <Icon name={item.icon} size={22} weight={active ? "fill" : "duotone"} className={active ? "" : "text-[var(--tone-ink)]"} />
         <span className="max-w-full truncate">{item.short}</span>
       </Link>
     );
@@ -81,11 +81,11 @@ function NavLink({ item, variant }: { item: NavItem; variant: "sidebar" | "rail"
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`flex h-10 items-center gap-3 rounded-xl px-3 text-[0.9375rem] transition-colors ${
-        active ? "bg-accent-soft font-medium text-accent-ink" : "text-muted hover:bg-surface-2 hover:text-fg"
+      className={`tone-${item.tone} flex h-10 items-center gap-3 rounded-xl px-3 text-[0.9375rem] transition-colors ${
+        active ? "bg-[var(--tone-soft)] font-semibold text-[var(--tone-ink)]" : "text-muted hover:bg-surface-2 hover:text-fg"
       }`}
     >
-      <Icon name={item.icon} size={20} weight={active ? "fill" : "regular"} />
+      <Icon name={item.icon} size={20} weight={active ? "fill" : "duotone"} className="text-[var(--tone-ink)]" />
       {item.label}
     </Link>
   );
@@ -212,11 +212,32 @@ function MobileTopBar({ onOpenMore }: { onOpenMore: () => void }) {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-line/80 px-4 before:absolute before:inset-0 before:-z-10 before:bg-bg/85 before:backdrop-blur-xl md:hidden">
       <BrandMark />
       {me && (
-        <button type="button" onClick={onOpenMore} className="rounded-full" aria-label={`Compte de ${me.fullName}`}>
-          <Avatar member={me} size="sm" />
-        </button>
+        <div className="flex items-center gap-2">
+          {me.isAdmin && <AdminShortcut />}
+          <button type="button" onClick={onOpenMore} className="rounded-full" aria-label={`Compte de ${me.fullName}`}>
+            <Avatar member={me} size="sm" />
+          </button>
+        </div>
       )}
     </header>
+  );
+}
+
+/** Accès direct au panel admin (téléphone), réservé aux admins. */
+function AdminShortcut() {
+  const { Link, pathname } = usePlatform();
+  const active = isActivePath(pathname, "/admin");
+  return (
+    <Link
+      href="/admin"
+      aria-current={active ? "page" : undefined}
+      className={`flex h-9 items-center gap-1.5 rounded-full px-3 text-xs font-semibold ${
+        active ? "bg-accent text-on-accent" : "bg-accent-soft text-accent-ink"
+      }`}
+    >
+      <Icon name="admin" size={16} weight="fill" />
+      Admin
+    </Link>
   );
 }
 
@@ -250,7 +271,7 @@ function MobileTabBar({ onOpenMore }: { onOpenMore: () => void }) {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 py-1.5 text-[0.6875rem] font-medium ${active ? "text-accent-ink" : "text-muted"}`}
+                className={`tone-${tab.tone} flex flex-col items-center gap-0.5 py-1.5 text-[0.6875rem] font-medium ${active ? "text-[var(--tone-ink)]" : "text-muted"}`}
               >
                 <Icon name={tab.icon} size={24} weight={active ? "fill" : "regular"} />
                 {tab.short}
@@ -291,12 +312,17 @@ function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
                   href={item.href}
                   onClick={onClose}
                   aria-current={active ? "page" : undefined}
-                  className={`flex h-20 flex-col justify-between rounded-2xl border p-3 text-sm font-medium ${
-                    active ? "border-accent bg-accent-soft text-accent-ink" : "border-line bg-surface-2 text-fg"
+                  className={`tone-${item.tone} flex h-[5.5rem] flex-col justify-between rounded-2xl border p-3 text-sm font-semibold ${
+                    active ? "border-[var(--tone)] bg-[var(--tone-soft)] text-[var(--tone-ink)]" : "border-line bg-surface text-fg"
                   }`}
                 >
-                  <Icon name={item.icon} size={22} weight={active ? "fill" : "regular"} />
-                  {item.label}
+                  <span className="grid size-9 place-items-center rounded-xl bg-[var(--tone-soft)] text-[var(--tone-ink)]">
+                    <Icon name={item.icon} size={20} weight="fill" />
+                  </span>
+                  <span className="leading-tight">
+                    {item.label}
+                    <span className="block text-xs font-normal text-subtle">{item.hint}</span>
+                  </span>
                 </Link>
               </li>
             );

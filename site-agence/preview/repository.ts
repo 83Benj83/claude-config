@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "@/lib/data/repository";
-import type { DateRange, Member, Prospect, Resource } from "@/lib/types";
+import type { Contract, DateRange, Member, Prospect, Resource } from "@/lib/types";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
 const toMember = ({ passwordHash, sessionVersion, ...member }: StoredMember): Member => ({ ...member });
@@ -97,5 +97,29 @@ export class PreviewRepository implements Repository {
 
   async deleteResource(id: string): Promise<void> {
     await this.store.removeResource(id);
+  }
+
+  async listContracts(): Promise<Contract[]> {
+    return [...this.store.contracts.values()];
+  }
+
+  async getContract(id: string): Promise<Contract | null> {
+    return this.store.contracts.get(id) ?? null;
+  }
+
+  async saveContract(contract: Contract): Promise<void> {
+    await this.store.putContract(contract);
+  }
+
+  async deleteContract(id: string): Promise<void> {
+    await this.store.removeContract(id);
+  }
+
+  async getStatsSince(): Promise<string | null> {
+    return this.store.statsSince;
+  }
+
+  async setStatsSince(at: string): Promise<void> {
+    await this.store.putStatsSince(at);
   }
 }

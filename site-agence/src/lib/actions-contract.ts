@@ -42,6 +42,23 @@ export type ResourceFormValues = {
   sortOrder: string;
 };
 
+export type ContractFormValues = {
+  id: string;
+  client: string;
+  city: string;
+  contact: string;
+  pack: string;
+  options: string;
+  amount: string;
+  monthly: string;
+  status: string;
+  signedOn: string;
+  deliveredOn: string;
+  siteUrl: string;
+  broughtBy: string;
+  note: string;
+};
+
 export type CsvExport = { filename: string; content: string };
 
 export type AppActions = {
@@ -57,6 +74,10 @@ export type AppActions = {
   saveResource(input: ResourceFormValues): Promise<ActionResult>;
   deleteResource(id: string): Promise<ActionResult>;
   saveMember(input: MemberFormValues): Promise<ActionResult>;
+  resetStatistics(input: { confirmation: string }): Promise<ActionResult>;
+
+  saveContract(input: ContractFormValues): Promise<ActionResult>;
+  deleteContract(id: string): Promise<ActionResult>;
 
   exportCsv(input: { month: string; kind: "bilan" | "prospects" }): Promise<ActionResult<CsvExport>>;
 };

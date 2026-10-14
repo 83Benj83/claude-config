@@ -1,4 +1,4 @@
-import type { DateRange, Member, MemberPatch, Prospect, Resource } from "../types";
+import type { Contract, DateRange, Member, MemberPatch, Prospect, Resource } from "../types";
 
 /** Membre avec ses informations de connexion (jamais envoyées au navigateur). */
 export type Credentials = {
@@ -46,6 +46,20 @@ export interface Repository {
   listResources(): Promise<Resource[]>;
   saveResource(resource: Resource): Promise<void>;
   deleteResource(id: string): Promise<void>;
+
+  /**
+   * Instant (ISO) depuis lequel les prospects comptent dans les statistiques
+   * (classement, bilan, compteurs). `null` : depuis toujours. L'historique
+   * « déjà contacté ? » n'est jamais filtré.
+   */
+  getStatsSince(): Promise<string | null>;
+  setStatsSince(at: string): Promise<void>;
+
+  listContracts(): Promise<Contract[]>;
+  getContract(id: string): Promise<Contract | null>;
+  /** Crée ou remplace le contrat (même `id`). */
+  saveContract(contract: Contract): Promise<void>;
+  deleteContract(id: string): Promise<void>;
 }
 
 /** Clé d'identifiant : comparaison insensible à la casse, aux accents et aux espaces. */

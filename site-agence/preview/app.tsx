@@ -11,6 +11,8 @@ import { buttonClasses } from "@/ui/primitives/button";
 import { ToastProvider } from "@/ui/primitives/toast";
 import { AdminScreen } from "@/ui/screens/admin-screen";
 import { AgencyScreen } from "@/ui/screens/agency-screen";
+import { ContractsScreen } from "@/ui/screens/contracts-screen";
+import { GuideScreen } from "@/ui/screens/guide-screen";
 import { HomeScreen } from "@/ui/screens/home-screen";
 import { LoginScreen } from "@/ui/screens/login-screen";
 import { ProspectionScreen } from "@/ui/screens/prospection-screen";
@@ -116,9 +118,13 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
       return { kind: "screen", me, screen: <ResourcesScreen view={await loaders.loadResourcesView(repository, me)} /> };
     case "/agence":
       return { kind: "screen", me, screen: <AgencyScreen /> };
+    case "/contrats":
+      return { kind: "screen", me, screen: <ContractsScreen view={await loaders.loadContractsView(repository, me, today)} /> };
+    case "/guide":
+      return { kind: "screen", me, screen: <GuideScreen /> };
     case "/admin":
       if (!me.isAdmin) return { kind: "redirect", to: "/" };
-      return { kind: "screen", me, screen: <AdminScreen view={await loaders.loadAdminView(repository, me)} /> };
+      return { kind: "screen", me, screen: <AdminScreen view={await loaders.loadAdminView(repository, me, today)} /> };
     default:
       return { kind: "redirect", to: "/" };
   }

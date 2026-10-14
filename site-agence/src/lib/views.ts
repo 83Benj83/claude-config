@@ -9,7 +9,7 @@ import { addDays, eachDay, endOfMonth, formatRelativeDay, monthKeyOf, periodWind
 import { groupEstablishments, knownCities, type Establishment } from "./establishments";
 import { EDITABLE_PAST_DAYS } from "./rules";
 import { buildMonthReport, buildRanking, currentStreak, sumEntries, totalsByMember, type MonthReport, type RankingRow } from "./stats";
-import type { Channel, Entry, IsoDate, Member, MonthKey, Period, Prospect, Resource } from "./types";
+import type { Channel, Contract, Entry, IsoDate, Member, MonthKey, Period, Prospect, Resource } from "./types";
 
 /** Nombre de prospections par membre et par jour, à partir des prospects. */
 export function entriesFromProspects(prospects: readonly Prospect[]): Entry[] {
@@ -343,18 +343,29 @@ export type ResourcesView = {
 
 export function buildResourcesView(input: { resources: Resource[]; me: Member }): ResourcesView {
   return {
-    canEdit: input.me.isAdmin,
+    // Toute l'équipe gère « Mails et liens » (seuls identifiants et contrats sont réservés à l'admin).
+    canEdit: true,
     resources: [...input.resources].sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "fr")),
   };
 }
+
+export type AdminStats = {
+  /** Instant de la dernière remise à zéro (`null` : jamais). */
+  since: string | null;
+  /** Commerces dans l'historique « déjà contacté ? » (jamais remis à zéro). */
+  establishments: number;
+  /** Prospects comptés ce mois-ci, depuis la remise à zéro. */
+  countedThisMonth: number;
+};
 
 export type AdminView = {
   meId: string;
   members: Member[];
   departments: string[];
+  stats: AdminStats;
 };
 
-export function buildAdminView(input: { members: Member[]; me: Member }): AdminView {
+export function buildAdminView(input: { members: Member[]; me: Member; stats: AdminStats }): AdminView {
   const members = [...input.members].sort(
     (a, b) => Number(b.active) - Number(a.active) || a.sortOrder - b.sortOrder || a.fullName.localeCompare(b.fullName, "fr"),
   );
@@ -362,5 +373,50 @@ export function buildAdminView(input: { members: Member[]; me: Member }): AdminV
     meId: input.me.id,
     members,
     departments: [...new Set(members.map((m) => m.department).filter((d): d is string => Boolean(d)))].sort(),
+    stats: input.stats,
+  };
+}
+
+export type ContractsView = {
+  today: IsoDate;
+  /** Gestion (ajout, avancement, suppression) réservée aux admins ; lecture pour tous. */
+  canEdit: boolean;
+  /** Membres actifs, pour « apporté par ». */
+  members: { id: string; fullName: string }[];
+  /** Tous les noms, y compris d'anciens membres, pour l'affichage. */
+  names: Record<string, string>;
+  inProgress: Contract[];
+  done: Contract[];
+  totals: { inProgress: number; done: number; signed: number; monthly: number };
+};
+
+/** Ordre des étapes d'un contrat en cours. */
+export const CONTRACT_STEPS = ["maquette", "developpement", "validation", "termine"] as const;
+
+export function buildContractsView(input: { contracts: Contract[]; members: Member[]; me: Member; today: IsoDate }): ContractsView {
+  const step = (contract: Contract) => CONTRACT_STEPS.indexOf(contract.status);
+  const inProgress = input.contracts
+    .filter((contract) => contract.status !== "termine")
+    .sort((a, b) => step(b) - step(a) || b.signedOn.localeCompare(a.signedOn));
+  const done = input.contracts
+    .filter((contract) => contract.status === "termine")
+    .sort((a, b) => (b.deliveredOn ?? b.signedOn).localeCompare(a.deliveredOn ?? a.signedOn));
+  return {
+    today: input.today,
+    canEdit: input.me.isAdmin,
+    members: input.members
+      .filter((member) => member.active)
+      .sort((a, b) => a.fullName.localeCompare(b.fullName, "fr"))
+      .map(({ id, fullName }) => ({ id, fullName })),
+    names: Object.fromEntries(input.members.map((member) => [member.id, member.fullName])),
+    inProgress,
+    done,
+    totals: {
+      inProgress: inProgress.length,
+      done: done.length,
+      signed: input.contracts.reduce((sum, contract) => sum + (contract.amount ?? 0), 0),
+      // Abonnements en cours : ceux des sites déjà en ligne.
+      monthly: done.reduce((sum, contract) => sum + (contract.monthly ?? 0), 0),
+    },
   };
 }

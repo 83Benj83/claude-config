@@ -1,100 +1,84 @@
 /**
- * Contenu éditorial du site. Tout ce qui décrit l'agence se modifie ici :
- * nom, textes de présentation, services, méthode et valeurs.
- * Les mêmes textes servent au site et à l'aperçu interactif.
+ * Contenu éditorial de l'espace. Tout ce qui décrit l'agence se modifie ici :
+ * nom, présentation, packs, parcours client et engagements. Les mêmes textes
+ * servent au site et à l'aperçu interactif. Les chiffres reprennent le guide
+ * du prospecteur (page Tarifs au 13 octobre 2026) : c'est la page Tarifs du
+ * site public qui fait foi.
  */
 
-export type IconName =
-  | "browser"
-  | "storefront"
-  | "magnifying-glass"
-  | "wrench"
-  | "target"
-  | "chat"
-  | "handshake"
-  | "rocket";
+export type IconName = "target" | "mail" | "send" | "palette" | "rocket" | "shield" | "tag" | "receipt" | "eye";
+
+export type Tone = "violet" | "gold" | "mint" | "coral";
 
 export const site = {
-  name: "Atelier Vif",
-  monogram: "AV",
-  tagline: "Agence de création de sites web",
+  name: "Astrinova",
+  space: "Espace équipe",
+  tagline: "Sites internet pour les commerces",
   description:
-    "L'espace interne de l'équipe Atelier Vif\u00a0: prospection, établissements déjà contactés, classement, équipe et ressources.",
+    "L'espace de l'équipe Astrinova : prospection, commerces déjà contactés, classement, guide du prospecteur et ressources.",
 
   hero: {
-    title: "On crée des sites qui ramènent des clients.",
+    title: "Des sites internet pour les commerces, à prix affichés.",
     subtitle:
-      "Ici, tout ce qu'il faut pour prospecter\u00a0: les restaurants déjà contactés, les bons messages et le classement en direct.",
+      "Un site clair, rapide, pensé pour donner confiance, sans jargon technique et sans mauvaise surprise sur le prix.",
   },
+
+  facts: [
+    { label: "Ce qu'on vend", value: "Des sites pour commerces" },
+    { label: "Prix des packs", value: "290 € à 990 €" },
+    { label: "Paiement du site", value: "Une seule fois" },
+    { label: "Délai de création", value: "1 semaine à 1 mois" },
+  ],
 
   about: {
-    title: "Une agence petite, rapide, et qui livre.",
-    body: "On conçoit, on développe et on fait vivre les sites web de commerces, d'artisans et de PME. Chaque projet démarre par une conversation\u00a0: c'est pour ça que la prospection est au cœur de l'agence.",
+    title: "Vous trouvez les clients, l'équipe fait le reste.",
+    body: "Astrinova conçoit des sites internet professionnels pour les commerces et les petites entreprises : restaurants, snacks, salons de thé, bubble tea, cafés, boulangeries, coiffeurs, barbiers, instituts de beauté, boutiques…",
   },
 
-  services: [
+  packs: [
     {
-      icon: "browser",
-      title: "Sites vitrines",
-      description: "Un site clair et rapide qui présente l'activité et donne envie d'appeler.",
+      name: "Essentiel",
+      price: "290 €",
+      tagline: "Un site simple, efficace, qui fait le travail.",
+      delay: "1 semaine maximum",
+      subscription: "25 € par mois (facultatif)",
+      tone: "mint",
     },
     {
-      icon: "storefront",
-      title: "E-commerce",
-      description: "Une boutique en ligne simple à gérer, du catalogue au paiement.",
+      name: "Pro",
+      price: "490 €",
+      tagline: "Un site professionnel pensé pour votre commerce.",
+      delay: "2 semaines maximum",
+      subscription: "25 € par mois (facultatif)",
+      tone: "violet",
     },
     {
-      icon: "magnifying-glass",
-      title: "Refonte & SEO",
-      description: "On reprend un site daté et on le fait remonter sur Google.",
+      name: "Signature",
+      price: "990 €",
+      tagline: "Une expérience web haut de gamme, en 3D.",
+      delay: "1 mois maximum",
+      subscription: "15 € par mois (facultatif)",
+      tone: "gold",
     },
-    {
-      icon: "wrench",
-      title: "Maintenance",
-      description: "Mises à jour, sécurité et petites évolutions, au mois.",
-    },
-  ] satisfies { icon: IconName; title: string; description: string }[],
+  ] satisfies { name: string; price: string; tagline: string; delay: string; subscription: string; tone: Tone }[],
 
   method: [
-    {
-      icon: "target",
-      verb: "Repérer",
-      text: "Trouver les entreprises dont le site freine l'activité, ou qui n'en ont pas.",
-    },
-    {
-      icon: "chat",
-      verb: "Contacter",
-      text: "Un premier message court et personnalisé, puis des relances régulières.",
-    },
-    {
-      icon: "handshake",
-      verb: "Proposer",
-      text: "Un rendez-vous, une maquette rapide, un devis clair.",
-    },
-    {
-      icon: "rocket",
-      verb: "Livrer",
-      text: "La production prend le relais et on garde le lien après la mise en ligne.",
-    },
+    { icon: "target", verb: "Trouver", text: "Repérer les commerces qui ont besoin d'un site : pas de site, site daté, pas de réservation ni de commande en ligne." },
+    { icon: "mail", verb: "Prévenir l'équipe", text: "Dès qu'un client est intéressé, par e-mail avec la fiche de transmission." },
+    { icon: "send", verb: "Envoyer deux liens", text: "La page Tarifs et le formulaire de maquette, avec le modèle « Client intéressé »." },
+    { icon: "palette", verb: "La maquette", text: "L'équipe répond sous 24 h et réalise une maquette à l'image du commerce." },
+    { icon: "rocket", verb: "La mise en ligne", text: "Le client voit son site avant et peut demander des ajustements. Rien n'est publié sans son accord." },
+    { icon: "shield", verb: "Le suivi", text: "Avec l'abonnement, le site reste en ligne, sécurisé et à jour." },
   ] satisfies { icon: IconName; verb: string; text: string }[],
 
   values: [
-    {
-      title: "Le volume crée la chance.",
-      text: "Chaque journée de prospection compte, même celles sans réponse.",
-    },
-    {
-      title: "On joue collectif.",
-      text: "Le classement motive, mais on partage les bons messages et les bonnes pistes.",
-    },
-    {
-      title: "On dit ce qu'on fait.",
-      text: "Des chiffres honnêtes, des promesses tenues, des clients qui reviennent.",
-    },
-  ],
+    { icon: "tag", title: "Des prix affichés.", text: "Le commerçant compose lui-même son site sur la page Tarifs et voit le total exact, sans laisser ses coordonnées." },
+    { icon: "receipt", title: "Un paiement unique.", text: "Le site se paie une seule fois, sans contrat de location. L'abonnement est facultatif et résiliable à tout moment." },
+    { icon: "eye", title: "Une maquette avant tout.", text: "Le client voit son site avant la mise en ligne. Réponse sous 24 h à chaque demande." },
+  ] satisfies { icon: IconName; title: string; text: string }[],
 
   closing: {
     title: "Ta journée compte.",
-    text: "Ajoute chaque restaurant dès que tu l'as contacté\u00a0: dix secondes, et le classement de l'équipe est à jour.",
+    text: "Ajoute chaque commerce dès que tu l'as contacté : dix secondes, et le classement de l'équipe est à jour.",
   },
 } as const;

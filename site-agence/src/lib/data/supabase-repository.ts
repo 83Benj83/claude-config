@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { cityKey, nameKey } from "../establishments";
-import type { Channel, DateRange, Member, Prospect, Resource, ResourceKind } from "../types";
+import type { Channel, Contract, ContractPack, ContractStatus, DateRange, Member, Prospect, Resource, ResourceKind } from "../types";
 import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "./repository";
 
 type MemberRow = {
@@ -33,6 +33,50 @@ type ProspectRow = {
   contacted_on: string;
   created_at: string;
 };
+
+type ContractRow = {
+  id: string;
+  client: string;
+  city: string | null;
+  contact: string | null;
+  pack: ContractPack;
+  options: string | null;
+  amount: number | string | null;
+  monthly: number | string | null;
+  status: ContractStatus;
+  signed_on: string;
+  delivered_on: string | null;
+  site_url: string | null;
+  brought_by: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const CONTRACT_COLUMNS =
+  "id, client, city, contact, pack, options, amount, monthly, status, signed_on, delivered_on, site_url, brought_by, note, created_at, updated_at";
+
+/** Les colonnes `numeric` arrivent parfois en texte : conversion explicite. */
+const euros = (value: number | string | null) => (value === null ? null : Number(value));
+
+const toContract = (row: ContractRow): Contract => ({
+  id: row.id,
+  client: row.client,
+  city: row.city,
+  contact: row.contact,
+  pack: row.pack,
+  options: row.options,
+  amount: euros(row.amount),
+  monthly: euros(row.monthly),
+  status: row.status,
+  signedOn: row.signed_on,
+  deliveredOn: row.delivered_on,
+  siteUrl: row.site_url,
+  broughtBy: row.brought_by,
+  note: row.note,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
 
 type ResourceRow = {
   id: string;
@@ -253,6 +297,53 @@ export class SupabaseRepository implements Repository {
 
   async deleteProspect(id: string): Promise<void> {
     check("la suppression du prospect", await this.db.from("prospects").delete().eq("id", id));
+  }
+
+  async listContracts(): Promise<Contract[]> {
+    const rows = check("la lecture des contrats", await this.db.from("contracts").select(CONTRACT_COLUMNS).order("signed_on", { ascending: false }));
+    return (rows as ContractRow[]).map(toContract);
+  }
+
+  async getContract(id: string): Promise<Contract | null> {
+    const row = check("la lecture du contrat", await this.db.from("contracts").select(CONTRACT_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toContract(row as ContractRow) : null;
+  }
+
+  async saveContract(contract: Contract): Promise<void> {
+    check(
+      "l'enregistrement du contrat",
+      await this.db.from("contracts").upsert({
+        id: contract.id,
+        client: contract.client,
+        city: contract.city,
+        contact: contract.contact,
+        pack: contract.pack,
+        options: contract.options,
+        amount: contract.amount,
+        monthly: contract.monthly,
+        status: contract.status,
+        signed_on: contract.signedOn,
+        delivered_on: contract.deliveredOn,
+        site_url: contract.siteUrl,
+        brought_by: contract.broughtBy,
+        note: contract.note,
+        created_at: contract.createdAt,
+        updated_at: contract.updatedAt,
+      }),
+    );
+  }
+
+  async deleteContract(id: string): Promise<void> {
+    check("la suppression du contrat", await this.db.from("contracts").delete().eq("id", id));
+  }
+
+  async getStatsSince(): Promise<string | null> {
+    const row = check("la lecture des réglages", await this.db.from("app_settings").select("stats_since").eq("id", true).maybeSingle());
+    return (row as { stats_since: string | null } | null)?.stats_since ?? null;
+  }
+
+  async setStatsSince(at: string): Promise<void> {
+    check("la remise à zéro des statistiques", await this.db.from("app_settings").upsert({ id: true, stats_since: at }));
   }
 
   async listResources(): Promise<Resource[]> {

@@ -7,6 +7,7 @@ import { normalizeText } from "@/lib/establishments";
 import type { LoginChoice } from "@/lib/types";
 import { usePlatform } from "../platform";
 import { Avatar } from "../primitives/avatar";
+import { BrandMark, NovaLogo } from "../primitives/brand-mark";
 import { buttonClasses } from "../primitives/button";
 import { controlClasses, FormMessage } from "../primitives/field";
 import { ThemeToggle } from "../shell/theme-toggle";
@@ -88,26 +89,27 @@ export function LoginScreen({ choices, demoAccounts }: { choices: LoginChoice[];
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="dot-grid relative hidden flex-col justify-between overflow-hidden border-r border-line bg-surface-2 p-10 lg:flex xl:p-14">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-[11px] bg-accent text-sm font-bold text-on-accent">{site.monogram}</span>
-          <span className="text-base font-semibold tracking-tight text-fg">{site.name}</span>
+      <aside className="sky sky-stars relative hidden flex-col justify-between overflow-hidden p-10 lg:flex xl:p-14">
+        <div className="flex items-center gap-3">
+          <NovaLogo size={40} />
+          <span className="leading-tight">
+            <span className="block font-display text-lg font-bold tracking-tight">{site.name}</span>
+            <span className="block text-xs font-medium tracking-wide text-[var(--sky-muted)] uppercase">{site.space}</span>
+          </span>
         </div>
         <div className="max-w-md">
-          <p className="text-4xl font-semibold leading-[1.05] tracking-tighter text-fg xl:text-5xl">L&apos;espace de prospection de l&apos;équipe.</p>
-          <p className="mt-5 text-lg leading-relaxed text-muted">
-            Ajoute tes prospects, vérifie qu&apos;un restaurant n&apos;a pas déjà été contacté et suis le classement en direct.
+          <p className="font-display text-4xl leading-[1.05] font-bold tracking-tight xl:text-5xl">L&apos;espace de prospection de l&apos;équipe.</p>
+          <p className="mt-5 text-lg leading-relaxed text-[var(--sky-muted)]">
+            Ajoute chaque commerce contacté, vérifie qu&apos;il ne l&apos;a pas déjà été, suis le classement et retrouve le guide du prospecteur.
           </p>
         </div>
-        <p className="text-sm text-subtle">{site.tagline}</p>
-        <div aria-hidden className="pointer-events-none absolute -right-24 -bottom-24 size-72 rounded-full bg-accent/15 blur-3xl" />
+        <p className="text-sm text-[var(--sky-muted)]">{site.tagline}</p>
       </aside>
 
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-4 py-4 sm:px-8">
-          <span className="flex items-center gap-2.5 lg:invisible">
-            <span className="grid size-8 place-items-center rounded-[10px] bg-accent text-[0.8125rem] font-bold text-on-accent">{site.monogram}</span>
-            <span className="text-[0.9375rem] font-semibold tracking-tight text-fg">{site.name}</span>
+          <span className="lg:invisible">
+            <BrandMark href={null} />
           </span>
           <ThemeToggle />
         </div>

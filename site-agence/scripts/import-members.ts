@@ -12,10 +12,13 @@
  *   sarah;Sarah Benali;Prospectrice;un-autre-mot-de-passe;non;paul;Prospection;oui
  *
  * Un identifiant déjà présent est mis à jour (nom, poste, rôle, mot de passe)
- * et ses sessions ouvertes sont fermées. Les variables SUPABASE_URL,
+ * et ses sessions ouvertes sont fermées. Au premier import, « Mails et liens »
+ * reçoit les contacts, liens et modèles du guide. Les variables SUPABASE_URL,
  * SUPABASE_SECRET_KEY et SESSION_SECRET sont lues dans `.env.local`.
  */
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { AGENCY_RESOURCES } from "@/content/resources";
 import { loginKey } from "@/lib/data/repository";
 import { SupabaseRepository } from "@/lib/data/supabase-repository";
 import { hashPassword } from "@/lib/password";
@@ -111,7 +114,15 @@ async function main() {
     const [member, manager] = await Promise.all([repository.getCredentialsByLogin(row.login), repository.getCredentialsByLogin(row.managerLogin)]);
     if (member && manager && member.member.id !== manager.member.id) await repository.updateMember(member.member.id, { managerId: manager.member.id });
   }
-  console.log(`Import terminé : ${created} identifiant(s) créé(s), ${updated} mis à jour.`);
+  // Premier import : « Mails et liens » reçoit les contacts, liens et modèles du guide.
+  let resources = 0;
+  if ((await repository.listResources()).length === 0) {
+    for (const resource of AGENCY_RESOURCES) {
+      await repository.saveResource({ ...resource, id: randomUUID() });
+      resources += 1;
+    }
+  }
+  console.log(`Import terminé : ${created} identifiant(s) créé(s), ${updated} mis à jour${resources ? `, ${resources} ressources ajoutées` : ""}.`);
 }
 
 main().catch((error: unknown) => {

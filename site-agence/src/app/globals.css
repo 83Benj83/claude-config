@@ -1,40 +1,54 @@
 @import "tailwindcss";
 
 /*
- * Design system
- * - Une seule couleur d'accent (orange signal), neutres zinc froids.
- * - Formes : contrôles interactifs en pilule, conteneurs en 16px, champs en 12px.
- * - Thème : suit le système, surcharge possible via [data-theme] (bouton du header).
+ * Identité Astrinova (reprise du guide du prospecteur)
+ * - Violet lavande en couleur principale ; or, menthe et corail en appoint,
+ *   une teinte par famille de rubriques.
+ * - Titres en Bricolage Grotesque, texte en Onest.
+ * - Thème : suit le système, surcharge possible via [data-theme].
+ * Tous les couples texte/fond respectent le contraste AA (vérifiés).
  */
 
 :root {
-  --bg: #f6f6f7;
-  --surface: #fcfcfd;
-  --surface-2: #efeff1;
-  --line: #e2e2e6;
-  --line-strong: #cfcfd5;
-  --fg: #18181b;
-  --muted: #52525b;
-  --subtle: #6b6b74;
-  --accent: #ff5a1f;
-  --accent-ink: #c2410c;
-  --accent-soft: #fff0e8;
-  --on-accent: #18181b;
-  --inverse: #18181b;
-  --on-inverse: #f4f4f5;
-  --success: #15803d;
-  --success-soft: #ecfdf3;
-  --danger: #b91c1c;
-  --danger-soft: #fef2f2;
+  --bg: #f6f5fa;
+  --surface: #ffffff;
+  --surface-2: #efedf6;
+  --line: #e1deec;
+  --line-strong: #cfcbe0;
+  --fg: #17151f;
+  --muted: #5d5a6b;
+  --subtle: #67637a;
+  /* Violet Astrinova : couleur principale. */
+  --accent: #5b48c2;
+  --accent-ink: #5b48c2;
+  --accent-soft: #e9e5fa;
+  --on-accent: #ffffff;
+  --accent-2: #8a7be0;
+  /* Couleurs d'appoint (une par famille de rubriques). */
+  --gold: #c9973f;
+  --gold-ink: #7f581b;
+  --gold-soft: #f6ecd8;
+  --mint: #3fae80;
+  --mint-ink: #1f7a55;
+  --mint-soft: #e1f3ea;
+  --coral: #e27a62;
+  --coral-ink: #a0442f;
+  --coral-soft: #f8e6e1;
+  --inverse: #17151f;
+  --on-inverse: #eeedf4;
+  --success: #1f7a55;
+  --success-soft: #e1f3ea;
+  --danger: #a0442f;
+  --danger-soft: #f8e6e1;
   /* Icônes des toasts, posées sur le fond inversé. */
-  --success-on-inverse: #4ade80;
-  --danger-on-inverse: #f87171;
-  --shadow-tint: 24 24 27;
+  --success-on-inverse: #6fd3a6;
+  --danger-on-inverse: #f0a08f;
+  --shadow-tint: 40 30 90;
   /* Bordure des champs et anneau de focus : contraste ≥ 3:1 (WCAG 1.4.11). */
-  --line-input: #8a8a94;
-  --focus: #c2410c;
-  --dot: rgb(24 24 27 / 0.14);
-  --shimmer: rgb(255 255 255 / 0.35);
+  --line-input: #8a86a0;
+  --focus: #5b48c2;
+  --dot: rgb(91 72 194 / 0.12);
+  --shimmer: rgb(255 255 255 / 0.5);
   /* Défini ici aussi pour les règles CSS écrites à la main (hors utilitaires). */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
@@ -42,60 +56,80 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c0c0e;
-    --surface: #141417;
-    --surface-2: #1c1c21;
-    --line: #2a2a31;
-    --line-strong: #3a3a43;
-    --fg: #f4f4f5;
-    --muted: #b4b4bc;
-    --subtle: #8e8e98;
-    --accent: #f5571c;
-    --accent-ink: #ff8a5c;
-    --accent-soft: #2a160e;
-    --on-accent: #18181b;
-    --inverse: #f4f4f5;
-    --on-inverse: #18181b;
-    --success: #4ade80;
-    --success-soft: #0f2a1a;
-    --danger: #f87171;
-    --danger-soft: #2a1212;
-    --success-on-inverse: #15803d;
-    --danger-on-inverse: #b91c1c;
+    --bg: #0b0b10;
+    --surface: #14141c;
+    --surface-2: #1b1a25;
+    --line: #2a2836;
+    --line-strong: #3a3748;
+    --fg: #eeedf4;
+    --muted: #a3a0b3;
+    --subtle: #8d8a9e;
+    --accent: #a99bea;
+    --accent-ink: #b7abf0;
+    --accent-soft: #25213d;
+    --on-accent: #17151f;
+    --accent-2: #7c6bd6;
+    --gold: #e8c177;
+    --gold-ink: #e8c177;
+    --gold-soft: #2e2617;
+    --mint: #6fd3a6;
+    --mint-ink: #6fd3a6;
+    --mint-soft: #14291f;
+    --coral: #f0a08f;
+    --coral-ink: #f0a08f;
+    --coral-soft: #2e1a16;
+    --inverse: #eeedf4;
+    --on-inverse: #17151f;
+    --success: #6fd3a6;
+    --success-soft: #14291f;
+    --danger: #f0a08f;
+    --danger-soft: #2e1a16;
+    --success-on-inverse: #1f7a55;
+    --danger-on-inverse: #a0442f;
     --shadow-tint: 0 0 0;
-    --line-input: #6b6b76;
-    --focus: #f5571c;
-    --dot: rgb(255 255 255 / 0.08);
+    --line-input: #77738c;
+    --focus: #a99bea;
+    --dot: rgb(169 155 234 / 0.1);
     --shimmer: rgb(255 255 255 / 0.05);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0c0c0e;
-  --surface: #141417;
-  --surface-2: #1c1c21;
-  --line: #2a2a31;
-  --line-strong: #3a3a43;
-  --fg: #f4f4f5;
-  --muted: #b4b4bc;
-  --subtle: #8e8e98;
-  --accent: #f5571c;
-  --accent-ink: #ff8a5c;
-  --accent-soft: #2a160e;
-  --on-accent: #18181b;
-  --inverse: #f4f4f5;
-  --on-inverse: #18181b;
-  --success: #4ade80;
-  --success-soft: #0f2a1a;
-  --danger: #f87171;
-  --danger-soft: #2a1212;
-  --success-on-inverse: #15803d;
-  --danger-on-inverse: #b91c1c;
+  --bg: #0b0b10;
+  --surface: #14141c;
+  --surface-2: #1b1a25;
+  --line: #2a2836;
+  --line-strong: #3a3748;
+  --fg: #eeedf4;
+  --muted: #a3a0b3;
+  --subtle: #8d8a9e;
+  --accent: #a99bea;
+  --accent-ink: #b7abf0;
+  --accent-soft: #25213d;
+  --on-accent: #17151f;
+  --accent-2: #7c6bd6;
+  --gold: #e8c177;
+  --gold-ink: #e8c177;
+  --gold-soft: #2e2617;
+  --mint: #6fd3a6;
+  --mint-ink: #6fd3a6;
+  --mint-soft: #14291f;
+  --coral: #f0a08f;
+  --coral-ink: #f0a08f;
+  --coral-soft: #2e1a16;
+  --inverse: #eeedf4;
+  --on-inverse: #17151f;
+  --success: #6fd3a6;
+  --success-soft: #14291f;
+  --danger: #f0a08f;
+  --danger-soft: #2e1a16;
+  --success-on-inverse: #1f7a55;
+  --danger-on-inverse: #a0442f;
   --shadow-tint: 0 0 0;
-  --line-input: #6b6b76;
-  --focus: #f5571c;
-  --dot: rgb(255 255 255 / 0.08);
+  --line-input: #77738c;
+  --focus: #a99bea;
+  --dot: rgb(169 155 234 / 0.1);
   --shimmer: rgb(255 255 255 / 0.05);
   color-scheme: dark;
 }
@@ -113,6 +147,16 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-2: var(--accent-2);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-gold-soft: var(--gold-soft);
+  --color-mint: var(--mint);
+  --color-mint-ink: var(--mint-ink);
+  --color-mint-soft: var(--mint-soft);
+  --color-coral: var(--coral);
+  --color-coral-ink: var(--coral-ink);
+  --color-coral-soft: var(--coral-soft);
   --color-on-accent: var(--on-accent);
   --color-inverse: var(--inverse);
   --color-on-inverse: var(--on-inverse);
@@ -122,8 +166,9 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-on-inverse: var(--danger-on-inverse);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-title), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --shadow-card: 0 1px 0 rgb(var(--shadow-tint) / 0.04), 0 12px 32px -16px rgb(var(--shadow-tint) / 0.18);
   --shadow-pop: 0 1px 0 rgb(var(--shadow-tint) / 0.06), 0 24px 48px -20px rgb(var(--shadow-tint) / 0.28);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -138,13 +183,13 @@
   body {
     background: var(--bg);
     color: var(--fg);
-    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-    font-feature-settings: "ss01", "cv11";
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   }
 
   h1,
   h2,
   h3 {
+    font-family: var(--font-title), var(--font-body), ui-sans-serif, system-ui, sans-serif;
     text-wrap: balance;
   }
 
@@ -208,18 +253,58 @@
     color: var(--muted);
     background: var(--surface-2);
   }
-  .heat-1 { background: color-mix(in oklab, var(--accent) 20%, var(--surface)); color: var(--fg); }
-  .heat-2 { background: color-mix(in oklab, var(--accent) 40%, var(--surface)); color: var(--fg); }
-  .heat-3 { background: color-mix(in oklab, var(--accent) 60%, var(--surface)); color: var(--fg); }
-  .heat-4 { background: color-mix(in oklab, var(--accent) var(--heat-4-mix, 80%), var(--surface)); color: var(--fg); }
+  .heat-1 { background: color-mix(in oklab, var(--accent) var(--heat-1-mix, 20%), var(--surface)); color: var(--fg); }
+  .heat-2 { background: color-mix(in oklab, var(--accent) var(--heat-2-mix, 40%), var(--surface)); color: var(--fg); }
+  .heat-3 { background: color-mix(in oklab, var(--accent) var(--heat-3-mix, 55%), var(--surface)); color: var(--fg); }
+  .heat-4 { background: color-mix(in oklab, var(--accent) var(--heat-4-mix, 70%), var(--surface)); color: var(--fg); }
   .heat-5 { background: var(--accent); color: var(--on-accent); }
+  /* En sombre, rampe resserrée : le texte clair garde un contraste ≥ 4,5:1 jusqu'à la 4e marche. */
   :root[data-theme="dark"] {
-    --heat-4-mix: 70%;
+    --heat-1-mix: 15%;
+    --heat-2-mix: 30%;
+    --heat-3-mix: 45%;
+    --heat-4-mix: 60%;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --heat-4-mix: 70%;
+      --heat-1-mix: 15%;
+      --heat-2-mix: 30%;
+      --heat-3-mix: 45%;
+      --heat-4-mix: 60%;
     }
+  }
+
+  /*
+   * Teintes de rubrique : chaque famille a sa couleur (icône, pastille, onglet actif).
+   * Les composants lisent --tone, --tone-ink (texte) et --tone-soft (fond).
+   */
+  .tone-violet { --tone: var(--accent); --tone-ink: var(--accent-ink); --tone-soft: var(--accent-soft); }
+  .tone-gold { --tone: var(--gold); --tone-ink: var(--gold-ink); --tone-soft: var(--gold-soft); }
+  .tone-mint { --tone: var(--mint); --tone-ink: var(--mint-ink); --tone-soft: var(--mint-soft); }
+  .tone-coral { --tone: var(--coral); --tone-ink: var(--coral-ink); --tone-soft: var(--coral-soft); }
+
+  /*
+   * Ciel Astrinova : surface nuit avec halos violet et or, identique dans les
+   * deux thèmes (texte clair, contraste ≥ 7:1). Pour les moments forts : accueil,
+   * connexion, présentation de l'agence.
+   */
+  .sky {
+    --sky-fg: #eeedf4;
+    --sky-muted: #c9c5da;
+    color: var(--sky-fg);
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgb(169 155 234 / 0.42), transparent 55%),
+      radial-gradient(80% 70% at 0% 100%, rgb(232 193 119 / 0.22), transparent 60%),
+      #17151f;
+  }
+  .sky-stars {
+    background-image:
+      radial-gradient(1.5px 1.5px at 12% 22%, rgb(255 255 255 / 0.7), transparent 60%),
+      radial-gradient(1px 1px at 32% 68%, rgb(255 255 255 / 0.55), transparent 60%),
+      radial-gradient(1.5px 1.5px at 58% 18%, rgb(255 255 255 / 0.6), transparent 60%),
+      radial-gradient(1px 1px at 78% 52%, rgb(255 255 255 / 0.5), transparent 60%),
+      radial-gradient(1.5px 1.5px at 90% 84%, rgb(255 255 255 / 0.55), transparent 60%),
+      radial-gradient(1px 1px at 46% 88%, rgb(255 255 255 / 0.45), transparent 60%);
   }
 
   .tabular {

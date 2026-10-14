@@ -23,9 +23,9 @@ const css = read(".css").replaceAll("</style", "<\\/style");
 
 const fonts =
   '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-  '<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">';
+  '<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Onest:wght@400..700&display=swap" rel="stylesheet">';
 
-const page = `<title>Espace Atelier Vif</title>
+const page = `<title>Astrinova · Espace équipe</title>
 ${fonts}
 <style>${css}</style>
 <div id="app"></div>

@@ -4,8 +4,8 @@
  *
  * - Sans liste d'identifiants : l'équipe fictive du mode démo.
  * - Avec la liste de l'agence (fichier CSV, jamais dans le dépôt) : ces
- *   identifiants seulement, première connexion à faire, et un historique
- *   d'exemple réparti entre eux pour voir le classement et le bilan.
+ *   identifiants seulement, première connexion à faire, et aucun prospect :
+ *   les compteurs partent de zéro.
  */
 import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "@/lib/data/demo-seed";
 import { loginKey } from "@/lib/data/repository";
@@ -55,7 +55,7 @@ async function agencyMembers(rows: MemberCsvRow[]): Promise<SeedDoc[]> {
         isAdmin: row.isAdmin,
         active: true,
         sortOrder: index,
-        // Première connexion : chacun confirme son nom et son poste.
+        // Première connexion : chacun confirme son nom.
         welcomedAt: null,
         lastLoginAt: null,
         // Vrais mots de passe : hachage complet.
@@ -67,30 +67,16 @@ async function agencyMembers(rows: MemberCsvRow[]): Promise<SeedDoc[]> {
   return docs.flat();
 }
 
-/** Historique d'exemple : les rythmes les plus soutenus de l'équipe fictive, attribués aux prospecteurs donnés. */
-function exampleProspects(today: IsoDate, memberIds: string[] | null): Prospect[] {
-  const generated = generateDemoProspects(today);
-  if (!memberIds) return generated;
-  const volume = new Map<string, number>();
-  for (const prospect of generated) volume.set(prospect.memberId, (volume.get(prospect.memberId) ?? 0) + 1);
-  const profiles = [...volume.keys()].sort((a, b) => volume.get(b)! - volume.get(a)!);
-  const owner = new Map(profiles.slice(0, memberIds.length).map((profile, index) => [profile, memberIds[index]]));
-  return generated.flatMap((prospect) => {
-    const memberId = owner.get(prospect.memberId);
-    return memberId ? [{ ...prospect, id: prospect.id.replace(`demo-${prospect.memberId}-`, `exemple-${memberId}-`), memberId }] : [];
-  });
-}
-
 export async function buildSeed(
   today: IsoDate,
   { iterations = SEED_HASH_ITERATIONS, members }: { iterations?: number; members?: MemberCsvRow[] } = {},
 ): Promise<SeedDoc[]> {
   const people = members ? await agencyMembers(members) : await fictionalMembers(iterations);
-  const profiles = people.filter((doc) => doc.collection === "members");
-  const ordered = members ? profiles.filter((doc) => doc.data.isProspector === true).map((doc) => doc.id) : null;
+  // L'historique fictif ne sert qu'à l'équipe fictive.
+  const history = members ? [] : generateDemoProspects(today);
 
   const months = new Map<string, { memberId: string; month: string; items: Omit<Prospect, "memberId">[] }>();
-  for (const { memberId, ...item } of exampleProspects(today, ordered)) {
+  for (const { memberId, ...item } of history) {
     const month = monthKeyOf(item.date);
     const id = monthDocId(memberId, month);
     const entry = months.get(id) ?? { memberId, month, items: [] };

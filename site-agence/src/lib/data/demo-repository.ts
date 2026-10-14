@@ -1,7 +1,7 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { DateRange, IsoDate, Member, Prospect, Resource } from "../types";
+import type { Contract, DateRange, IsoDate, Member, Prospect, Resource } from "../types";
 import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewMember, type Repository } from "./repository";
 
@@ -11,6 +11,8 @@ type DemoState = {
   members: StoredMember[];
   prospects: Prospect[];
   resources: Resource[];
+  contracts: Contract[];
+  statsSince?: string | null;
 };
 
 /** Peu d'itérations en démo : démarrage rapide, mots de passe publics de toute façon. */
@@ -24,7 +26,13 @@ export async function createDemoState(today: IsoDate): Promise<DemoState> {
       sessionVersion: 1,
     })),
   );
-  return { members, prospects: generateDemoProspects(today), resources: DEMO_RESOURCES.map((r) => ({ ...r })) };
+  return {
+    members,
+    prospects: generateDemoProspects(today),
+    resources: DEMO_RESOURCES.map((r) => ({ ...r })),
+    // Aucun contrat d'exemple : l'équipe saisit les siens.
+    contracts: [],
+  };
 }
 
 const clone = <T,>(value: T): T => structuredClone(value);
@@ -110,6 +118,33 @@ export class DemoRepository implements Repository {
 
   async deleteResource(id: string): Promise<void> {
     this.state.resources = this.state.resources.filter((r) => r.id !== id);
+  }
+
+  async listContracts(): Promise<Contract[]> {
+    return this.state.contracts.map(clone);
+  }
+
+  async getContract(id: string): Promise<Contract | null> {
+    const contract = this.state.contracts.find((c) => c.id === id);
+    return contract ? clone(contract) : null;
+  }
+
+  async saveContract(contract: Contract): Promise<void> {
+    const index = this.state.contracts.findIndex((c) => c.id === contract.id);
+    if (index === -1) this.state.contracts.push(clone(contract));
+    else this.state.contracts[index] = clone(contract);
+  }
+
+  async deleteContract(id: string): Promise<void> {
+    this.state.contracts = this.state.contracts.filter((c) => c.id !== id);
+  }
+
+  async getStatsSince(): Promise<string | null> {
+    return this.state.statsSince ?? null;
+  }
+
+  async setStatsSince(at: string): Promise<void> {
+    this.state.statsSince = at;
   }
 }
 

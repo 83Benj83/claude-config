@@ -18,7 +18,7 @@ async function repositoryWith(prospectList: Prospect[] = []) {
   const stored = await Promise.all(
     [admin, lea, theo].map(async (member) => ({ member: { ...member }, passwordHash: await hashPassword(`${member.id}2026`, 1_000), sessionVersion: 1 })),
   );
-  return new DemoRepository({ members: stored, prospects: prospectList.map((p) => ({ ...p })), resources: [] });
+  return new DemoRepository({ members: stored, prospects: prospectList.map((p) => ({ ...p })), resources: [], contracts: [] });
 }
 
 const prospectForm = (overrides: Partial<ProspectFormValues> = {}): ProspectFormValues => ({
@@ -198,12 +198,13 @@ describe("première connexion", () => {
 });
 
 describe("ressources", () => {
-  test("seul un admin ajoute, avec un lien web valide", async () => {
+  test("toute l'équipe ajoute et retire, avec un lien web valide", async () => {
     const repo = await repositoryWith();
     const form = { id: "", kind: "link", title: "Portfolio", value: "javascript:alert(1)", note: "", sortOrder: "0" };
-    expect((await members.saveResource(repo, lea, { ...form, value: "https://exemple.fr" })).ok).toBe(false);
-    expect((await members.saveResource(repo, admin, form)).ok).toBe(false);
-    expect((await members.saveResource(repo, admin, { ...form, value: "https://exemple.fr" })).ok).toBe(true);
-    expect(await repo.listResources()).toHaveLength(1);
+    expect((await members.saveResource(repo, lea, form)).ok).toBe(false);
+    expect((await members.saveResource(repo, lea, { ...form, value: "https://exemple.fr" })).ok).toBe(true);
+    const [saved] = await repo.listResources();
+    expect((await members.deleteResource(repo, theo, saved.id)).ok).toBe(true);
+    expect(await repo.listResources()).toHaveLength(0);
   });
 });

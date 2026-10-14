@@ -123,17 +123,17 @@ describe("team, resources and admin views", () => {
     expect(view.monthTotals).toEqual({ a: 3, b: 2, old: 1 });
   });
 
-  test("resources are sorted and editable by admins only", () => {
+  test("resources are sorted and editable by the whole team", () => {
     const resources = [
       { id: "2", kind: "link" as const, title: "B", value: "https://b.fr", note: null, sortOrder: 2 },
       { id: "1", kind: "email" as const, title: "A", value: "a@b.fr", note: null, sortOrder: 1 },
     ];
-    expect(buildResourcesView({ resources, me }).canEdit).toBe(false);
+    expect(buildResourcesView({ resources, me }).canEdit).toBe(true);
     expect(buildResourcesView({ resources, me: members[2] }).resources.map((r) => r.id)).toEqual(["1", "2"]);
   });
 
   test("admin view lists active members first", () => {
-    const view = buildAdminView({ members, me: members[2] });
+    const view = buildAdminView({ members, me: members[2], stats: { since: null, establishments: 0, countedThisMonth: 0 } });
     expect(view.members.at(-1)?.id).toBe("old");
     expect(view.departments).toEqual(["Commercial"]);
   });

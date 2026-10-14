@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  ArrowCounterClockwiseIcon,
   ArrowsClockwiseIcon,
+  ChartBarIcon,
   CheckCircleIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -12,7 +14,8 @@ import {
 } from "@phosphor-icons/react";
 import { useId, useState, useTransition, type FormEvent } from "react";
 import type { MemberFormValues } from "@/lib/actions-contract";
-import { formatDayShort, todayIso } from "@/lib/dates";
+import { formatDayLong, formatDayShort, todayIso } from "@/lib/dates";
+import { formatInt } from "@/lib/format";
 import { generatePassword } from "@/lib/password";
 import { MIN_PASSWORD_LENGTH } from "@/lib/rules";
 import type { Member } from "@/lib/types";
@@ -21,16 +24,21 @@ import { usePlatform } from "../platform";
 import { Avatar } from "../primitives/avatar";
 import { buttonClasses } from "../primitives/button";
 import { CopyButton } from "../primitives/copy-button";
+import { Segmented } from "../primitives/choice";
 import { Checkbox, Field, FormMessage, SelectField, controlClasses } from "../primitives/field";
 import { Sheet } from "../primitives/sheet";
 import { Badge, Card, ScreenHeader } from "../primitives/surface";
+import { useToast } from "../primitives/toast";
+
+type Tab = "identifiants" | "statistiques";
 
 /**
- * Gestion des identifiants : l'admin crée chaque identifiant avec son mot de
- * passe, puis les transmet. À la première connexion, la personne choisit son
- * identifiant dans la liste et entre ce mot de passe.
+ * Panel admin : les identifiants de l'équipe (création, mots de passe, rôles)
+ * et les statistiques (chiffres clés, remise à zéro). À la première connexion,
+ * chacun choisit son identifiant dans la liste et entre son mot de passe.
  */
 export function AdminScreen({ view }: { view: AdminView }) {
+  const [tab, setTab] = useState<Tab>("identifiants");
   const [editing, setEditing] = useState<Member | "new" | null>(null);
   const active = view.members.filter((member) => member.active);
   const waiting = active.filter((member) => !member.welcomedAt).length;
@@ -39,16 +47,31 @@ export function AdminScreen({ view }: { view: AdminView }) {
   return (
     <div className="flex flex-col gap-6">
       <ScreenHeader
-        title="Identifiants"
-        description="Crée les identifiants de l'équipe et définis le mot de passe de chacun."
+        title="Panel admin"
+        description="Les identifiants de l'équipe et les statistiques. Réservé aux administrateurs."
         actions={
-          <button type="button" onClick={() => setEditing("new")} className={buttonClasses()}>
-            <UserPlusIcon size={18} aria-hidden />
-            Nouvel identifiant
-          </button>
+          tab === "identifiants" && (
+            <button type="button" onClick={() => setEditing("new")} className={buttonClasses()}>
+              <UserPlusIcon size={18} aria-hidden />
+              Nouvel identifiant
+            </button>
+          )
         }
       />
 
+      <Segmented
+        label="Partie du panel admin"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "identifiants", label: `Identifiants (${active.length})` },
+          { value: "statistiques", label: "Statistiques" },
+        ]}
+      />
+
+      {tab === "statistiques" ? (
+        <StatisticsPanel view={view} />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-8">
           <div className="grid grid-cols-3 gap-3">
@@ -91,6 +114,7 @@ export function AdminScreen({ view }: { view: AdminView }) {
           </Card>
         </aside>
       </div>
+      )}
 
       <Sheet
         open={editing !== null}
@@ -111,11 +135,94 @@ export function AdminScreen({ view }: { view: AdminView }) {
   );
 }
 
+/** Chiffres clés et remise à zéro des compteurs (confirmation tapée, rien n'est supprimé). */
+function StatisticsPanel({ view }: { view: AdminView }) {
+  const { actions, Link } = usePlatform();
+  const toast = useToast();
+  const [confirmation, setConfirmation] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const fieldId = useId();
+  const since = view.stats.since;
+
+  const reset = (event: FormEvent) => {
+    event.preventDefault();
+    start(async () => {
+      const result = await actions.resetStatistics({ confirmation });
+      if (!result.ok) {
+        setError(result.errors?.confirmation ?? result.message ?? "Remise à zéro impossible.");
+        return;
+      }
+      setConfirmation("");
+      setError(null);
+      toast(result.message ?? "Statistiques remises à zéro.");
+    });
+  };
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
+      <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
+        <div className="grid grid-cols-2 gap-3">
+          <Figure label="Prospects ce mois-ci" value={view.stats.countedThisMonth} />
+          <Figure label="Commerces déjà contactés" value={view.stats.establishments} />
+        </div>
+        <Card className="p-5">
+          <p className="text-sm text-subtle">Les compteurs partent du</p>
+          <p className="mt-0.5 font-display text-xl font-bold tracking-tight text-fg first-letter:uppercase" suppressHydrationWarning>
+            {since ? formatDayLong(todayIso(new Date(since))) : "début (jamais remis à zéro)"}
+          </p>
+          <p className="mt-3 text-sm text-muted">
+            Le classement, le bilan et les compteurs de l&apos;accueil ne comptent que les prospects ajoutés depuis cette date.
+          </p>
+          <Link href="/bilan" className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-4" })}>
+            <ChartBarIcon size={16} aria-hidden />
+            Voir le bilan et l&apos;exporter
+          </Link>
+        </Card>
+      </div>
+
+      <Card className="min-w-0 border-danger/40 p-5 lg:col-span-5">
+        <h2 className="flex items-center gap-2 font-display text-base font-bold tracking-tight text-fg">
+          <ArrowCounterClockwiseIcon size={18} className="text-danger" aria-hidden />
+          Remettre les statistiques à zéro
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          Le classement, le bilan et tous les compteurs repartent de zéro à partir de maintenant, pour toute l&apos;équipe.
+          L&apos;historique «&nbsp;déjà contacté ?&nbsp;» est conservé : aucun commerce n&apos;est oublié.
+        </p>
+        <form onSubmit={reset} className="mt-4 flex flex-col gap-3" noValidate>
+          <Field
+            id={fieldId}
+            label={<>Pour confirmer, tape <strong>zéro</strong></>}
+            value={confirmation}
+            onChange={(event) => {
+              setConfirmation(event.target.value);
+              setError(null);
+            }}
+            error={error ?? undefined}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          <button
+            type="submit"
+            disabled={pending || confirmation.trim() === ""}
+            className={buttonClasses({ variant: "secondary", className: "border-danger text-danger hover:bg-danger-soft" })}
+          >
+            <ArrowCounterClockwiseIcon size={18} aria-hidden />
+            {pending ? "Remise à zéro…" : "Remettre à zéro"}
+          </button>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
 function Figure({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0 rounded-2xl border border-line bg-surface px-3 py-3 sm:px-4 sm:py-3.5">
       <p className="text-xs text-subtle">{label}</p>
-      <p className="mt-0.5 text-2xl font-semibold tracking-tight text-fg tabular">{value}</p>
+      <p className="mt-0.5 font-display text-2xl font-bold tracking-tight text-fg tabular">{formatInt(value)}</p>
     </div>
   );
 }
@@ -254,7 +361,7 @@ function MemberForm({ member, view, onDone }: { member: Member | null; view: Adm
       <fieldset className="flex min-w-0 flex-col gap-4 rounded-2xl border border-line p-4">
         <legend className="px-1 text-sm font-semibold text-fg">Rôles</legend>
         <Checkbox label="Prospecteur" hint="Apparaît dans le classement et le bilan." checked={form.isProspector} onChange={(value) => set("isProspector", value)} />
-        <Checkbox label="Administrateur" hint="Gère les identifiants et les mails et liens." checked={form.isAdmin} onChange={(value) => set("isAdmin", value)} />
+        <Checkbox label="Administrateur" hint="Accède au panel admin (identifiants, statistiques) et gère les contrats." checked={form.isAdmin} onChange={(value) => set("isAdmin", value)} />
         {errors.isAdmin && <p className="text-sm text-danger">{errors.isAdmin}</p>}
         {member && (
           <Checkbox

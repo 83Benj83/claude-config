@@ -90,7 +90,7 @@ export const resourceSchema = z
       .string()
       .max(64)
       .transform((value) => (value === "" ? null : value)),
-    kind: z.enum(["email", "template", "link"], { error: "Choisis un type." }),
+    kind: z.enum(["email", "phone", "template", "link"], { error: "Choisis un type." }),
     title: line(2, 100, "Donne un titre."),
     value: z.string().trim().min(1, "Ce champ est obligatoire.").max(5000, "5000 caractères maximum."),
     note: optionalText(300),
@@ -100,12 +100,59 @@ export const resourceSchema = z
     if (resource.kind === "email" && !z.email().safeParse(resource.value).success) {
       ctx.addIssue({ code: "custom", path: ["value"], message: "Adresse e-mail invalide." });
     }
+    if (resource.kind === "phone" && !/^\+?[\d .()-]{6,20}$/.test(resource.value)) {
+      ctx.addIssue({ code: "custom", path: ["value"], message: "Numéro de téléphone invalide." });
+    }
     if (resource.kind === "link" && !/^https?:\/\/\S+$/.test(resource.value)) {
       ctx.addIssue({ code: "custom", path: ["value"], message: "Le lien doit commencer par https://" });
     }
   });
 
 export type ResourceFormInput = z.infer<typeof resourceSchema>;
+
+/** Montant en euros saisi librement (« 490 », « 490,50 », vide = non renseigné). */
+const optionalEuros = (max: number) =>
+  z
+    .string()
+    .trim()
+    .transform((value, ctx) => {
+      if (value === "") return null;
+      const amount = Number(value.replace(/\s|€/g, "").replace(",", "."));
+      if (!Number.isFinite(amount) || amount < 0 || amount > max) {
+        ctx.addIssue({ code: "custom", message: `Montant entre 0 et ${max} €.` });
+        return z.NEVER;
+      }
+      return Math.round(amount * 100) / 100;
+    });
+
+const optionalDate = z
+  .string()
+  .trim()
+  .refine((value) => value === "" || isIsoDate(value), "Date invalide.")
+  .transform((value) => (value === "" ? null : value));
+
+export const contractSchema = z.object({
+  id: z
+    .string()
+    .max(64)
+    .transform((value) => (value === "" ? null : value)),
+  client: line(2, 120, "Indique le nom du commerce."),
+  city: optionalLine(80),
+  contact: optionalLine(160),
+  pack: z.enum(["Essentiel", "Pro", "Signature", "Sur mesure"], { error: "Choisis le pack." }),
+  options: optionalText(300),
+  amount: optionalEuros(100_000),
+  monthly: optionalEuros(10_000),
+  status: z.enum(["maquette", "developpement", "validation", "termine"], { error: "Choisis l'étape." }),
+  signedOn: z.string().refine(isIsoDate, "Indique la date de signature."),
+  deliveredOn: optionalDate,
+  siteUrl: optionalLine(300).refine((value) => value === null || /^https?:\/\/\S+$/.test(value), "Le lien doit commencer par https://"),
+  broughtBy: z
+    .string()
+    .max(64)
+    .transform((value) => (value === "" ? null : value)),
+  note: optionalText(500),
+});
 
 /** Premier message d'erreur par champ, pour l'affichage sous les inputs. */
 export function fieldErrors(error: z.ZodError): Record<string, string> {

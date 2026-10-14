@@ -36,13 +36,19 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();
   await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Bilan du mois", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
+  // Contrats : consultables par l'équipe, gérés par les admins seulement.
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Contrats", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Contrats" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Nouveau contrat" })).toHaveCount(0);
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Guide du prospecteur", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await page.getByRole("button", { name: "Changer d'identifiant" }).click();
   await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Camille");
   await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Camille/ }).click();
   await page.getByLabel("Mot de passe", { exact: true }).fill("camille2026");
   await page.getByRole("button", { name: "Se connecter" }).click();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Identifiants", exact: true }).click();
+  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Panel admin", exact: true }).click();
   await page.getByRole("button", { name: "Nouvel identifiant" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("Identifiant", { exact: true }).fill("sami");

@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions-contract";
 import type { Repository } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
+import * as contracts from "@/lib/services/contracts";
 import * as members from "@/lib/services/members";
 import * as prospects from "@/lib/services/prospects";
 import type { Member } from "@/lib/types";
@@ -79,6 +80,9 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     saveResource: (input) => withMember((actor) => members.saveResource(repository, actor, input)),
     deleteResource: (id) => withMember((actor) => members.deleteResource(repository, actor, String(id))),
     saveMember: (input) => withMember((actor) => members.saveMember(repository, actor, input)),
+    saveContract: (input) => withMember((actor) => contracts.saveContract(repository, actor, input, clock())),
+    deleteContract: (id) => withMember((actor) => contracts.deleteContract(repository, actor, String(id))),
+    resetStatistics: (input) => withMember((actor) => members.resetStatistics(repository, actor, String(input?.confirmation ?? ""), clock().now)),
 
     exportCsv: (input) =>
       withMember((actor) =>

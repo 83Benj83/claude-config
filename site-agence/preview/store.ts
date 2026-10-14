@@ -8,14 +8,16 @@
  *   lien de consultation, on voit les noms mais on ne peut ni lire les empreintes,
  *   ni se connecter ;
  * - `prospects/<membre>_<mois>` : les prospects d'un membre pour un mois ;
- * - `resources/<id>`    : adresses e-mail, modèles et liens.
+ * - `resources/<id>`    : adresses e-mail, modèles et liens ;
+ * - `settings/app`      : réglages (date de remise à zéro des statistiques) ;
+ * - `contracts/<id>`    : contrats en cours et effectués.
  *
  * Tout ce qui vient de la base est relu et filtré : un document mal formé
  * est ignoré plutôt que d'interrompre l'affichage.
  */
 import { isChannel } from "@/lib/channels";
 import { isIsoDate } from "@/lib/dates";
-import type { Member, Prospect, Resource, ResourceKind } from "@/lib/types";
+import type { Contract, ContractPack, ContractStatus, Member, Prospect, Resource, ResourceKind } from "@/lib/types";
 
 export type DbError = { code: string; message: string };
 type DocSnapshot = { id: string; exists: boolean; data(): Record<string, unknown> | undefined };
@@ -36,7 +38,7 @@ export type Db = { collection(path: string): Collection };
 export type StoredMember = Member & { passwordHash: string | null; sessionVersion: number };
 type MonthDoc = { memberId: string; month: string; items: Prospect[] };
 
-const RESOURCE_KINDS: ResourceKind[] = ["email", "template", "link"];
+const RESOURCE_KINDS: ResourceKind[] = ["email", "phone", "template", "link"];
 /** Plus d'un millier de mois-membres : bien au-delà de l'usage d'un aperçu. */
 const MONTH_DOCS_LIMIT = 1000;
 
@@ -113,6 +115,39 @@ function readResource(id: string, data: Record<string, unknown>): Resource | nul
   return { id, kind, title, value, note: optionalText(data.note, 300), sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0 };
 }
 
+const PACKS: ContractPack[] = ["Essentiel", "Pro", "Signature", "Sur mesure"];
+const STATUSES: ContractStatus[] = ["maquette", "developpement", "validation", "termine"];
+const euros = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null);
+const isoDate = (value: unknown) => (isIsoDate(value) ? value : null);
+
+function readContract(id: string, data: Record<string, unknown>): Contract | null {
+  const client = text(data.client, 120);
+  const pack = PACKS.find((candidate) => candidate === data.pack);
+  const status = STATUSES.find((candidate) => candidate === data.status);
+  const signedOn = isoDate(data.signedOn);
+  if (!client || !pack || !status || !signedOn) return null;
+  const siteUrl = text(data.siteUrl, 300);
+  return {
+    id,
+    client,
+    city: optionalText(data.city, 80),
+    contact: optionalText(data.contact, 160),
+    pack,
+    options: optionalText(data.options, 300),
+    amount: euros(data.amount),
+    monthly: euros(data.monthly),
+    status,
+    signedOn,
+    deliveredOn: isoDate(data.deliveredOn),
+    // Seuls les liens web sont affichés.
+    siteUrl: siteUrl && /^https?:\/\/\S+$/.test(siteUrl) ? siteUrl : null,
+    broughtBy: optionalText(data.broughtBy, 80),
+    note: optionalText(data.note, 500),
+    createdAt: text(data.createdAt, 40) ?? `${signedOn}T12:00:00.000Z`,
+    updatedAt: text(data.updatedAt, 40) ?? `${signedOn}T12:00:00.000Z`,
+  };
+}
+
 export const monthDocId = (memberId: string, month: string) => `${memberId}_${month}`;
 
 type Status = "loading" | "ready" | "error";
@@ -127,6 +162,9 @@ export class PreviewStore {
   members = new Map<string, StoredMember>();
   months = new Map<string, MonthDoc>();
   resources = new Map<string, Resource>();
+  contracts = new Map<string, Contract>();
+  /** Depuis quand les prospects comptent dans les statistiques (`null` : depuis toujours). */
+  statsSince: string | null = null;
   status: Status = "loading";
   error: DbError | null = null;
 
@@ -148,7 +186,7 @@ export class PreviewStore {
     };
     const loadedOne = (name: string) => {
       this.loaded.add(name);
-      if (this.loaded.size === 4 && this.status === "loading") this.status = "ready";
+      if (this.loaded.size === 6 && this.status === "loading") this.status = "ready";
       this.emit();
     };
 
@@ -182,6 +220,20 @@ export class PreviewStore {
           );
           loadedOne("prospects");
         }, fail),
+      this.db.collection("contracts").onSnapshot((snap) => {
+        this.contracts = new Map(
+          snap.docs.flatMap((doc) => {
+            const contract = doc.exists ? readContract(doc.id, doc.data() ?? {}) : null;
+            return contract ? [[doc.id, contract] as const] : [];
+          }),
+        );
+        loadedOne("contracts");
+      }, fail),
+      this.db.collection("settings").onSnapshot((snap) => {
+        const app = snap.docs.find((doc) => doc.id === "app" && doc.exists)?.data();
+        this.statsSince = text(app?.statsSince, 40);
+        loadedOne("settings");
+      }, fail),
       this.db.collection("resources").onSnapshot((snap) => {
         this.resources = new Map(
           snap.docs.flatMap((doc) => {
@@ -262,6 +314,27 @@ export class PreviewStore {
         ? ref.delete()
         : ref.set({ memberId: month.memberId, month: month.month, items: month.items.map(({ memberId, ...item }) => item) }),
     );
+  }
+
+  async putContract(contract: Contract): Promise<void> {
+    this.contracts = new Map(this.contracts).set(contract.id, contract);
+    this.emit();
+    const { id, ...body } = contract;
+    await this.enqueue(`contracts/${id}`, () => this.db.collection("contracts").doc(id).set(body));
+  }
+
+  async removeContract(id: string): Promise<void> {
+    const contracts = new Map(this.contracts);
+    contracts.delete(id);
+    this.contracts = contracts;
+    this.emit();
+    await this.enqueue(`contracts/${id}`, () => this.db.collection("contracts").doc(id).delete());
+  }
+
+  async putStatsSince(at: string): Promise<void> {
+    this.statsSince = at;
+    this.emit();
+    await this.enqueue("settings/app", () => this.db.collection("settings").doc("app").set({ statsSince: at }));
   }
 
   async putResource(resource: Resource): Promise<void> {

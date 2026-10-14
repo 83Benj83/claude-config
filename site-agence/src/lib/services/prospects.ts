@@ -39,10 +39,11 @@ export async function addProspect(
     createdAt: clock.now,
   };
   await repository.addProspect(prospect);
-  const today = await repository.listProspects({ from: clock.today, to: clock.today });
+  const [today, since] = await Promise.all([repository.listProspects({ from: clock.today, to: clock.today }), repository.getStatsSince()]);
+  const counted = since ? today.filter((p) => p.createdAt >= since) : today;
   return {
     ok: true,
-    data: { prospect, todayCount: today.filter((p) => p.memberId === actor.id).length },
+    data: { prospect, todayCount: counted.filter((p) => p.memberId === actor.id).length },
     message: `${prospect.name} ajouté.`,
   };
 }

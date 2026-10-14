@@ -11,6 +11,7 @@ import {
   GENERIC_ERROR,
   SESSION_EXPIRED,
   type ActionResult,
+  type ContractFormValues,
   type CsvExport,
   type MemberFormValues,
   type ProspectFormValues,
@@ -22,6 +23,7 @@ import { loginKey } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
 import type { DuplicateCheck, Establishment } from "@/lib/establishments";
 import { createRateLimiter } from "@/lib/rate-limit";
+import * as contracts from "@/lib/services/contracts";
 import * as members from "@/lib/services/members";
 import * as prospects from "@/lib/services/prospects";
 import type { Member, Prospect } from "@/lib/types";
@@ -138,6 +140,18 @@ export async function deleteResource(id: string): Promise<ActionResult> {
 
 export async function saveMember(input: MemberFormValues): Promise<ActionResult> {
   return withMember(async (actor) => members.saveMember(await getRepository(), actor, input));
+}
+
+export async function resetStatistics(input: { confirmation: string }): Promise<ActionResult> {
+  return withMember(async (actor) => members.resetStatistics(await getRepository(), actor, String(input?.confirmation ?? ""), clock().now));
+}
+
+export async function saveContract(input: ContractFormValues): Promise<ActionResult> {
+  return withMember(async (actor) => contracts.saveContract(await getRepository(), actor, input, clock()));
+}
+
+export async function deleteContract(id: string): Promise<ActionResult> {
+  return withMember(async (actor) => contracts.deleteContract(await getRepository(), actor, String(id)));
 }
 
 export async function exportCsv(input: { month: string; kind: "bilan" | "prospects" }): Promise<ActionResult<CsvExport>> {

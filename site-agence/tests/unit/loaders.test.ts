@@ -40,8 +40,11 @@ describe("chargement des écrans", () => {
     expect((await loaders.loadDirectoryView(repository, TODAY)).recent.length).toBeGreaterThan(0);
     expect((await loaders.loadRankingView(repository, me, TODAY)).periods.mois.rows.length).toBeGreaterThan(0);
     expect((await loaders.loadTeamView(repository, me, TODAY)).members.length).toBe(DEMO_MEMBERS.length);
-    expect((await loaders.loadResourcesView(repository, me)).canEdit).toBe(false);
-    expect((await loaders.loadAdminView(repository, me)).departments).toContain("Commercial");
+    expect((await loaders.loadResourcesView(repository, me)).canEdit).toBe(true);
+    expect((await loaders.loadContractsView(repository, me, TODAY)).canEdit).toBe(false);
+    const admin = await loaders.loadAdminView(repository, me, TODAY);
+    expect(admin.departments).toContain("Commercial");
+    expect(admin.stats.since).toBeNull();
   });
 
   test("le bilan ignore un mois futur ou invalide", async () => {

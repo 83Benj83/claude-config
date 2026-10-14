@@ -83,8 +83,23 @@ export async function saveMember(repository: Repository, actor: Member, input: M
   return { ok: true, data: null, message: password ? "Modifications et nouveau mot de passe enregistrés." : "Modifications enregistrées." };
 }
 
-export async function saveResource(repository: Repository, actor: Member, input: ResourceFormValues): Promise<ActionResult> {
+/** Mot à taper pour confirmer la remise à zéro (sans accents ni majuscules). */
+export const RESET_CONFIRMATION = "zero";
+
+/**
+ * Remise à zéro des statistiques : classement, bilan et compteurs repartent de
+ * maintenant. Rien n'est supprimé : l'historique « déjà contacté ? » reste entier.
+ */
+export async function resetStatistics(repository: Repository, actor: Member, confirmation: string, now: string): Promise<ActionResult> {
   if (!actor.isAdmin) return { ok: false, message: ADMIN_ONLY };
+  const typed = confirmation.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  if (typed !== RESET_CONFIRMATION) return { ok: false, errors: { confirmation: "Tape « zéro » pour confirmer." } };
+  await repository.setStatsSince(now);
+  return { ok: true, data: null, message: "Statistiques remises à zéro. L'historique « déjà contacté ? » est conservé." };
+}
+
+/** « Mails et liens » : toute l'équipe les ajoute, les corrige et les retire. */
+export async function saveResource(repository: Repository, actor: Member, input: ResourceFormValues): Promise<ActionResult> {
   const parsed = resourceSchema.safeParse(input);
   if (!parsed.success) return { ok: false, errors: fieldErrors(parsed.error) };
   const { id, ...resource } = parsed.data;
@@ -93,7 +108,6 @@ export async function saveResource(repository: Repository, actor: Member, input:
 }
 
 export async function deleteResource(repository: Repository, actor: Member, id: string): Promise<ActionResult> {
-  if (!actor.isAdmin) return { ok: false, message: ADMIN_ONLY };
   await repository.deleteResource(id);
   return { ok: true, data: null, message: "Ressource supprimée." };
 }

@@ -15,6 +15,6 @@ export default function AdminPage() {
 }
 
 async function Admin() {
-  const { me, repository } = await screenContext({ admin: true });
-  return <AdminScreen view={await loadAdminView(repository, me)} />;
+  const { me, repository, today } = await screenContext({ admin: true });
+  return <AdminScreen view={await loadAdminView(repository, me, today)} />;
 }

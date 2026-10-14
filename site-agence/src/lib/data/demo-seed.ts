@@ -1,3 +1,4 @@
+import { AGENCY_RESOURCES } from "@/content/resources";
 import { addDays, isWeekend } from "../dates";
 import type { Channel, IsoDate, Member, Prospect, Resource } from "../types";
 
@@ -164,27 +165,5 @@ export function generateDemoProspects(today: IsoDate): Prospect[] {
   return prospects;
 }
 
-export const DEMO_RESOURCES: readonly Resource[] = [
-  { id: "res-1", kind: "email", title: "Adresse de prospection", value: "prospection@atelier-vif.fr", note: "À utiliser pour tous les premiers contacts.", sortOrder: 1 },
-  { id: "res-2", kind: "email", title: "Devis et contrats", value: "devis@atelier-vif.fr", note: "Mettre en copie dès qu'un devis part.", sortOrder: 2 },
-  {
-    id: "res-3",
-    kind: "template",
-    title: "Premier message (restaurant sans site)",
-    value:
-      "Bonjour,\n\nJ'ai découvert votre restaurant sur Google et vos avis sont excellents. En revanche, je n'ai pas trouvé de site internet pour réserver ou voir la carte.\n\nNous créons des sites simples et rapides pour les restaurants. Je peux vous montrer un exemple en 10 minutes, cette semaine ?\n\nBelle journée,",
-    note: "Exemple : remplace-le par vos vrais modèles.",
-    sortOrder: 3,
-  },
-  {
-    id: "res-4",
-    kind: "template",
-    title: "Relance à J+3",
-    value: "Bonjour,\n\nJe me permets de revenir vers vous au sujet de votre site internet. Avez-vous eu le temps d'y réfléchir ?\n\nBonne journée,",
-    note: null,
-    sortOrder: 4,
-  },
-  { id: "res-5", kind: "link", title: "Portfolio de l'agence", value: "https://atelier-vif.fr/realisations", note: "À envoyer après un premier échange positif.", sortOrder: 5 },
-  { id: "res-6", kind: "link", title: "Prise de rendez-vous", value: "https://cal.com/atelier-vif/decouverte", note: null, sortOrder: 6 },
-  { id: "res-7", kind: "link", title: "Tableau des relances", value: "https://docs.google.com/spreadsheets", note: "Lien d'exemple à remplacer.", sortOrder: 7 },
-];
+/** Ressources de l'agence (contacts, liens, modèles du guide). */
+export const DEMO_RESOURCES: readonly Resource[] = AGENCY_RESOURCES;

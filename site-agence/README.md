@@ -1,20 +1,30 @@
-# Atelier Vif : l'espace de l'équipe
+# Astrinova : l'espace de l'équipe
 
 Application interne de l'agence, pensée pour le téléphone, la tablette et l'ordinateur. On passe d'une rubrique à l'autre par le menu (barre d'onglets en bas sur téléphone, rail sur tablette, menu latéral sur ordinateur), sans faire défiler une longue page.
 
 | Rubrique | Ce qu'on y fait |
 | --- | --- |
-| **Accueil** (`/`) | Ma journée, recherche rapide « déjà contacté ? », podium du jour, activité de l'équipe |
+| **Accueil** (`/`) | Ma journée, recherche rapide « déjà contacté ? », toutes les rubriques en tuiles, podium du jour, derniers prospects |
 | **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. |
 | **Déjà contacté ?** (`/recherche`) | Chercher un établissement : oui ou non, par qui, quand et comment |
 | **Classement** (`/classement`) | Jour, semaine, mois, mis à jour à chaque ajout |
 | **Bilan du mois** (`/bilan`) | Totaux par personne, calendrier, moyens de contact, export CSV |
+| **Contrats** (`/contrats`) | Contrats en cours (maquette, développement, validation) et effectués (en ligne), avec les totaux |
+| **Guide du prospecteur** (`/guide`) | Le guide complet en 15 sections : packs, abonnement, devis, messages, FAQ, objections, règles |
+| **Mails et liens** (`/ressources`) | E-mail et téléphones de l'équipe, liens utiles et modèles de message du guide, copiables en un clic |
 | **Organigramme** (`/equipe`) | Organigramme et annuaire, avec le total du mois de chacun |
-| **Mails et liens** (`/ressources`) | Adresses e-mail, modèles de message et liens utiles, copiables en un clic |
-| **L'agence** (`/agence`) | Présentation : services, méthode, valeurs |
-| **Identifiants** (`/admin`) | Admins : créer les identifiants et définir le mot de passe de chacun |
+| **L'agence** (`/agence`) | Présentation : packs, parcours client, engagements |
+| **Panel admin** (`/admin`) | Admins : identifiants et mots de passe, statistiques et remise à zéro des compteurs |
 
-Le guide de prospection viendra plus tard (contenu à fournir).
+## Qui peut faire quoi
+
+| Action | Toute l'équipe | Admins |
+| --- | --- | --- |
+| Ajouter des prospects, chercher, voir le classement et le bilan | oui | oui |
+| Gérer les mails, liens et modèles | oui | oui |
+| Consulter les contrats | oui | oui |
+| Ajouter, modifier ou supprimer un contrat | non | oui |
+| Panel admin : identifiants, mots de passe, remise à zéro des statistiques | non | oui |
 
 Stack : Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwind CSS 4, Supabase (Postgres), Motion.
 
@@ -22,8 +32,8 @@ Stack : Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwin
 
 ## Connexion : identifiant + mot de passe
 
-- L'admin crée un identifiant par personne et **choisit son mot de passe** (ou le génère) dans **Identifiants**, puis le transmet.
-- À sa **première connexion**, la personne choisit son identifiant dans la liste, entre son mot de passe, puis confirme son nom et son poste.
+- L'admin crée un identifiant par personne et **choisit son mot de passe** (ou le génère) dans le **Panel admin**, puis le transmet. Le poste de chacun est défini par l'admin.
+- À sa **première connexion**, la personne choisit son identifiant dans la liste, entre son mot de passe, puis confirme son nom.
 - Mot de passe oublié : l'admin en définit un nouveau. Les sessions ouvertes de cette personne sont alors fermées. Un identifiant désactivé disparaît de la connexion ; son historique reste.
 - Les mots de passe ne sont jamais stockés en clair (PBKDF2-SHA256, 600 000 itérations).
 
@@ -62,26 +72,28 @@ Aucune clé n'est envoyée au navigateur.
 
 ### 3. Importer les identifiants
 
-Prépare un fichier CSV (séparateur `;`) à partir de [`scripts/identifiants.exemple.csv`](scripts/identifiants.exemple.csv) : une ligne par personne, avec **son** mot de passe. Mets `oui` dans la colonne `admin` pour toi (au moins un admin).
+Prépare un fichier CSV (séparateur `;`) à partir de [`scripts/identifiants.exemple.csv`](scripts/identifiants.exemple.csv) : une ligne par personne, avec **son** mot de passe. Colonnes : `identifiant;nom;poste;mot de passe;admin;responsable;pôle;prospecteur`. Mets `oui` dans la colonne `admin` pour toi (au moins un admin).
 
 ```bash
 npm run members:import -- scripts/identifiants.csv
 ```
 
-Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop courts…). Un identifiant déjà présent est mis à jour. Les fichiers `scripts/*.csv` sont ignorés par Git : supprime le tien une fois l'import fait. Ensuite, tout se gère depuis la rubrique **Identifiants** du site.
+Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop courts…) ; ajoute `--verifier` pour tout contrôler sans rien écrire. Un identifiant déjà présent est mis à jour. Si la rubrique **Mails et liens** est vide, l'import y ajoute les contacts, liens et modèles du guide. Les fichiers `scripts/*.csv` sont ignorés par Git : supprime le tien une fois l'import fait. Ensuite, tout se gère depuis le **Panel admin** du site.
 
 ### 4. Déployer (Vercel)
 
 1. Importe le dépôt sur [vercel.com](https://vercel.com) (dossier racine : `site-agence`).
 2. Ajoute les 3 variables d'environnement ci-dessus.
-3. Déploie, puis complète dans **Identifiants** le pôle et le responsable de chacun : l'organigramme se construit tout seul.
+3. Déploie, puis complète dans le **Panel admin** le pôle et le responsable de chacun : l'organigramme se construit tout seul.
 
 ## Personnaliser
 
 | Quoi | Où |
 | --- | --- |
-| Nom de l'agence, textes, services, méthode, valeurs | [`src/config/site.ts`](src/config/site.ts) |
-| Mails, modèles et liens | Directement sur le site (rubrique **Mails et liens**, admins) |
+| Nom de l'agence, textes, packs, parcours, engagements | [`src/config/site.ts`](src/config/site.ts) |
+| Guide du prospecteur | [`src/content/guide.ts`](src/content/guide.ts) |
+| Mails, téléphones, modèles et liens | Directement sur le site (rubrique **Mails et liens**) ; contenu de départ dans [`src/content/resources.ts`](src/content/resources.ts) |
+| Contrats | Directement sur le site (rubrique **Contrats**, admins) |
 | Moyens de contact proposés | [`src/lib/channels.ts`](src/lib/channels.ts) (et la contrainte `channel` de la migration SQL) |
 | Couleurs, typographie | Variables en haut de [`src/app/globals.css`](src/app/globals.css) |
 | Délai de correction, longueur minimale des mots de passe | [`src/lib/rules.ts`](src/lib/rules.ts) |
@@ -91,6 +103,8 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 - Chaque prospect compte pour une prospection, au nom de la personne qui l'ajoute, pour aujourd'hui ou l'un des **7 derniers jours** (jamais dans le futur). Les journées sont comptées à l'**heure de Paris**.
 - « Déjà contacté ? » ignore les majuscules, les accents, la ponctuation, les articles (le, la, chez…) et le mot « restaurant » : « Le Café des Arts » et « cafe des arts » sont le même établissement. Un même nom dans une autre ville est signalé à part.
 - Chacun peut supprimer ses propres prospects des 7 derniers jours ; un admin peut tout supprimer.
+- **Remise à zéro des statistiques** (Panel admin > Statistiques, confirmer en tapant « zéro ») : l'accueil, le classement, le bilan et l'organigramme ne comptent plus que les prospects ajoutés depuis. Rien n'est effacé : « Déjà contacté ? » garde tout l'historique, pour ne jamais rappeler un commerce déjà contacté.
+- Un contrat passe de **maquette** à **développement**, **validation**, puis **en ligne** (effectué) ; la date de mise en ligne est celle du jour si elle n'est pas précisée.
 - La variation du classement compare à la même durée de la période précédente.
 
 ## Sécurité
@@ -102,12 +116,12 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 
 ## Aperçu interactif
 
-Le dossier [`preview/`](preview/) empaquette les mêmes écrans dans une seule page, publiée sur claude.ai avec une base partagée et des données d'exemple, pour tester sans rien installer.
+Le dossier [`preview/`](preview/) empaquette les mêmes écrans dans une seule page, publiée sur claude.ai avec une base partagée, pour tester sans rien installer.
 
 ```bash
 npm run preview:build   # page à publier : preview/dist/page.html
 npm run preview:local   # même page avec une base locale en mémoire : preview/dist-local/local.html
-npm run preview:seed    # données d'exemple au format de la base de l'aperçu
+npm run preview:seed    # données de départ au format de la base de l'aperçu (avec un CSV : ces identifiants, aucun prospect)
 ```
 
 Dans l'aperçu, la connexion est simulée dans le navigateur : n'y mets pas de vrais mots de passe.
@@ -136,11 +150,13 @@ src/
     next-platform.tsx  branchement des écrans sur Next.js (liens, navigation, actions)
   ui/
     screens/           écrans (communs au site et à l'aperçu)
+    guide/             blocs du guide (tableaux, modèles, FAQ…)
     shell/             menu latéral, rail tablette, barre d'onglets mobile
     primitives/        boutons, champs, panneaux, notifications…
   config/              contenu éditorial, menu
+  content/             guide du prospecteur, mails et liens de départ
   lib/
-    services/          règles métier (prospects, identifiants, chargement des écrans)
+    services/          règles métier (prospects, identifiants, contrats, chargement des écrans)
     data/              accès aux données : SupabaseRepository / DemoRepository
     auth/              session signée, requireMember / requireAdmin
     establishments.ts  reconnaissance des établissements (doublons, recherche)
