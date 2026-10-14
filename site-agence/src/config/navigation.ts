@@ -13,7 +13,8 @@ export type NavIcon =
   | "team"
   | "agency"
   | "chat"
-  | "admin";
+  | "admin"
+  | "activity";
 
 export type NavItem = {
   href: string;
@@ -51,7 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/contrats", label: "Contrats", icon: "contracts", tone: "gold", hint: "En cours et effectués" },
       { href: "/bilan", label: "Bilan du mois", icon: "report", tone: "gold", hint: "Totaux, calendrier, export" },
-      { href: "/classement", label: "Classement", icon: "ranking", tone: "gold", hint: "Jour, semaine et mois" },
+      { href: "/classement", label: "Classement", icon: "ranking", tone: "gold", hint: "Semaine, mois et année" },
     ],
   },
   {
@@ -64,11 +65,14 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     title: "Administration",
-    items: [{ href: "/admin", label: "Panel admin", icon: "admin", tone: "violet", hint: "Identifiants et statistiques", adminOnly: true }],
+    items: [
+      { href: "/admin", label: "Panel admin", icon: "admin", tone: "violet", hint: "Identifiants et statistiques", adminOnly: true },
+      { href: "/activite", label: "Activité", icon: "activity", tone: "violet", hint: "Qui est venu, connexions, chiffres", adminOnly: true },
+    ],
   },
 ];
 
-/** Groupes visibles pour ce membre (le panel admin n'apparaît qu'aux admins). */
+/** Groupes visibles pour ce membre (l'administration n'apparaît qu'aux admins). */
 export const navGroupsFor = (isAdmin: boolean): NavGroup[] =>
   NAV_GROUPS.map((group) => ({ ...group, items: group.items.filter((item) => isAdmin || !item.adminOnly) })).filter(
     (group) => group.items.length > 0,

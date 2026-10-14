@@ -10,12 +10,10 @@ type Props = {
   rows: RankingRow[];
   meId: string;
   comparison: string;
-  /** Vue du jour : signale ceux qui n'ont encore rien ajouté aujourd'hui. */
-  flagMissing?: boolean;
 };
 
 /** Classement complet : rang, personne, barre proportionnelle et total. */
-export function RankingList({ rows, meId, comparison, flagMissing = false }: Props) {
+export function RankingList({ rows, meId, comparison }: Props) {
   const max = Math.max(1, ...rows.map((row) => row.total));
 
   return (
@@ -58,14 +56,10 @@ export function RankingList({ rows, meId, comparison, flagMissing = false }: Pro
               </div>
             </div>
 
-            {flagMissing && !row.hasEntry ? (
-              <span className="text-right text-xs text-subtle">Rien aujourd&apos;hui</span>
-            ) : (
-              <div className="flex flex-col items-end gap-0.5 text-right">
-                <span className="text-lg font-semibold tracking-tight text-fg tabular">{formatInt(row.total)}</span>
-                <Delta value={row.delta} label={`${formatInt(row.previousTotal)} ${comparison}`} />
-              </div>
-            )}
+            <div className="flex flex-col items-end gap-0.5 text-right">
+              <span className="text-lg font-semibold tracking-tight text-fg tabular">{formatInt(row.total)}</span>
+              <Delta value={row.delta} label={`${formatInt(row.previousTotal)} ${comparison}`} />
+            </div>
           </li>
         );
       })}

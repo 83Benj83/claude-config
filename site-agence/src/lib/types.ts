@@ -20,7 +20,10 @@ export type Member = {
   sortOrder: number;
   /** Date de la première connexion confirmée (écran de bienvenue), `null` avant. */
   welcomedAt: string | null;
+  /** Dernière connexion avec le mot de passe (une session dure ensuite 30 jours). */
   lastLoginAt: string | null;
+  /** Dernière visite sur le site, notée au plus toutes les 5 minutes (rubrique Activité). */
+  lastSeenAt: string | null;
 };
 
 export type MemberPatch = Partial<
@@ -131,7 +134,24 @@ export type Entry = {
   count: number;
 };
 
-export type Period = "jour" | "semaine" | "mois";
+export type Period = "semaine" | "mois" | "annee";
+
+/** Présence d'un membre sur le site un jour donné (heure de Paris) : première et dernière visite. */
+export type PresenceDay = {
+  memberId: string;
+  day: IsoDate;
+  firstSeenAt: string;
+  lastSeenAt: string;
+};
+
+/** Essai de connexion avec un mot de passe, réussi ou refusé. `memberId` vide : refusé, identifiant tel que saisi. */
+export type LoginEvent = {
+  id: string;
+  memberId: string | null;
+  login: string;
+  ok: boolean;
+  at: string;
+};
 
 export type DateRange = {
   from: IsoDate;

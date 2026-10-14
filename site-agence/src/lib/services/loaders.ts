@@ -1,6 +1,7 @@
+import { buildActivityView } from "../activity";
 import type { Repository } from "../data/repository";
-import { isMonthKey, monthKeyOf } from "../dates";
-import { MESSAGES_SHOWN } from "../rules";
+import { addDays, isMonthKey, monthKeyOf } from "../dates";
+import { ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_SHOWN, MESSAGES_SHOWN } from "../rules";
 import type { IsoDate, LoginChoice, Member } from "../types";
 import {
   buildAdminView,
@@ -35,16 +36,6 @@ export async function loadLoginChoices(repository: Repository): Promise<LoginCho
     .map(({ id, login, fullName, avatarUrl }) => ({ id, login, fullName, avatarUrl }));
 }
 
-/** Membres et prospects récents, limités à ce qui compte dans les statistiques. */
-async function historyData(repository: Repository, today: IsoDate) {
-  const [members, prospects, since] = await Promise.all([
-    repository.listMembers(),
-    repository.listProspects(DATA_WINDOWS.history(today)),
-    repository.getStatsSince(),
-  ]);
-  return { members, prospects: countedSince(prospects, since) };
-}
-
 export function loadHomeView(me: Member, today: IsoDate) {
   return buildHomeView({ me, today });
 }
@@ -64,7 +55,12 @@ export async function loadDirectoryView(repository: Repository, today: IsoDate) 
 }
 
 export async function loadRankingView(repository: Repository, me: Member, today: IsoDate) {
-  return buildRankingView({ ...(await historyData(repository, today)), me, today });
+  const [members, prospects, since] = await Promise.all([
+    repository.listMembers(),
+    repository.listProspects(DATA_WINDOWS.ranking(today)),
+    repository.getStatsSince(),
+  ]);
+  return buildRankingView({ members, prospects: countedSince(prospects, since), me, today });
 }
 
 export async function loadReportView(repository: Repository, me: Member, today: IsoDate, requestedMonth: unknown) {
@@ -99,6 +95,24 @@ export async function loadAdminView(repository: Repository, me: Member, today: I
     repository.listProspects(DATA_WINDOWS.month(monthKeyOf(today))),
   ]);
   return buildAdminView({ members, me, stats: { since, establishments, countedThisMonth: countedSince(month, since).length } });
+}
+
+/** Activité des 7 derniers jours (admins) : visites, connexions, prospects et messages. */
+export async function loadActivityView(repository: Repository, today: IsoDate, now: Date = new Date()) {
+  const from = addDays(today, -(ACTIVITY_DAYS - 1));
+  const [members, presence, logins, prospects, messages, contracts, storage, establishments, statsSince] = await Promise.all([
+    repository.listMembers(),
+    repository.listPresence({ from, to: today }),
+    repository.listLoginEvents(new Date(now.getTime() - ACTIVITY_DAYS * 24 * 60 * 60_000).toISOString(), LOGIN_EVENTS_SHOWN),
+    // Ajoutés ces 7 derniers jours : leur date de contact peut remonter jusqu'à 7 jours plus tôt.
+    repository.listProspects({ from: addDays(from, -EDITABLE_PAST_DAYS), to: today }),
+    repository.listMessages(ACTIVITY_MESSAGES),
+    repository.listContracts(),
+    repository.storageUsage(),
+    repository.countEstablishments(),
+    repository.getStatsSince(),
+  ]);
+  return buildActivityView({ members, presence, logins, prospects, messages, contracts, storage, establishments, statsSince, today });
 }
 
 export async function loadMessagesView(repository: Repository, me: Member, now: string) {

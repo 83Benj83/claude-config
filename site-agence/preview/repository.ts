@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Contract, DateRange, Member, Message, Prospect, Resource, StoredFile } from "@/lib/types";
+import type { Contract, DateRange, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
 const toMember = ({ passwordHash, sessionVersion, ...member }: StoredMember): Member => ({ ...member });
@@ -53,7 +53,7 @@ export class PreviewRepository implements Repository {
   }
 
   async createMember({ passwordHash, ...member }: NewMember): Promise<Member> {
-    const created: StoredMember = { ...member, id: crypto.randomUUID(), welcomedAt: null, lastLoginAt: null, passwordHash, sessionVersion: 1 };
+    const created: StoredMember = { ...member, id: crypto.randomUUID(), welcomedAt: null, lastLoginAt: null, lastSeenAt: null, passwordHash, sessionVersion: 1 };
     await this.store.putMember(created);
     return toMember(created);
   }
@@ -212,5 +212,23 @@ export class PreviewRepository implements Repository {
   async deleteFile(id: string): Promise<void> {
     this.pending.delete(id);
     await this.files?.remove(id);
+  }
+
+  async storageUsage(): Promise<{ files: number; bytes: number }> {
+    const attachments = [...this.store.messages.values()].flatMap((message) => message.attachments);
+    return { files: attachments.length, bytes: attachments.reduce((sum, file) => sum + file.size, 0) };
+  }
+
+  // L'aperçu ne suit ni les visites ni les connexions : la rubrique Activité y reste vide.
+  async recordPresence(): Promise<void> {}
+
+  async listPresence(): Promise<PresenceDay[]> {
+    return [];
+  }
+
+  async recordLogin(): Promise<void> {}
+
+  async listLoginEvents(): Promise<LoginEvent[]> {
+    return [];
   }
 }

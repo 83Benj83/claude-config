@@ -73,13 +73,15 @@ describe("directory view", () => {
 describe("ranking view", () => {
   test("all periods are computed at once", () => {
     const view = buildRankingView({ members, prospects, me, today });
-    expect(view.periods.jour.rows.map((r) => [r.member.id, r.total])).toEqual([
-      ["a", 2],
-      ["b", 1],
+    expect(Object.keys(view.periods)).toEqual(["semaine", "mois", "annee"]);
+    expect(view.periods.semaine.rows.map((r) => [r.member.id, r.total])).toEqual([
+      ["a", 3],
+      ["b", 2],
     ]);
     expect(view.periods.semaine.teamTotal).toBe(5);
     expect(view.periods.mois.teamTotal).toBe(6);
-    expect(view.periods.jour.podium[0].isMe).toBe(true);
+    expect(view.periods.annee.teamTotal).toBe(7);
+    expect(view.periods.semaine.podium[0].isMe).toBe(true);
     expect(view.myStreak).toBe(2);
   });
 });

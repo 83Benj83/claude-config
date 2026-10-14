@@ -1,4 +1,4 @@
-import type { Contract, DateRange, Member, MemberPatch, Message, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, IsoDate, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 
 /** Membre avec ses informations de connexion (jamais envoyées au navigateur). */
 export type Credentials = {
@@ -8,7 +8,7 @@ export type Credentials = {
   sessionVersion: number;
 };
 
-export type NewMember = Omit<Member, "id" | "welcomedAt" | "lastLoginAt"> & { passwordHash: string };
+export type NewMember = Omit<Member, "id" | "welcomedAt" | "lastLoginAt" | "lastSeenAt"> & { passwordHash: string };
 
 /** Fichier à enregistrer : son identifiant est choisi par le stockage. */
 export type NewFile = Omit<StoredFile, "id" | "messageId"> & { blob: Blob };
@@ -85,6 +85,16 @@ export interface Repository {
    */
   linkFiles(ids: string[], messageId: string, uploaderId: string): Promise<number>;
   deleteFile(id: string): Promise<void>;
+  /** Fichiers de l'échange : nombre et poids total. */
+  storageUsage(): Promise<{ files: number; bytes: number }>;
+
+  /** Visite d'un membre : première et dernière visite du jour, et dernière visite tout court. */
+  recordPresence(memberId: string, day: IsoDate, at: string): Promise<void>;
+  listPresence(range: DateRange): Promise<PresenceDay[]>;
+  /** Essai de connexion avec un mot de passe (réussi ou refusé). */
+  recordLogin(event: Omit<LoginEvent, "id">): Promise<void>;
+  /** Connexions depuis cet instant, les plus récentes d'abord. */
+  listLoginEvents(since: string, limit: number): Promise<LoginEvent[]>;
 }
 
 /** Clé d'identifiant : comparaison insensible à la casse, aux accents et aux espaces. */

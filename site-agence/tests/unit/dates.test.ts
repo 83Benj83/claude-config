@@ -91,12 +91,6 @@ describe("validators", () => {
 });
 
 describe("periodWindow", () => {
-  test("day compares with yesterday", () => {
-    expect(periodWindow("jour", "2026-10-13")).toEqual({
-      current: { from: "2026-10-13", to: "2026-10-13" },
-      previous: { from: "2026-10-12", to: "2026-10-12" },
-    });
-  });
 
   test("week compares the same elapsed days of last week", () => {
     expect(periodWindow("semaine", "2026-10-14")).toEqual({
@@ -110,6 +104,14 @@ describe("periodWindow", () => {
       current: { from: "2026-03-01", to: "2026-03-31" },
       previous: { from: "2026-02-01", to: "2026-02-28" },
     });
+  });
+
+  test("year compares the same elapsed days of last year", () => {
+    expect(periodWindow("annee", "2026-10-14")).toEqual({
+      current: { from: "2026-01-01", to: "2026-10-14" },
+      previous: { from: "2025-01-01", to: "2025-10-14" },
+    });
+    expect(periodWindow("annee", "2028-02-29").previous).toEqual({ from: "2027-01-01", to: "2027-02-28" });
   });
 });
 

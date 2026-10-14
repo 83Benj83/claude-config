@@ -9,6 +9,7 @@ import { PlatformProvider, type LinkProps, type Platform } from "@/ui/platform";
 import { BrandMark } from "@/ui/primitives/brand-mark";
 import { buttonClasses } from "@/ui/primitives/button";
 import { ToastProvider } from "@/ui/primitives/toast";
+import { ActivityScreen } from "@/ui/screens/activity-screen";
 import { AdminScreen } from "@/ui/screens/admin-screen";
 import { AgencyScreen } from "@/ui/screens/agency-screen";
 import { ContractsScreen } from "@/ui/screens/contracts-screen";
@@ -129,6 +130,9 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
     case "/admin":
       if (!me.isAdmin) return { kind: "redirect", to: "/" };
       return { kind: "screen", me, screen: <AdminScreen view={await loaders.loadAdminView(repository, me, today)} /> };
+    case "/activite":
+      if (!me.isAdmin) return { kind: "redirect", to: "/" };
+      return { kind: "screen", me, screen: <ActivityScreen view={await loaders.loadActivityView(repository, today)} /> };
     default:
       return { kind: "redirect", to: "/" };
   }

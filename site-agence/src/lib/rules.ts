@@ -19,3 +19,13 @@ export const PENDING_FILES_MAX = 20;
 export const PENDING_FILES_TTL_MS = 24 * 60 * 60_000;
 /** Messages affichés dans l'échange (les plus récents). */
 export const MESSAGES_SHOWN = 200;
+
+/** Activité (admins) : présence notée au plus toutes les 5 minutes, suivie sur 7 jours. */
+export const PRESENCE_REFRESH_MS = 5 * 60_000;
+export const ACTIVITY_DAYS = 7;
+/** Connexions affichées dans le journal (les plus récentes). */
+export const LOGIN_EVENTS_SHOWN = 40;
+/** Messages lus pour compter l'activité de la semaine. */
+export const ACTIVITY_MESSAGES = 500;
+/** Espace de stockage des fichiers compris dans l'offre gratuite de Supabase. */
+export const STORAGE_QUOTA_BYTES = 1024 ** 3;

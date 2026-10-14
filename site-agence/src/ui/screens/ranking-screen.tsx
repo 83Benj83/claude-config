@@ -14,14 +14,14 @@ import { Podium } from "../ranking/podium";
 import { RankingList } from "../ranking/ranking-list";
 
 const PERIODS: { value: Period; label: string; comparison: string }[] = [
-  { value: "jour", label: "Aujourd'hui", comparison: "par rapport à hier" },
   { value: "semaine", label: "Semaine", comparison: "par rapport au même moment la semaine dernière" },
   { value: "mois", label: "Mois", comparison: "par rapport au même moment le mois dernier" },
+  { value: "annee", label: "Année", comparison: "par rapport au même moment l'année dernière" },
 ];
 
 export function RankingScreen({ view }: { view: RankingView }) {
   const { Link } = usePlatform();
-  const [period, setPeriod] = useState<Period>("jour");
+  const [period, setPeriod] = useState<Period>("semaine");
   const data = view.periods[period];
   const info = PERIODS.find((p) => p.value === period)!;
   const myRow = data.rows.find((row) => row.member.id === view.meId);
@@ -57,8 +57,8 @@ export function RankingScreen({ view }: { view: RankingView }) {
             </div>
           ) : (
             <div className="dot-grid rounded-t-2xl border-b border-line">
-              <EmptyState icon={<UsersThreeIcon size={24} aria-hidden />} title={period === "jour" ? "Personne n'a encore prospecté aujourd'hui." : "Aucun prospect sur cette période."}>
-                {period === "jour" ? "Le premier ajout prend la tête du classement." : "Les totaux apparaîtront dès les premiers ajouts."}
+              <EmptyState icon={<UsersThreeIcon size={24} aria-hidden />} title="Aucun prospect sur cette période.">
+                Le premier ajout prend la tête du classement.
               </EmptyState>
             </div>
           )}
@@ -66,7 +66,7 @@ export function RankingScreen({ view }: { view: RankingView }) {
             <h2 className="text-sm font-semibold text-fg">Tous les prospecteurs</h2>
             <p className="hidden text-xs text-subtle sm:block">Variation {info.comparison}</p>
           </div>
-          <RankingList rows={data.rows} meId={view.meId} comparison={info.comparison} flagMissing={period === "jour"} />
+          <RankingList rows={data.rows} meId={view.meId} comparison={info.comparison} />
         </Card>
 
         <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-6 lg:col-span-4">

@@ -62,6 +62,31 @@ describe("chargement des écrans", () => {
   });
 });
 
+describe("activité (admins)", () => {
+  test("visites et connexions du jour, sur les données de démo", async () => {
+    const { repository } = await demo();
+    const now = new Date("2026-10-14T09:00:00.000Z");
+    await repository.recordPresence("lea", TODAY, "2026-10-14T08:00:00.000Z");
+    await repository.recordPresence("lea", TODAY, "2026-10-14T08:40:00.000Z");
+    await repository.recordPresence("lea", TODAY, "2026-10-14T08:20:00.000Z");
+    await repository.recordLogin({ memberId: "lea", login: "lea", ok: true, at: "2026-10-14T07:59:00.000Z" });
+    await repository.recordLogin({ memberId: null, login: "lea", ok: false, at: "2026-10-14T07:58:00.000Z" });
+
+    const view = await loaders.loadActivityView(repository, TODAY, now);
+    const lea = view.rows[0];
+    expect(lea.member.id).toBe("lea");
+    expect(lea.today).toEqual({ firstSeenAt: "2026-10-14T08:00:00.000Z", lastSeenAt: "2026-10-14T08:40:00.000Z" });
+    expect(lea.lastSeenAt).toBe("2026-10-14T08:40:00.000Z");
+    expect(view.totals.presentToday).toBe(1);
+    expect(view.totals.refusedToday).toBe(1);
+    expect(view.logins.map((event) => [event.ok, event.name])).toEqual([
+      [true, "Léa Fontaine"],
+      [false, "Léa Fontaine"],
+    ]);
+    expect(view.site.files).toBe(0);
+  });
+});
+
 describe("formats", () => {
   test("rangs, variations, prénoms et pluriels", () => {
     expect([formatRank(1), formatRank(2)]).toEqual(["1er", "2e"]);

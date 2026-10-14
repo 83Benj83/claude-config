@@ -9,8 +9,11 @@ import type {
   ContractPack,
   ContractStatus,
   DateRange,
+  IsoDate,
+  LoginEvent,
   Member,
   Message,
+  PresenceDay,
   Prospect,
   Resource,
   ResourceKind,
@@ -32,6 +35,7 @@ type MemberRow = {
   sort_order: number;
   welcomed_at: string | null;
   last_login_at: string | null;
+  last_seen_at: string | null;
   password_hash: string | null;
   session_version: number;
 };
@@ -79,6 +83,9 @@ type FileRow = {
   kind: AttachmentKind;
   created_at: string;
 };
+
+type PresenceRow = { member_id: string; day: IsoDate; first_seen_at: string; last_seen_at: string };
+type LoginEventRow = { id: number; member_id: string | null; login: string; ok: boolean; at: string };
 
 const MESSAGE_COLUMNS = "id, author_id, body, attachments, created_at";
 const FILE_COLUMNS = "id, uploader_id, message_id, name, type, size, kind, created_at";
@@ -153,7 +160,7 @@ type ResourceRow = {
 };
 
 const MEMBER_PUBLIC_COLUMNS =
-  "id, login, full_name, job_title, department, manager_id, avatar_url, is_prospector, is_admin, active, sort_order, welcomed_at, last_login_at";
+  "id, login, full_name, job_title, department, manager_id, avatar_url, is_prospector, is_admin, active, sort_order, welcomed_at, last_login_at, last_seen_at";
 const MEMBER_CREDENTIAL_COLUMNS = `${MEMBER_PUBLIC_COLUMNS}, password_hash, session_version`;
 const PROSPECT_COLUMNS = "id, member_id, name, city, channel, contact, note, contacted_on, created_at";
 
@@ -176,6 +183,7 @@ const toMember = (row: Omit<MemberRow, "password_hash" | "session_version">): Me
   sortOrder: row.sort_order,
   welcomedAt: row.welcomed_at,
   lastLoginAt: row.last_login_at,
+  lastSeenAt: row.last_seen_at,
 });
 
 const toCredentials = (row: MemberRow): Credentials => ({
@@ -515,5 +523,47 @@ export class SupabaseRepository implements Repository {
   async deleteFile(id: string): Promise<void> {
     check("la suppression du fichier", await this.db.storage.from(FILES_BUCKET).remove([id]));
     check("la suppression du fichier", await this.db.from("message_files").delete().eq("id", id));
+  }
+
+  async storageUsage(): Promise<{ files: number; bytes: number }> {
+    let files = 0;
+    let bytes = 0;
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const rows = check(
+        "la lecture de l'espace utilisé",
+        await this.db.from("message_files").select("size").order("id").range(offset, offset + PAGE_SIZE - 1),
+      ) as { size: number }[];
+      files += rows.length;
+      bytes += rows.reduce((sum, row) => sum + row.size, 0);
+      if (rows.length < PAGE_SIZE) return { files, bytes };
+    }
+  }
+
+  async recordPresence(memberId: string, day: IsoDate, at: string): Promise<void> {
+    // Une seule requête (fonction SQL) : la première visite du jour est gardée, la dernière avance.
+    check("l'enregistrement de la visite", await this.db.rpc("record_presence", { p_member: memberId, p_day: day, p_at: at }));
+  }
+
+  async listPresence(range: DateRange): Promise<PresenceDay[]> {
+    const rows = check(
+      "la lecture des visites",
+      await this.db.from("member_days").select("member_id, day, first_seen_at, last_seen_at").gte("day", range.from).lte("day", range.to),
+    ) as PresenceRow[];
+    return rows.map((row) => ({ memberId: row.member_id, day: row.day, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at }));
+  }
+
+  async recordLogin(event: Omit<LoginEvent, "id">): Promise<void> {
+    check(
+      "le journal des connexions",
+      await this.db.from("login_events").insert({ member_id: event.memberId, login: event.login, ok: event.ok, at: event.at }),
+    );
+  }
+
+  async listLoginEvents(since: string, limit: number): Promise<LoginEvent[]> {
+    const rows = check(
+      "la lecture des connexions",
+      await this.db.from("login_events").select("id, member_id, login, ok, at").gte("at", since).order("at", { ascending: false }).limit(limit),
+    ) as LoginEventRow[];
+    return rows.map((row) => ({ id: String(row.id), memberId: row.member_id, login: row.login, ok: row.ok, at: row.at }));
   }
 }

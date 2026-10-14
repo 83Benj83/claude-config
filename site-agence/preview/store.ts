@@ -83,6 +83,7 @@ function readMember(id: string, data: Record<string, unknown>): Member | null {
     sortOrder: typeof data.sortOrder === "number" ? data.sortOrder : 0,
     welcomedAt: optionalText(data.welcomedAt, 40),
     lastLoginAt: optionalText(data.lastLoginAt, 40),
+    lastSeenAt: optionalText(data.lastSeenAt, 40),
   };
 }
 

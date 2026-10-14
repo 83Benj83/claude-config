@@ -7,7 +7,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | **Accueil** (`/`) | Un mot de bienvenue et toutes les rubriques, sans chiffres ni classement |
 | **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. **Importer une liste** : un fichier Excel (.xlsx), CSV ou texte, jusqu'à 500 lignes ; les colonnes sont reconnues d'après leur titre, chaque ligne est vérifiée (doublons, déjà contactés, champs manquants) avant l'enregistrement. |
 | **Déjà contacté ?** (`/recherche`) | Chercher un établissement : oui ou non, par qui, quand et comment |
-| **Classement** (`/classement`) | Jour, semaine, mois, mis à jour à chaque ajout |
+| **Classement** (`/classement`) | Semaine, mois et année, mis à jour à chaque ajout |
 | **Bilan du mois** (`/bilan`) | Totaux par personne, calendrier, moyens de contact, export CSV |
 | **Contrats** (`/contrats`) | Contrats en cours (maquette, développement, validation) et effectués (en ligne), avec les totaux |
 | **Guide du prospecteur** (`/guide`) | La page d'origine du guide, à l'identique (sommaire, modèles à copier, recherche dans la FAQ), sous la barre du menu |
@@ -16,6 +16,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | **Organigramme** (`/equipe`) | Organigramme et annuaire : qui fait quoi |
 | **L'agence** (`/agence`) | Présentation : packs, parcours client, engagements |
 | **Panel admin** (`/admin`) | Admins : identifiants et mots de passe, statistiques et remise à zéro des compteurs |
+| **Activité** (`/activite`) | Admins : qui est venu sur le site aujourd'hui (heure d'arrivée et dernière visite), présence et travail de chacun sur 7 jours, journal des connexions (réussies et mots de passe refusés), contrats, fichiers et espace de stockage |
 
 ## Qui peut faire quoi
 
@@ -28,6 +29,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | Consulter les contrats | oui | oui |
 | Ajouter, modifier ou supprimer un contrat | non | oui |
 | Panel admin : identifiants, mots de passe, remise à zéro des statistiques | non | oui |
+| Activité : visites, connexions, chiffres du site | non | oui |
 
 Stack : Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwind CSS 4, Supabase (Postgres), Motion.
 
@@ -57,7 +59,7 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 
 Le plus simple : depuis le projet Vercel, onglet **Storage**, ajoute **Supabase** (plan Free, région **Paris**, préfixe des variables laissé vide). Vercel relie la base au projet et crée lui-même `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `POSTGRES_URL_NON_POOLING`.
 
-Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers).
+Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers ; 0004 : visites et journal des connexions).
 
 Base créée directement sur [supabase.com](https://supabase.com) : exécute ces fichiers dans **SQL Editor**, puis récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 

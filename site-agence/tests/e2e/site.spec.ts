@@ -14,9 +14,11 @@ test.describe("accès", () => {
     await expect(page).toHaveURL(/\/connexion$/);
   });
 
-  test("un membre non admin ne peut pas ouvrir la gestion des identifiants", async ({ page }) => {
+  test("un membre non admin ne peut pas ouvrir la gestion des identifiants ni l'activité", async ({ page }) => {
     await loginAs(page, "theo", "Théo Garnier");
     await page.goto("/admin");
+    await expect(page).toHaveURL("/");
+    await page.goto("/activite");
     await expect(page).toHaveURL("/");
   });
 });
@@ -28,6 +30,7 @@ test.describe("navigation", () => {
     const sections = page.getByRole("region", { name: "Les rubriques" });
     await expect(sections.getByRole("link")).toHaveCount(10);
     await expect(sections.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
+    await expect(sections.getByRole("link", { name: "Activité" })).toHaveCount(0);
     await expect(page.getByText(/Podium|Rang du jour/)).toHaveCount(0);
 
     // Le menu donne toutes les rubriques et se referme une fois la rubrique choisie.
@@ -50,6 +53,28 @@ test.describe("navigation", () => {
     await expect(page.getByRole("region", { name: "Les rubriques" }).getByRole("link", { name: "Panel admin" })).toBeVisible();
     await openSection(page, "Panel admin");
     await expect(page.getByRole("heading", { level: 1, name: "Panel admin" })).toBeVisible();
+  });
+});
+
+test.describe("activité (admins)", () => {
+  test("qui est venu aujourd'hui, et les connexions réussies ou refusées", async ({ page, browser }) => {
+    // Quelqu'un se trompe de mot de passe, sur un autre appareil.
+    const other = await newContextLike(browser);
+    await signIn(await other.newPage(), "Inès Marchetti", "pas-le-bon");
+    await other.close();
+
+    await loginAs(page, "mehdi", "Mehdi Belkacem");
+    await openSection(page, "Activité");
+    await expect(page.getByRole("heading", { level: 1, name: "Activité" })).toBeVisible();
+
+    const today = page.getByRole("list", { name: "Présence aujourd'hui" }).getByRole("listitem").filter({ hasText: "Mehdi Belkacem" });
+    await expect(today).toContainText(/Venu à \d{2}:\d{2}/);
+    await expect(page.getByRole("list", { name: "Présence et activité sur 7 jours" }).getByRole("listitem")).not.toHaveCount(0);
+
+    const logins = page.getByRole("list", { name: "Journal des connexions" });
+    await expect(logins.getByRole("listitem").filter({ hasText: "Mehdi Belkacem" }).first()).toContainText("Connecté");
+    await expect(logins.getByRole("listitem").filter({ hasText: "Inès Marchetti" }).first()).toContainText("Mot de passe refusé");
+    await expect(page.getByRole("progressbar", { name: "Espace de stockage utilisé" })).toBeVisible();
   });
 });
 
@@ -88,8 +113,13 @@ test.describe("prospection", () => {
     await loginAs(page, "clara", "Clara Nguyen");
     await openSection(page, "Classement");
     await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();
-    await page.getByRole("button", { name: "Mois", exact: true }).click();
-    await expect(page.getByRole("button", { name: "Mois", exact: true })).toHaveAttribute("aria-pressed", "true");
+    // Semaine, mois et année : pas de classement du jour.
+    await expect(page.getByRole("button", { name: "Semaine", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Aujourd'hui", exact: true })).toHaveCount(0);
+    for (const label of ["Mois", "Année"]) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      await expect(page.getByRole("button", { name: label, exact: true })).toHaveAttribute("aria-pressed", "true");
+    }
 
     await page.goto("/bilan");
     await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
@@ -209,7 +239,7 @@ test("un admin crée un identifiant, la personne s'y connecte pour la première 
 
 test("aucun débordement horizontal sur les écrans principaux", async ({ page }) => {
   await loginAs(page, "mehdi", "Mehdi Belkacem");
-  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/contrats", "/guide", "/equipe", "/ressources", "/agence", "/admin"]) {
+  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/contrats", "/guide", "/equipe", "/ressources", "/agence", "/admin", "/activite"]) {
     await page.goto(path);
     await expect(page.locator("main")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

@@ -1,0 +1,41 @@
+# L'espace équipe Astrinova : mode d'emploi
+
+👉 **https://astrinova-equipe.vercel.app**
+
+**Se connecter**
+1. Ouvre le lien, choisis ton nom dans la liste et tape ton mot de passe.
+2. La première fois, confirme ton nom : c'est tout.
+3. Tu restes connecté 30 jours sur ton téléphone ou ton ordinateur.
+
+Mot de passe oublié ? Demande à Paul ou Benjamin. Ne donne jamais ton mot de passe à quelqu'un d'autre.
+
+**Se repérer**
+Le bouton **Menu**, en haut à gauche, mène à toutes les rubriques, sur toutes les pages.
+
+**Ta journée de prospection**
+- **Avant d'appeler** : ouvre **Déjà contacté ?** et tape le nom du commerce. Tu sais tout de suite si quelqu'un l'a déjà contacté, quand et comment.
+- **Après chaque contact** : ouvre **Prospecter** et ajoute le commerce (nom, ville, moyen de contact ; numéro et note si tu veux). Si quelqu'un l'a déjà contacté, le site te prévient.
+- **Une liste entière** : dans **Prospecter**, bouton **Importer une liste**. Tu peux envoyer un fichier Excel ou CSV. Le site vérifie chaque ligne avant d'enregistrer. Le bouton **Modèle à remplir** te donne un fichier prêt à compléter.
+- Une erreur ? Tu peux supprimer tes prospects des 7 derniers jours et les ressaisir.
+
+**Les ressources**
+- **Guide du prospecteur** : les packs, les messages à envoyer, les réponses aux objections, la FAQ. Le sommaire t'emmène directement à la bonne partie.
+- **Mails et liens** : les adresses, numéros, liens et modèles de messages, à copier en un clic.
+
+**L'équipe**
+- **Échange** : la discussion de toute l'équipe. Tu peux y mettre des messages, des photos et des fichiers (PDF, Word, Excel…), jusqu'à 4 par message. Une pastille sur le Menu te signale les nouveaux messages.
+- **Organigramme** : qui fait quoi.
+- **L'agence** : Astrinova en bref : les packs, le parcours client, nos engagements.
+
+**Le suivi**
+- **Classement** : les prospects de chacun, par semaine, par mois et par année.
+- **Bilan du mois** : les totaux, le calendrier et les moyens de contact utilisés.
+- **Contrats** : les clients signés, en cours et en ligne.
+
+**Astuce téléphone** : ajoute le site à ton écran d'accueil pour l'ouvrir en un geste.
+- iPhone (Safari) : bouton Partager, puis « Sur l'écran d'accueil ».
+- Android (Chrome) : menu ⋮, puis « Ajouter à l'écran d'accueil ».
+
+**À savoir** : les admins voient qui vient sur le site et à quelle heure, ainsi que les connexions. C'est pour suivre l'activité de l'équipe.
+
+Pour te déconnecter : **Menu**, puis **Se déconnecter** tout en bas.

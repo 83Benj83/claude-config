@@ -1,9 +1,11 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { cache } from "react";
+import { isPresenceDue } from "../activity";
 import { getRepository } from "../data";
+import { todayIso } from "../dates";
 import { getSessionSecret } from "../env";
 import { SESSION_DAYS } from "../rules";
 import type { Member } from "../types";
@@ -38,8 +40,25 @@ export async function requireMember({ allowFirstLogin = false } = {}): Promise<M
   const member = await getCurrentMember();
   if (!member) redirect("/connexion");
   if (!member.welcomedAt && !allowFirstLogin) redirect("/bienvenue");
+  notePresence(member.id, member.lastSeenAt);
   return member;
 }
+
+/**
+ * Visite notée pour la rubrique Activité : au plus toutes les 5 minutes, une
+ * fois par rendu, après l'envoi de la page. Une erreur n'empêche rien.
+ */
+const notePresence = cache((memberId: string, lastSeenAt: string | null) => {
+  const now = new Date();
+  if (!isPresenceDue(lastSeenAt, now)) return;
+  after(async () => {
+    try {
+      await (await getRepository()).recordPresence(memberId, todayIso(now), now.toISOString());
+    } catch (error) {
+      console.error("[activité]", error);
+    }
+  });
+});
 
 export async function requireAdmin(): Promise<Member> {
   const member = await requireMember();

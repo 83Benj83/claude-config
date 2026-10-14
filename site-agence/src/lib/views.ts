@@ -27,6 +27,8 @@ export function entriesFromProspects(prospects: readonly Prospect[]): Entry[] {
 export const DATA_WINDOWS = {
   /** Séries en cours et comparaisons : deux mois glissants suffisent. */
   history: (today: IsoDate) => ({ from: addDays(startOfMonth(monthKeyOf(today)), -40), to: today }),
+  /** Classement : depuis le 1er janvier de l'année dernière (comparaison sur l'année). */
+  ranking: (today: IsoDate) => ({ from: periodWindow("annee", today).previous.from, to: today }),
   month: (month: MonthKey) => ({ from: startOfMonth(month), to: endOfMonth(month) }),
 };
 
@@ -197,7 +199,7 @@ export function buildRankingView(input: { members: Member[]; prospects: Prospect
     today: input.today,
     meId: input.me.id,
     meIsProspector: input.me.isProspector,
-    periods: { jour: period("jour"), semaine: period("semaine"), mois: period("mois") },
+    periods: { semaine: period("semaine"), mois: period("mois"), annee: period("annee") },
     myStreak: currentStreak(entries, input.me.id, input.today),
   };
 }

@@ -20,6 +20,7 @@ import {
   PaperPlaneTiltIcon,
   PhoneIcon,
   PlusCircleIcon,
+  PulseIcon,
   ReceiptIcon,
   RocketLaunchIcon,
   ShieldCheckIcon,
@@ -60,6 +61,7 @@ const ICONS: Record<IconName | NavIcon | `channel-${Channel}`, PhosphorIcon> = {
   agency: BuildingsIcon,
   chat: ChatsCircleIcon,
   admin: ShieldStarIcon,
+  activity: PulseIcon,
   // moyens de contact
   "channel-telephone": PhoneIcon,
   "channel-email": EnvelopeSimpleIcon,

@@ -32,6 +32,7 @@ function demo(
     sortOrder: 0,
     welcomedAt: "2026-01-05T09:00:00.000Z",
     lastLoginAt: null,
+    lastSeenAt: null,
     // Mot de passe de démonstration : identifiant + « 2026 ».
     demoPassword: `${id}2026`,
     ...overrides,

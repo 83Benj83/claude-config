@@ -25,6 +25,7 @@ const member = (id: string, overrides: Partial<Member> = {}): Member => ({
   sortOrder: 0,
   welcomedAt: null,
   lastLoginAt: null,
+  lastSeenAt: null,
   ...overrides,
 });
 

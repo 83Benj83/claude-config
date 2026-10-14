@@ -1,7 +1,7 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { Contract, DateRange, IsoDate, Member, Message, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, IsoDate, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
@@ -15,6 +15,8 @@ type DemoState = {
   statsSince?: string | null;
   messages?: Message[];
   files?: Map<string, { file: StoredFile; bytes: Uint8Array }>;
+  presence?: PresenceDay[];
+  logins?: LoginEvent[];
 };
 
 /** Peu d'itérations en démo : démarrage rapide, mots de passe publics de toute façon. */
@@ -63,7 +65,7 @@ export class DemoRepository implements Repository {
   }
 
   async createMember({ passwordHash, ...member }: NewMember): Promise<Member> {
-    const created: Member = { ...member, id: crypto.randomUUID(), welcomedAt: null, lastLoginAt: null };
+    const created: Member = { ...member, id: crypto.randomUUID(), welcomedAt: null, lastLoginAt: null, lastSeenAt: null };
     this.state.members.push({ member: created, passwordHash, sessionVersion: 1 });
     return clone(created);
   }
@@ -211,6 +213,43 @@ export class DemoRepository implements Repository {
 
   async deleteFile(id: string): Promise<void> {
     this.files.delete(id);
+  }
+
+  async storageUsage(): Promise<{ files: number; bytes: number }> {
+    const files = [...this.files.values()];
+    return { files: files.length, bytes: files.reduce((sum, { file }) => sum + file.size, 0) };
+  }
+
+  private get presence(): PresenceDay[] {
+    return (this.state.presence ??= []);
+  }
+
+  private get logins(): LoginEvent[] {
+    return (this.state.logins ??= []);
+  }
+
+  async recordPresence(memberId: string, day: IsoDate, at: string): Promise<void> {
+    const entry = this.presence.find((p) => p.memberId === memberId && p.day === day);
+    if (entry) entry.lastSeenAt = at > entry.lastSeenAt ? at : entry.lastSeenAt;
+    else this.presence.push({ memberId, day, firstSeenAt: at, lastSeenAt: at });
+    const stored = this.state.members.find((s) => s.member.id === memberId);
+    if (stored && (!stored.member.lastSeenAt || at > stored.member.lastSeenAt)) stored.member = { ...stored.member, lastSeenAt: at };
+  }
+
+  async listPresence(range: DateRange): Promise<PresenceDay[]> {
+    return this.presence.filter((p) => inRange(p.day, range)).map(clone);
+  }
+
+  async recordLogin(event: Omit<LoginEvent, "id">): Promise<void> {
+    this.logins.push({ ...event, id: crypto.randomUUID() });
+  }
+
+  async listLoginEvents(since: string, limit: number): Promise<LoginEvent[]> {
+    return this.logins
+      .filter((event) => event.at >= since)
+      .sort((a, b) => b.at.localeCompare(a.at))
+      .slice(0, limit)
+      .map(clone);
   }
 }
 

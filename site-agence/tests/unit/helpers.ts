@@ -14,6 +14,7 @@ export const makeMember = (id: string, overrides: Partial<Member> = {}): Member 
   sortOrder: 0,
   welcomedAt: "2026-01-01T00:00:00.000Z",
   lastLoginAt: null,
+  lastSeenAt: null,
   ...overrides,
 });
 

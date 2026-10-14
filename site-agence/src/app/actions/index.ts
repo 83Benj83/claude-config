@@ -7,6 +7,7 @@
  */
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import {
   GENERIC_ERROR,
   SESSION_EXPIRED,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/actions-contract";
 import { closeSession, getCurrentMember, openSession } from "@/lib/auth/session";
 import { getRepository } from "@/lib/data";
-import { loginKey } from "@/lib/data/repository";
+import { loginKey, type Repository } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
 import type { DuplicateCheck, Establishment } from "@/lib/establishments";
 import { createRateLimiter } from "@/lib/rate-limit";
@@ -30,7 +31,7 @@ import * as members from "@/lib/services/members";
 import * as messages from "@/lib/services/messages";
 import * as prospects from "@/lib/services/prospects";
 import type { RowStatus } from "@/lib/prospect-import";
-import type { Attachment, Member, Prospect } from "@/lib/types";
+import type { Attachment, LoginEvent, Member, Prospect } from "@/lib/types";
 import type { MessagesView } from "@/lib/views";
 
 /* ------------------------------------------------------------------ */
@@ -68,15 +69,25 @@ export async function signIn(input: { login: string; password: string }): Promis
 
   const repository = await getRepository();
   const result = await members.authenticate(repository, { login: String(input?.login ?? ""), password: String(input?.password ?? "") });
+  const at = new Date().toISOString();
   if (!result.ok) {
-    if (result.message) failuresByLoginAndIp(pairKey);
+    if (result.message) {
+      failuresByLoginAndIp(pairKey);
+      logSignIn(repository, { memberId: null, login: String(input?.login ?? "").trim().slice(0, 60), ok: false, at });
+    }
     return { ok: false, message: result.message, errors: result.errors };
   }
 
   const { member, sessionVersion } = result.credentials;
-  await repository.updateMember(member.id, { lastLoginAt: new Date().toISOString() });
+  logSignIn(repository, { memberId: member.id, login: member.login, ok: true, at });
+  await repository.updateMember(member.id, { lastLoginAt: at });
   await openSession(member.id, sessionVersion);
   return { ok: true, data: { next: member.welcomedAt ? "/" : "/bienvenue" } };
+}
+
+/** Journal des connexions (rubrique Activité), écrit après la réponse : une erreur n'empêche jamais de se connecter. */
+function logSignIn(repository: Repository, event: Omit<LoginEvent, "id">) {
+  after(() => repository.recordLogin(event).catch((error: unknown) => console.error("[connexion]", error)));
 }
 
 export async function signOut(): Promise<void> {

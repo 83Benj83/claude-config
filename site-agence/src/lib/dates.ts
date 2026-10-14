@@ -99,9 +99,15 @@ export type PeriodWindow = {
  * de la période précédente (ex. lundi→mercredi vs lundi→mercredi dernier).
  */
 export function periodWindow(period: Period, today: IsoDate): PeriodWindow {
-  if (period === "jour") {
-    const yesterday = addDays(today, -1);
-    return { current: { from: today, to: today }, previous: { from: yesterday, to: yesterday } };
+  if (period === "annee") {
+    const year = Number(today.slice(0, 4));
+    const lastYear = String(year - 1).padStart(4, "0");
+    const month = today.slice(5, 7);
+    const day = Math.min(Number(today.slice(8, 10)), daysInMonth(`${lastYear}-${month}`));
+    return {
+      current: { from: `${today.slice(0, 4)}-01-01`, to: today },
+      previous: { from: `${lastYear}-01-01`, to: `${lastYear}-${month}-${String(day).padStart(2, "0")}` },
+    };
   }
   if (period === "semaine") {
     const from = startOfWeek(today);
