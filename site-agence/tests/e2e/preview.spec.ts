@@ -47,7 +47,7 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await page.getByRole("button", { name: "Envoyer" }).click();
   await expect(page.getByRole("log", { name: "Messages" }).getByText("Bonjour depuis l'aperçu")).toBeVisible();
   await openSection(page, "Guide du prospecteur");
-  await expect(page.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
+  await expect(page.frameLocator('iframe[title="Guide du prospecteur"]').getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
   await signOut(page);
   await page.getByRole("button", { name: "Changer d'identifiant" }).click();
   await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Camille");

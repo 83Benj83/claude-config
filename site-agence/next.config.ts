@@ -9,9 +9,10 @@ const isProduction = process.env.NODE_ENV === "production";
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}`,
-  "style-src 'self' 'unsafe-inline'",
+  // Google Fonts : utilisées par la page du guide du prospecteur, affichée telle quelle.
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: https:",
-  "font-src 'self'",
+  "font-src 'self' https://fonts.gstatic.com",
   `connect-src 'self'${isProduction ? "" : " ws:"}`,
   "frame-ancestors 'none'",
   "form-action 'self'",

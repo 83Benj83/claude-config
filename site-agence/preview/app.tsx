@@ -13,6 +13,7 @@ import { AdminScreen } from "@/ui/screens/admin-screen";
 import { AgencyScreen } from "@/ui/screens/agency-screen";
 import { ContractsScreen } from "@/ui/screens/contracts-screen";
 import { GuideScreen } from "@/ui/screens/guide-screen";
+import { GUIDE_HTML } from "@/content/guide-original";
 import { ChatScreen } from "@/ui/screens/chat-screen";
 import { HomeScreen } from "@/ui/screens/home-screen";
 import { LoginScreen } from "@/ui/screens/login-screen";
@@ -122,7 +123,7 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
     case "/contrats":
       return { kind: "screen", me, screen: <ContractsScreen view={await loaders.loadContractsView(repository, me, today)} /> };
     case "/guide":
-      return { kind: "screen", me, screen: <GuideScreen /> };
+      return { kind: "screen", me, screen: <GuideScreen html={GUIDE_HTML} /> };
     case "/echange":
       return { kind: "screen", me, screen: <ChatScreen view={await loaders.loadMessagesView(repository, me, new Date().toISOString())} /> };
     case "/admin":

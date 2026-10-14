@@ -10,7 +10,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | **Classement** (`/classement`) | Jour, semaine, mois, mis à jour à chaque ajout |
 | **Bilan du mois** (`/bilan`) | Totaux par personne, calendrier, moyens de contact, export CSV |
 | **Contrats** (`/contrats`) | Contrats en cours (maquette, développement, validation) et effectués (en ligne), avec les totaux |
-| **Guide du prospecteur** (`/guide`) | Le guide complet en 15 sections : packs, abonnement, devis, messages, FAQ, objections, règles |
+| **Guide du prospecteur** (`/guide`) | La page d'origine du guide, à l'identique (sommaire, modèles à copier, recherche dans la FAQ), sous la barre du menu |
 | **Mails et liens** (`/ressources`) | E-mail et téléphones de l'équipe, liens utiles et modèles de message du guide, copiables en un clic |
 | **Échange** (`/echange`) | La discussion de l'équipe : messages, photos et fichiers, visibles par tous en direct ; une pastille signale les nouveaux messages |
 | **Organigramme** (`/equipe`) | Organigramme et annuaire : qui fait quoi |
@@ -94,7 +94,7 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 | Quoi | Où |
 | --- | --- |
 | Nom de l'agence, textes, packs, parcours, engagements | [`src/config/site.ts`](src/config/site.ts) |
-| Guide du prospecteur | [`src/content/guide.ts`](src/content/guide.ts) |
+| Guide du prospecteur | [`src/content/guide-original.ts`](src/content/guide-original.ts) : la page entière, à remplacer par la nouvelle version (les modèles de **Mails et liens** viennent de [`src/content/guide.ts`](src/content/guide.ts)) |
 | Mails, téléphones, modèles et liens | Directement sur le site (rubrique **Mails et liens**) ; contenu de départ dans [`src/content/resources.ts`](src/content/resources.ts) |
 | Contrats | Directement sur le site (rubrique **Contrats**, admins) |
 | Moyens de contact proposés | [`src/lib/channels.ts`](src/lib/channels.ts) (et la contrainte `channel` de la migration SQL) |

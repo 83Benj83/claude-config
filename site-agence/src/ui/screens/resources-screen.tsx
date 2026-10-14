@@ -17,7 +17,7 @@ import type { ResourceFormValues } from "@/lib/actions-contract";
 import { normalizeText } from "@/lib/establishments";
 import type { Resource, ResourceKind } from "@/lib/types";
 import type { ResourcesView } from "@/lib/views";
-import { Placeholders } from "../guide/blocks";
+import { Placeholders } from "../primitives/placeholders";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { ChipGroup, Segmented } from "../primitives/choice";

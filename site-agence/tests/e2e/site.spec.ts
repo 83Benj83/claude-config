@@ -112,19 +112,22 @@ test.describe("équipe et ressources", () => {
     await expect(page.getByRole("heading", { name: /Trouver/ })).toBeVisible();
   });
 
-  test("guide du prospecteur : sections, modèles à copier, recherche dans la FAQ", async ({ page }) => {
+  test("guide du prospecteur : la page d'origine, avec son sommaire, ses polices et sa recherche", async ({ page }) => {
     await loginAs(page, "karim", "Karim Ouali");
-    await page.goto("/guide");
-    await expect(page.getByRole("heading", { level: 2, name: "Votre rôle" })).toBeVisible();
-    await page.getByRole("button", { name: /Suivant/ }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "L’essentiel en une minute" })).toBeVisible();
-    // Liste déroulante sur téléphone, sommaire latéral sur ordinateur.
-    const select = page.getByLabel("Section", { exact: true });
-    if (await select.isVisible()) await select.selectOption({ label: "11. Questions fréquentes" });
-    else await page.getByRole("navigation", { name: "Sommaire du guide" }).getByRole("button", { name: /Questions fréquentes/ }).click();
-    await page.getByRole("searchbox", { name: "Rechercher une question" }).fill("Google");
-    await expect(page.getByText("Est-ce que je serai bien visible sur Google ?")).toBeVisible();
-    await expect(page.getByText("Combien ça coûte ?")).toHaveCount(0);
+    await openSection(page, "Guide du prospecteur");
+    const guide = page.frameLocator('iframe[title="Guide du prospecteur"]');
+    await expect(guide.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
+    await expect(guide.getByRole("heading", { level: 2, name: "Votre rôle" })).toBeVisible();
+    // Polices d'origine (Google Fonts) chargées malgré la politique de sécurité du site.
+    await expect
+      .poll(() => guide.locator("body").evaluate(() => document.fonts.ready.then(() => document.fonts.check('16px "Bricolage Grotesque"'))))
+      .toBe(true);
+    await guide.getByLabel("Rechercher une question").fill("Google");
+    await expect(guide.getByText("Est-ce que je serai bien visible sur Google ?")).toBeVisible();
+    await expect(guide.getByText("Combien ça coûte ?")).toBeHidden();
+    // Le menu reste accessible au-dessus du guide.
+    await openSection(page, "Accueil");
+    await expect(page).toHaveURL("/");
   });
 
   test("un admin ajoute une ressource, visible et copiable par l'équipe", async ({ page }) => {

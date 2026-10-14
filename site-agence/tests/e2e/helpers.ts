@@ -9,9 +9,14 @@ export const unique = () => `${Date.now().toString(36)}${Math.floor(Math.random(
 /** Adresse IP simulée, propre à chaque connexion de test : le frein par adresse (30 essais) ne bloque pas la suite entière. */
 const fakeClientIp = () => `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250) + 1}`;
 
+/** Requêtes vers le site testé seulement (les polices Google refusent un en-tête inconnu). */
+const SITE_REQUESTS = /^http:\/\/localhost:\d+\//;
+
 /** Connexion : choix de l'identifiant dans la liste, puis mot de passe. */
 export async function signIn(page: Page, fullName: string, password: string) {
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": fakeClientIp() });
+  const ip = fakeClientIp();
+  await page.unroute(SITE_REQUESTS);
+  await page.route(SITE_REQUESTS, (route, request) => route.continue({ headers: { ...request.headers(), "x-forwarded-for": ip } }));
   await page.goto("/connexion");
   const filter = page.getByRole("searchbox", { name: "Filtrer les identifiants" });
   if (await filter.isVisible()) await filter.fill(fullName);
