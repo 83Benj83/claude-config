@@ -206,16 +206,18 @@ export function PreviewApp({ store, repository, session, download, fileUrl, canU
   );
 
   if (store.status === "error") return <Notice title="L'aperçu n'a pas pu charger ses données.">Recharge la page dans un instant.</Notice>;
-  if (store.status === "ready" && store.members.size === 0) {
-    return <Notice title="Les données d'exemple arrivent.">Elles sont en cours d&apos;installation : recharge la page dans une minute.</Notice>;
-  }
+  // Sans l'accès « Contributeur », la base ne renvoie rien (ni identifiants, ni données) : on explique quoi demander.
   if (store.status === "ready" && !store.canSignIn) {
     return (
       <Notice title="Il te manque l'accès « Contributeur ».">
-        Ton lien ouvre cette page en lecture seule : tu ne peux ni te connecter ni enregistrer. Demande à Paul de t&apos;ajouter avec
-        l&apos;accès « Contributeur » (menu Partager de la page), connecte-toi à claude.ai avec la même adresse, puis recharge.
+        Ton lien ouvre cette page en lecture seule : tu ne peux ni te connecter ni voir les données de l&apos;équipe. Demande à Paul de
+        t&apos;ajouter avec l&apos;accès « Contributeur » (menu Partager de la page), connecte-toi à claude.ai avec la même adresse,
+        puis recharge.
       </Notice>
     );
+  }
+  if (store.status === "ready" && store.members.size === 0) {
+    return <Notice title="Les données d'exemple arrivent.">Elles sont en cours d&apos;installation : recharge la page dans une minute.</Notice>;
   }
 
   const outside = !me || !me.welcomedAt;

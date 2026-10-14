@@ -56,8 +56,9 @@ async function boot() {
   const db = await openDb(claude);
   if (!db) {
     root.render(
-      <Notice title="Ouvre cet aperçu depuis claude.ai.">
-        Il a besoin de ta session claude.ai pour lire et enregistrer les données partagées de l&apos;équipe.
+      <Notice title="Connecte-toi à claude.ai pour ouvrir l'espace.">
+        L&apos;espace équipe s&apos;ouvre avec ton compte claude.ai (gratuit) : connecte-toi avec l&apos;adresse à laquelle Paul a
+        partagé la page, puis rouvre ce lien.
       </Notice>,
     );
     return;
