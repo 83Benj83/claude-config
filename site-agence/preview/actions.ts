@@ -76,6 +76,9 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
 
     addProspect: (input) => withMember((actor) => prospects.addProspect(repository, actor, input, clock())),
     deleteProspect: (id) => withMember((actor) => prospects.deleteProspect(repository, actor, String(id), clock().today)),
+    analyzeImport: (rows) => withMember(() => prospects.analyzeImport(repository, rows, clock().today)),
+    importProspects: (input) =>
+      withMember((actor) => prospects.importProspects(repository, actor, { rows: input?.rows, includeKnown: input?.includeKnown }, clock())),
     async checkEstablishment(input) {
       return prospects.checkEstablishment(repository, String(input?.name ?? ""), String(input?.city ?? ""));
     },

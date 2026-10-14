@@ -104,6 +104,20 @@ const toStoredFile = (row: FileRow): StoredFile => ({
   createdAt: row.created_at,
 });
 
+const toProspectRow = (prospect: Prospect) => ({
+  id: prospect.id,
+  member_id: prospect.memberId,
+  name: prospect.name,
+  name_key: nameKey(prospect.name),
+  city: prospect.city,
+  city_key: cityKey(prospect.city),
+  channel: prospect.channel,
+  contact: prospect.contact,
+  note: prospect.note,
+  contacted_on: prospect.date,
+  created_at: prospect.createdAt,
+});
+
 const CONTRACT_COLUMNS =
   "id, client, city, contact, pack, options, amount, monthly, status, signed_on, delivered_on, site_url, brought_by, note, created_at, updated_at";
 
@@ -328,22 +342,14 @@ export class SupabaseRepository implements Repository {
   }
 
   async addProspect(prospect: Prospect): Promise<void> {
-    check(
-      "l'enregistrement du prospect",
-      await this.db.from("prospects").insert({
-        id: prospect.id,
-        member_id: prospect.memberId,
-        name: prospect.name,
-        name_key: nameKey(prospect.name),
-        city: prospect.city,
-        city_key: cityKey(prospect.city),
-        channel: prospect.channel,
-        contact: prospect.contact,
-        note: prospect.note,
-        contacted_on: prospect.date,
-        created_at: prospect.createdAt,
-      }),
-    );
+    check("l'enregistrement du prospect", await this.db.from("prospects").insert(toProspectRow(prospect)));
+  }
+
+  async addProspects(prospects: Prospect[]): Promise<void> {
+    // Une seule requête par paquet : tout ou rien pour chaque paquet de 500.
+    for (let offset = 0; offset < prospects.length; offset += 500) {
+      check("l'import des prospects", await this.db.from("prospects").insert(prospects.slice(offset, offset + 500).map(toProspectRow)));
+    }
   }
 
   async deleteProspect(id: string): Promise<void> {

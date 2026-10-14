@@ -9,6 +9,7 @@ import { firstName, formatInt, pluralize } from "@/lib/format";
 import type { Channel } from "@/lib/types";
 import type { ProspectionView, ProspectRow } from "@/lib/views";
 import { ProspectLine } from "../feed-item";
+import { ImportList } from "../prospection/import-list";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { ChipGroup } from "../primitives/choice";
@@ -88,104 +89,107 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
       <ScreenHeader title="Prospecter" description="Note chaque commerce contacté : toute l'équipe saura qu'il a déjà été démarché." />
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
-        <Card className="lg:col-span-7" aria-labelledby="nouveau-prospect">
-          <CardHeader id="nouveau-prospect" title="Nouveau prospect" description="Nom, ville et moyen de contact sont obligatoires." />
-          <form onSubmit={submit} className="flex flex-col gap-5 px-5 pt-5 pb-6 sm:px-6" noValidate>
-            <FormMessage>{message}</FormMessage>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-              <Field
-                ref={nameRef}
-                label="Nom du restaurant"
-                value={form.name}
-                onChange={(event) => set("name", event.target.value)}
-                error={errors.name}
-                autoComplete="off"
-                autoFocus
-                maxLength={120}
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
+          <Card aria-labelledby="nouveau-prospect">
+            <CardHeader id="nouveau-prospect" title="Nouveau prospect" description="Nom, ville et moyen de contact sont obligatoires." />
+            <form onSubmit={submit} className="flex flex-col gap-5 px-5 pt-5 pb-6 sm:px-6" noValidate>
+              <FormMessage>{message}</FormMessage>
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <Field
+                  ref={nameRef}
+                  label="Nom du restaurant"
+                  value={form.name}
+                  onChange={(event) => set("name", event.target.value)}
+                  error={errors.name}
+                  autoComplete="off"
+                  autoFocus
+                  maxLength={120}
+                />
+                <Field
+                  label="Ville"
+                  value={form.city}
+                  onChange={(event) => set("city", event.target.value)}
+                  error={errors.city}
+                  list={citiesId}
+                  autoComplete="address-level2"
+                  maxLength={80}
+                />
+                <datalist id={citiesId}>
+                  {view.cities.map((city) => (
+                    <option key={city} value={city} />
+                  ))}
+                </datalist>
+              </div>
+
+              {shownDuplicate && <DuplicateNotice check={shownDuplicate} today={view.today} />}
+
+              <ChipGroup
+                label="Moyen de contact"
+                name="channel"
+                value={form.channel}
+                onChange={(value) => set("channel", value)}
+                error={errors.channel}
+                columns="grid"
+                options={CHANNELS.map((channel) => ({
+                  value: channel.value,
+                  label: channel.label,
+                  icon: <ChannelIcon channel={channel.value} size={17} />,
+                }))}
               />
-              <Field
-                label="Ville"
-                value={form.city}
-                onChange={(event) => set("city", event.target.value)}
-                error={errors.city}
-                list={citiesId}
-                autoComplete="address-level2"
-                maxLength={80}
+
+              <ChipGroup
+                label="Jour du contact"
+                name="date"
+                value={form.date}
+                onChange={(value) => set("date", value)}
+                error={errors.date}
+                options={view.days.slice(0, 4).map((day) => ({ value: day.value, label: day.label }))}
               />
-              <datalist id={citiesId}>
-                {view.cities.map((city) => (
-                  <option key={city} value={city} />
-                ))}
-              </datalist>
-            </div>
 
-            {shownDuplicate && <DuplicateNotice check={shownDuplicate} today={view.today} />}
+              <div className="rounded-2xl border border-line">
+                <button
+                  type="button"
+                  onClick={() => setShowDetails((value) => !value)}
+                  aria-expanded={showDetails}
+                  className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-fg"
+                >
+                  Coordonnées et note
+                  <span className="flex items-center gap-2 text-xs font-normal text-subtle">
+                    facultatif
+                    <CaretDownIcon size={16} className={`transition-transform ${showDetails ? "rotate-180" : ""}`} aria-hidden />
+                  </span>
+                </button>
+                {showDetails && (
+                  <div className="grid gap-4 border-t border-line px-4 pt-4 pb-4">
+                    <Field
+                      label="Coordonnées utilisées"
+                      value={form.contact}
+                      onChange={(event) => set("contact", event.target.value)}
+                      placeholder={channelHint ? `Ex. ${channelHint}` : "Numéro, e-mail ou compte"}
+                      error={errors.contact}
+                      maxLength={160}
+                    />
+                    <TextArea
+                      label="Note"
+                      value={form.note}
+                      onChange={(event) => set("note", event.target.value)}
+                      placeholder="Ex. rappeler jeudi, gérant absent"
+                      error={errors.note}
+                      maxLength={500}
+                      rows={3}
+                    />
+                  </div>
+                )}
+              </div>
 
-            <ChipGroup
-              label="Moyen de contact"
-              name="channel"
-              value={form.channel}
-              onChange={(value) => set("channel", value)}
-              error={errors.channel}
-              columns="grid"
-              options={CHANNELS.map((channel) => ({
-                value: channel.value,
-                label: channel.label,
-                icon: <ChannelIcon channel={channel.value} size={17} />,
-              }))}
-            />
-
-            <ChipGroup
-              label="Jour du contact"
-              name="date"
-              value={form.date}
-              onChange={(value) => set("date", value)}
-              error={errors.date}
-              options={view.days.slice(0, 4).map((day) => ({ value: day.value, label: day.label }))}
-            />
-
-            <div className="rounded-2xl border border-line">
-              <button
-                type="button"
-                onClick={() => setShowDetails((value) => !value)}
-                aria-expanded={showDetails}
-                className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-fg"
-              >
-                Coordonnées et note
-                <span className="flex items-center gap-2 text-xs font-normal text-subtle">
-                  facultatif
-                  <CaretDownIcon size={16} className={`transition-transform ${showDetails ? "rotate-180" : ""}`} aria-hidden />
-                </span>
+              <button type="submit" disabled={pending} className={buttonClasses({ size: "lg", className: "w-full sm:w-fit" })}>
+                <PlusIcon size={18} weight="bold" aria-hidden />
+                {pending ? "Ajout…" : "Ajouter le prospect"}
               </button>
-              {showDetails && (
-                <div className="grid gap-4 border-t border-line px-4 pt-4 pb-4">
-                  <Field
-                    label="Coordonnées utilisées"
-                    value={form.contact}
-                    onChange={(event) => set("contact", event.target.value)}
-                    placeholder={channelHint ? `Ex. ${channelHint}` : "Numéro, e-mail ou compte"}
-                    error={errors.contact}
-                    maxLength={160}
-                  />
-                  <TextArea
-                    label="Note"
-                    value={form.note}
-                    onChange={(event) => set("note", event.target.value)}
-                    placeholder="Ex. rappeler jeudi, gérant absent"
-                    error={errors.note}
-                    maxLength={500}
-                    rows={3}
-                  />
-                </div>
-              )}
-            </div>
-
-            <button type="submit" disabled={pending} className={buttonClasses({ size: "lg", className: "w-full sm:w-fit" })}>
-              <PlusIcon size={18} weight="bold" aria-hidden />
-              {pending ? "Ajout…" : "Ajouter le prospect"}
-            </button>
-          </form>
-        </Card>
+            </form>
+          </Card>
+          <ImportList today={view.today} />
+        </div>
 
         <MyProspects view={view} />
       </div>

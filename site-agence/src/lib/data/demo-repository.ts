@@ -104,6 +104,10 @@ export class DemoRepository implements Repository {
     this.state.prospects.push(clone(prospect));
   }
 
+  async addProspects(prospects: Prospect[]): Promise<void> {
+    this.state.prospects.push(...prospects.map(clone));
+  }
+
   async deleteProspect(id: string): Promise<void> {
     this.state.prospects = this.state.prospects.filter((p) => p.id !== id);
   }

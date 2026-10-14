@@ -4,6 +4,7 @@
  * ne connaissent que ce contrat.
  */
 import type { DuplicateCheck, Establishment } from "./establishments";
+import type { RowStatus } from "./prospect-import";
 import type { Attachment, Prospect } from "./types";
 import type { MessagesView } from "./views";
 
@@ -69,6 +70,9 @@ export type AppActions = {
 
   addProspect(input: ProspectFormValues): Promise<ActionResult<{ prospect: Prospect; todayCount: number }>>;
   deleteProspect(id: string): Promise<ActionResult>;
+  /** Import d'une liste : verdict de chaque ligne (rien n'est enregistré), puis enregistrement. */
+  analyzeImport(rows: ProspectFormValues[]): Promise<ActionResult<RowStatus[]>>;
+  importProspects(input: { rows: ProspectFormValues[]; includeKnown: boolean }): Promise<ActionResult<{ added: number; skipped: number }>>;
   checkEstablishment(input: { name: string; city: string }): Promise<DuplicateCheck>;
   searchDirectory(input: { query: string; city: string }): Promise<Establishment[]>;
 

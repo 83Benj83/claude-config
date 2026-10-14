@@ -5,7 +5,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | Rubrique | Ce qu'on y fait |
 | --- | --- |
 | **Accueil** (`/`) | Un mot de bienvenue et toutes les rubriques, sans chiffres ni classement |
-| **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. |
+| **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. **Importer une liste** : un fichier Excel (.xlsx), CSV ou texte, jusqu'à 500 lignes ; les colonnes sont reconnues d'après leur titre, chaque ligne est vérifiée (doublons, déjà contactés, champs manquants) avant l'enregistrement. |
 | **Déjà contacté ?** (`/recherche`) | Chercher un établissement : oui ou non, par qui, quand et comment |
 | **Classement** (`/classement`) | Jour, semaine, mois, mis à jour à chaque ajout |
 | **Bilan du mois** (`/bilan`) | Totaux par personne, calendrier, moyens de contact, export CSV |

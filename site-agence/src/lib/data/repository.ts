@@ -44,6 +44,8 @@ export interface Repository {
   countEstablishments(): Promise<number>;
   getProspect(id: string): Promise<Prospect | null>;
   addProspect(prospect: Prospect): Promise<void>;
+  /** Plusieurs prospects d'un coup (import d'une liste). */
+  addProspects(prospects: Prospect[]): Promise<void>;
   deleteProspect(id: string): Promise<void>;
 
   listResources(): Promise<Resource[]>;

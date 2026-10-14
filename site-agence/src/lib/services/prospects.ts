@@ -10,6 +10,7 @@ import {
   type DuplicateCheck,
   type Establishment,
 } from "../establishments";
+import { analyzeRows, establishmentKey, sanitizeRows, type RowStatus } from "../prospect-import";
 import { EDITABLE_PAST_DAYS } from "../rules";
 import { buildReportView, countedSince } from "../views";
 import type { IsoDate, Member, Prospect } from "../types";
@@ -45,6 +46,51 @@ export async function addProspect(
     ok: true,
     data: { prospect, todayCount: counted.filter((p) => p.memberId === actor.id).length },
     message: `${prospect.name} ajouté.`,
+  };
+}
+
+/** Établissements déjà contactés par l'équipe (tout l'historique, comme « Déjà contacté ? »). */
+async function knownEstablishments(repository: Repository): Promise<Set<string>> {
+  return new Set((await repository.listProspects()).map((prospect) => establishmentKey(prospect.name, prospect.city)));
+}
+
+/** Aperçu d'un import : verdict de chaque ligne, sans rien enregistrer. */
+export async function analyzeImport(repository: Repository, input: unknown, today: IsoDate): Promise<ActionResult<RowStatus[]>> {
+  const rows = sanitizeRows(input);
+  if (!rows) return { ok: false, message: "La liste est vide ou dépasse 500 lignes." };
+  return { ok: true, data: analyzeRows(rows, await knownEstablishments(repository), today) };
+}
+
+/**
+ * Import d'une liste : chaque ligne est revérifiée ici. Les lignes à corriger
+ * et les doublons du fichier sont ignorés ; les commerces déjà contactés
+ * aussi, sauf demande explicite.
+ */
+export async function importProspects(
+  repository: Repository,
+  actor: Member,
+  input: { rows: unknown; includeKnown: unknown },
+  clock: { today: IsoDate; now: string },
+): Promise<ActionResult<{ added: number; skipped: number }>> {
+  const rows = sanitizeRows(input?.rows);
+  if (!rows) return { ok: false, message: "La liste est vide ou dépasse 500 lignes." };
+  const statuses = analyzeRows(rows, await knownEstablishments(repository), clock.today);
+  const start = Date.parse(clock.now);
+  const prospects: Prospect[] = rows.flatMap((row, index) => {
+    const status = statuses[index].status;
+    if (status !== "ready" && !(status === "known" && input.includeKnown === true)) return [];
+    const parsed = prospectSchema.parse(row);
+    // Une milliseconde d'écart par ligne : l'ordre du fichier est gardé.
+    return [{ id: crypto.randomUUID(), memberId: actor.id, ...parsed, createdAt: new Date(start + index).toISOString() }];
+  });
+  if (prospects.length === 0) return { ok: false, message: "Aucune ligne à ajouter : toutes sont à corriger ou déjà contactées." };
+
+  await repository.addProspects(prospects);
+  const skipped = rows.length - prospects.length;
+  return {
+    ok: true,
+    data: { added: prospects.length, skipped },
+    message: `${prospects.length} prospect${prospects.length > 1 ? "s" : ""} ajouté${prospects.length > 1 ? "s" : ""}${skipped ? `, ${skipped} ignoré${skipped > 1 ? "s" : ""}` : ""}.`,
   };
 }
 

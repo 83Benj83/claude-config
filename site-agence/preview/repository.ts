@@ -93,10 +93,21 @@ export class PreviewRepository implements Repository {
   }
 
   async addProspect(prospect: Prospect): Promise<void> {
-    const month = monthKeyOf(prospect.date);
-    const id = monthDocId(prospect.memberId, month);
-    const current = this.store.months.get(id);
-    await this.store.putMonth(id, { memberId: prospect.memberId, month, items: [...(current?.items ?? []), prospect] });
+    await this.addProspects([prospect]);
+  }
+
+  /** Regroupés par membre et par mois : un document écrit par mois concerné. */
+  async addProspects(prospects: Prospect[]): Promise<void> {
+    const byDoc = new Map<string, Prospect[]>();
+    for (const prospect of prospects) {
+      const id = monthDocId(prospect.memberId, monthKeyOf(prospect.date));
+      byDoc.set(id, [...(byDoc.get(id) ?? []), prospect]);
+    }
+    for (const [id, added] of byDoc) {
+      const current = this.store.months.get(id);
+      const { memberId, date } = added[0];
+      await this.store.putMonth(id, { memberId, month: monthKeyOf(date), items: [...(current?.items ?? []), ...added] });
+    }
   }
 
   async deleteProspect(id: string): Promise<void> {

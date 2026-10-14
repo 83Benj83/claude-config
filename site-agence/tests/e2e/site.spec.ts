@@ -179,8 +179,11 @@ test("un admin crée un identifiant, la personne s'y connecte pour la première 
   await page.evaluate(() => localStorage.clear());
   await signIn(page, fullName, password);
   await expect(page).toHaveURL("/bienvenue");
-  await page.getByRole("button", { name: "C'est parti" }).click();
-  await expect(page).toHaveURL("/");
+  // Première visite de la page en développement : le bouton peut s'afficher avant d'être actif.
+  await expect(async () => {
+    if (new URL(page.url()).pathname === "/bienvenue") await page.getByRole("button", { name: "C'est parti" }).click();
+    await expect(page).toHaveURL("/", { timeout: 3000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("aucun débordement horizontal sur les écrans principaux", async ({ page }) => {
@@ -257,5 +260,64 @@ test.describe("échange", () => {
     await mine.getByRole("button", { name: "Supprimer" }).click();
     await mine.getByRole("button", { name: "Oui" }).click();
     await expect(log.getByText(text)).toHaveCount(0);
+  });
+});
+
+test.describe("import d'une liste", () => {
+  test("un fichier CSV : aperçu ligne par ligne, ville par défaut, doublons, puis enregistrement", async ({ page }) => {
+    const u = unique();
+    const csv = [
+      "Nom;Ville;Moyen de contact;Téléphone;Date",
+      `Import A ${u};Lyon;Appel;0612345678;`,
+      `Import B ${u};Lyon;;contact@b-${u}.fr;`,
+      `Import A ${u};Lyon;Téléphone;;`,
+      "X;Lyon;Téléphone;;",
+      `Import C ${u};;Sur place;;`,
+    ].join("\n");
+    const file = { name: "prospects.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf8") };
+
+    await loginAs(page, "lea", "Léa Fontaine");
+    await openSection(page, "Prospecter");
+    await page.getByLabel("Fichier de prospects").setInputFiles(file);
+    const sheet = page.getByRole("dialog", { name: "Importer une liste" });
+    const summary = sheet.getByRole("list", { name: "Résumé" });
+    await expect(summary).toContainText("2 prêts");
+    await expect(summary).toContainText("1 en double dans le fichier");
+    await expect(summary).toContainText("2 à corriger");
+
+    await sheet.getByLabel("Ville des lignes sans ville").fill("Lyon");
+    await expect(summary).toContainText("3 prêts");
+    await sheet.getByRole("button", { name: "Ajouter 3 prospects" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "3 prospects ajoutés, 2 ignorés." })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Mes prospects" }).getByText(`Import C ${u}`)).toBeVisible();
+
+    // Le même fichier une seconde fois : tout est déjà contacté, rien n'est ajouté sans le demander.
+    await page.getByLabel("Fichier de prospects").setInputFiles(file);
+    await expect(summary).toContainText("2 déjà contactés");
+    await sheet.getByLabel("Ville des lignes sans ville").fill("Lyon");
+    await expect(summary).toContainText("3 déjà contactés");
+    await expect(sheet.getByRole("button", { name: "Ajouter 0 prospect" })).toBeDisabled();
+    await sheet.getByLabel("Ajouter aussi les commerces déjà contactés").check();
+    await expect(sheet.getByRole("button", { name: "Ajouter 3 prospects" })).toBeEnabled();
+    await sheet.getByRole("button", { name: "Fermer" }).click();
+  });
+
+  test("un fichier Excel : titres libres, date et numéro sans son 0 reconnus", async ({ page }) => {
+    await loginAs(page, "yanis", "Yanis Haddad");
+    await openSection(page, "Prospecter");
+    await page.getByLabel("Fichier de prospects").setInputFiles("tests/e2e/fixtures/prospects.xlsx");
+    const sheet = page.getByRole("dialog", { name: "Importer une liste" });
+    await expect(sheet.getByText("Colonnes reconnues : Nom, Ville, Coordonnées, Date.")).toBeVisible();
+    const rows = sheet.getByRole("list", { name: "Lignes du fichier" });
+    await expect(rows.getByText("Fixture Excel Bistrot")).toBeVisible();
+    await expect(rows.getByText(/0612345678/)).toBeVisible();
+    await expect(rows.getByText(/fleurs@exemple\.fr/)).toBeVisible();
+  });
+
+  test("un ancien format Excel est refusé avec une explication", async ({ page }) => {
+    await loginAs(page, "theo", "Théo Garnier");
+    await openSection(page, "Prospecter");
+    await page.getByLabel("Fichier de prospects").setInputFiles({ name: "vieux.xls", mimeType: "application/vnd.ms-excel", buffer: Buffer.from("x") });
+    await expect(page.getByRole("alert").filter({ hasText: "Ancien format Excel" })).toBeVisible();
   });
 });

@@ -29,6 +29,7 @@ import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
 import * as messages from "@/lib/services/messages";
 import * as prospects from "@/lib/services/prospects";
+import type { RowStatus } from "@/lib/prospect-import";
 import type { Attachment, Member, Prospect } from "@/lib/types";
 import type { MessagesView } from "@/lib/views";
 
@@ -116,6 +117,16 @@ export async function completeWelcome(input: { fullName: string }): Promise<Acti
 
 export async function addProspect(input: ProspectFormValues): Promise<ActionResult<{ prospect: Prospect; todayCount: number }>> {
   return withMember(async (actor) => prospects.addProspect(await getRepository(), actor, input, clock()));
+}
+
+export async function analyzeImport(rows: ProspectFormValues[]): Promise<ActionResult<RowStatus[]>> {
+  return withMember(async () => prospects.analyzeImport(await getRepository(), rows, clock().today), { refreshAfter: false });
+}
+
+export async function importProspects(input: { rows: ProspectFormValues[]; includeKnown: boolean }): Promise<ActionResult<{ added: number; skipped: number }>> {
+  return withMember(async (actor) =>
+    prospects.importProspects(await getRepository(), actor, { rows: input?.rows, includeKnown: input?.includeKnown }, clock()),
+  );
 }
 
 export async function deleteProspect(id: string): Promise<ActionResult> {
