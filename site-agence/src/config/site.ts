@@ -15,7 +15,7 @@ export const site = {
   space: "Espace équipe",
   tagline: "Sites internet pour les commerces",
   description:
-    "L'espace de l'équipe Astrinova : prospection, commerces déjà contactés, classement, guide du prospecteur et ressources.",
+    "L'espace de l'équipe Astrinova : prospection, commerces déjà contactés, guide du prospecteur, contrats et ressources.",
 
   hero: {
     title: "Des sites internet pour les commerces, à prix affichés.",
@@ -79,6 +79,6 @@ export const site = {
 
   closing: {
     title: "Ta journée compte.",
-    text: "Ajoute chaque commerce dès que tu l'as contacté : dix secondes, et le classement de l'équipe est à jour.",
+    text: "Ajoute chaque commerce dès que tu l'as contacté : dix secondes, et toute l'équipe sait qu'il a déjà été démarché.",
   },
 } as const;

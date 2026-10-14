@@ -1,6 +1,6 @@
 "use client";
 
-import { MagnifyingGlassIcon, PlusCircleIcon, TrophyIcon } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon, PlusCircleIcon, BookOpenTextIcon } from "@phosphor-icons/react";
 import { useState, useTransition, type FormEvent } from "react";
 import { site } from "@/config/site";
 import { firstName } from "@/lib/format";
@@ -13,7 +13,7 @@ import { Field, FormMessage } from "../primitives/field";
 const STEPS = [
   { icon: PlusCircleIcon, title: "Prospecter", text: "Ajoute chaque restaurant contacté : nom, ville et moyen de contact." },
   { icon: MagnifyingGlassIcon, title: "Déjà contacté ?", text: "Vérifie en deux secondes qu'un établissement n'a pas déjà été démarché." },
-  { icon: TrophyIcon, title: "Classement", text: "Tes ajouts comptent dans le classement du jour, de la semaine et du mois." },
+  { icon: BookOpenTextIcon, title: "Guide et ressources", text: "Le guide du prospecteur, les modèles de message et les liens utiles, à portée de main." },
 ];
 
 /** Première connexion : on confirme le nom affiché (le poste est fixé par la direction), puis on présente l'outil. */
@@ -60,7 +60,7 @@ export function WelcomeScreen({ member }: { member: MemberSummary }) {
       <form onSubmit={submit} className="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-5 shadow-card sm:p-6" noValidate>
         <div>
           <h2 className="font-semibold text-fg">Comment veux-tu apparaître ?</h2>
-          <p className="mt-0.5 text-sm text-subtle">Ton nom s&apos;affiche dans le classement et l&apos;organigramme de {site.name}.</p>
+          <p className="mt-0.5 text-sm text-subtle">Ton nom s&apos;affiche dans l&apos;organigramme de {site.name} et sur les prospects que tu ajoutes.</p>
         </div>
         <FormMessage>{message}</FormMessage>
         <div className="grid gap-4 sm:grid-cols-2 sm:items-start">

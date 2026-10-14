@@ -21,15 +21,25 @@ export async function loginAs(page: Page, login: string, fullName: string) {
   await expect(page).toHaveURL("/");
 }
 
-/** Rubrique par la navigation visible (menu latéral, ou onglets + « Plus » sur téléphone). */
+/** Ouvre le menu (bouton « Menu » en haut à gauche, sur tous les écrans). */
+export async function openMenu(page: Page) {
+  const menu = page.getByRole("navigation", { name: "Menu principal" });
+  // Juste après un chargement, le bouton peut être affiché avant d'être actif : on réessaie.
+  await expect(async () => {
+    if (!(await menu.isVisible())) await page.getByRole("button", { name: "Menu", exact: true }).click();
+    await expect(menu).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
+  return menu;
+}
+
+/** Rubrique choisie dans le menu, comme le ferait un membre de l'équipe. */
 export async function openSection(page: Page, label: string) {
-  // L'écran arrive en streaming : on attend que la navigation soit rendue.
-  await page.getByRole("navigation", { name: "Navigation principale" }).waitFor();
-  const link = page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: label, exact: true });
-  if (await link.isVisible()) {
-    await link.click();
-    return;
-  }
-  await page.getByRole("button", { name: "Plus", exact: true }).click();
-  await page.getByRole("navigation", { name: "Autres rubriques" }).getByRole("link", { name: label, exact: true }).click();
+  await (await openMenu(page)).getByRole("link", { name: label, exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Menu principal" })).toBeHidden();
+}
+
+/** Déconnexion depuis le pied du menu. */
+export async function signOut(page: Page) {
+  await openMenu(page);
+  await page.getByRole("button", { name: "Se déconnecter" }).click();
 }

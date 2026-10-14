@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, openSection, signIn, unique } from "./helpers";
+import { loginAs, openMenu, openSection, signIn, unique } from "./helpers";
 
 test.describe("accès", () => {
   test("un visiteur non connecté est renvoyé vers la connexion", async ({ page }) => {
@@ -18,6 +18,38 @@ test.describe("accès", () => {
     await loginAs(page, "theo", "Théo Garnier");
     await page.goto("/admin");
     await expect(page).toHaveURL("/");
+  });
+});
+
+test.describe("navigation", () => {
+  test("accueil simple, sans classement mis en avant, et menu en haut à gauche", async ({ page }) => {
+    await loginAs(page, "theo", "Théo Garnier");
+    await expect(page.getByRole("heading", { level: 1, name: /Théo/ })).toBeVisible();
+    const sections = page.getByRole("region", { name: "Les rubriques" });
+    await expect(sections.getByRole("link")).toHaveCount(9);
+    await expect(sections.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
+    await expect(page.getByText(/Podium|Rang du jour/)).toHaveCount(0);
+
+    // Le menu donne toutes les rubriques et se referme une fois la rubrique choisie.
+    const menu = await openMenu(page);
+    await expect(menu.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
+    await menu.getByRole("link", { name: "Guide du prospecteur", exact: true }).click();
+    await expect(page).toHaveURL("/guide");
+    await expect(menu).toBeHidden();
+
+    // Échap le referme aussi ; « Accueil » ramène au début.
+    await openMenu(page);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await openSection(page, "Accueil");
+    await expect(page).toHaveURL("/");
+  });
+
+  test("le panel admin n'apparaît que dans le menu des admins", async ({ page }) => {
+    await loginAs(page, "camille", "Camille Renaud");
+    await expect(page.getByRole("region", { name: "Les rubriques" }).getByRole("link", { name: "Panel admin" })).toBeVisible();
+    await openSection(page, "Panel admin");
+    await expect(page.getByRole("heading", { level: 1, name: "Panel admin" })).toBeVisible();
   });
 });
 

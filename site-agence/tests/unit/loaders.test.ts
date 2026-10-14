@@ -33,13 +33,12 @@ describe("chargement des écrans", () => {
     expect(choices[0]).not.toHaveProperty("passwordHash");
     expect(choices.map((c) => c.login)).toContain("recrue");
 
-    const home = await loaders.loadHomeView(repository, me, TODAY);
-    expect(home.establishmentsCount).toBe(await repository.countEstablishments());
+    expect(loaders.loadHomeView(me, TODAY)).toMatchObject({ today: TODAY, me: { id: me.id } });
 
     expect((await loaders.loadProspectionView(repository, me, TODAY)).days[0].value).toBe(TODAY);
     expect((await loaders.loadDirectoryView(repository, TODAY)).recent.length).toBeGreaterThan(0);
     expect((await loaders.loadRankingView(repository, me, TODAY)).periods.mois.rows.length).toBeGreaterThan(0);
-    expect((await loaders.loadTeamView(repository, me, TODAY)).members.length).toBe(DEMO_MEMBERS.length);
+    expect((await loaders.loadTeamView(repository, me)).members.length).toBe(DEMO_MEMBERS.length);
     expect((await loaders.loadResourcesView(repository, me)).canEdit).toBe(true);
     expect((await loaders.loadContractsView(repository, me, TODAY)).canEdit).toBe(false);
     const admin = await loaders.loadAdminView(repository, me, TODAY);

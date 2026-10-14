@@ -39,26 +39,11 @@ describe("entriesFromProspects", () => {
 });
 
 describe("home view", () => {
-  const view = buildHomeView({ members, prospects, me, today });
-
-  test("personal and team figures", () => {
-    expect(view.myToday).toBe(2);
-    expect(view.myStreak).toBe(2);
-    expect(view.myRank).toBe(1);
-    expect(view.team).toEqual({ today: 3, week: 5, month: 6 });
-    expect(view.enteredToday).toBe(2);
-    expect(view.prospectorCount).toBe(2); // inactive and non-prospectors excluded
-  });
-
-  test("podium, trend and feed", () => {
-    expect(view.podium.map((p) => [p.fullName, p.total, p.isMe])).toEqual([
-      ["Alice", 2, true],
-      ["Bruno", 1, false],
-    ]);
-    expect(view.trend).toHaveLength(14);
-    expect(view.trend.at(-1)).toEqual({ date: today, total: 3 });
-    expect(view.feed).toHaveLength(6);
-    expect(view.establishmentsCount).toBe(6);
+  test("no figures and no ranking on the home screen", () => {
+    const view = buildHomeView({ me, today });
+    expect(Object.keys(view).sort()).toEqual(["me", "today"]);
+    expect(view.me).toMatchObject({ id: me.id, fullName: me.fullName });
+    expect(view.me).not.toHaveProperty("passwordHash");
   });
 });
 
@@ -117,10 +102,10 @@ describe("report view", () => {
 });
 
 describe("team, resources and admin views", () => {
-  test("team view hides inactive members and totals the month", () => {
-    const view = buildTeamView({ members, prospects, me, today });
+  test("team view hides inactive members and shows no figures", () => {
+    const view = buildTeamView({ members, me });
     expect(view.members.map((m) => m.id)).toEqual(["a", "b", "boss"]);
-    expect(view.monthTotals).toEqual({ a: 3, b: 2, old: 1 });
+    expect(Object.keys(view).sort()).toEqual(["meId", "members"]);
   });
 
   test("resources are sorted and editable by the whole team", () => {

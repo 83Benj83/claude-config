@@ -350,8 +350,12 @@
 
 /*
  * Panneaux (<dialog>) : feuille qui monte du bas sur téléphone, panneau qui
- * glisse depuis la droite sur grand écran. Le fond s'assombrit en fondu.
+ * glisse depuis la droite sur grand écran, menu qui glisse depuis la gauche.
+ * Le fond s'assombrit en fondu.
  */
+dialog.sheet-from-left[open] {
+  animation: sheet-from-left 320ms var(--ease-out-expo) both;
+}
 dialog.sheet-right[open],
 dialog.sheet-bottom[open] {
   animation: sheet-up 360ms var(--ease-out-expo) both;
@@ -372,6 +376,11 @@ dialog[open]::backdrop {
 @keyframes sheet-left {
   from {
     transform: translateX(100%);
+  }
+}
+@keyframes sheet-from-left {
+  from {
+    transform: translateX(-100%);
   }
 }
 @keyframes fade-in {

@@ -8,7 +8,7 @@ import { CHANNELS } from "./channels";
 import { addDays, eachDay, endOfMonth, formatRelativeDay, monthKeyOf, periodWindow, startOfMonth, startOfWeek } from "./dates";
 import { groupEstablishments, knownCities, type Establishment } from "./establishments";
 import { EDITABLE_PAST_DAYS } from "./rules";
-import { buildMonthReport, buildRanking, currentStreak, sumEntries, totalsByMember, type MonthReport, type RankingRow } from "./stats";
+import { buildMonthReport, buildRanking, currentStreak, sumEntries, type MonthReport, type RankingRow } from "./stats";
 import type { Channel, Contract, Entry, IsoDate, Member, MonthKey, Period, Prospect, Resource } from "./types";
 
 /** Nombre de prospections par membre et par jour, à partir des prospects. */
@@ -51,33 +51,8 @@ export type PodiumEntry = {
   isMe: boolean;
 };
 
-export type FeedItem = {
-  id: string;
-  name: string;
-  city: string;
-  channel: Channel;
-  date: IsoDate;
-  memberName: string;
-  memberAvatarUrl: string | null;
-};
-
 const visibleMembers = (members: readonly Member[]) => members.filter((member) => member.active);
 
-function feed(prospects: readonly Prospect[], members: readonly Member[], limit: number): FeedItem[] {
-  const byId = new Map(members.map((member) => [member.id, member]));
-  return [...prospects]
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, limit)
-    .map((prospect) => ({
-      id: prospect.id,
-      name: prospect.name,
-      city: prospect.city,
-      channel: prospect.channel,
-      date: prospect.date,
-      memberName: byId.get(prospect.memberId)?.fullName ?? "Ancien membre",
-      memberAvatarUrl: byId.get(prospect.memberId)?.avatarUrl ?? null,
-    }));
-}
 
 const toPodium = (rows: RankingRow[], meId: string): PodiumEntry[] =>
   rows
@@ -99,56 +74,13 @@ const toPodium = (rows: RankingRow[], meId: string): PodiumEntry[] =>
 export type HomeView = {
   today: IsoDate;
   me: MemberSummary;
-  myToday: number;
-  myStreak: number;
-  myRank: number | null;
-  prospectorCount: number;
-  enteredToday: number;
-  team: { today: number; week: number; month: number };
-  podium: PodiumEntry[];
-  trend: { date: IsoDate; total: number }[];
-  feed: FeedItem[];
-  establishmentsCount: number;
 };
 
-const TREND_DAYS = 14;
-
-export function buildHomeView(input: { members: Member[]; prospects: Prospect[]; me: Member; today: IsoDate }): HomeView {
-  const { prospects, me, today } = input;
-  const members = visibleMembers(input.members);
-  const entries = entriesFromProspects(prospects);
-  const day = { from: today, to: today };
-  const ranking = buildRanking(members, entries, day, { from: addDays(today, -1), to: addDays(today, -1) });
-  const dailyTotals = totalsByDay(entries);
-
-  return {
-    today,
-    me: summarize(me),
-    myToday: sumEntries(entries.filter((e) => e.memberId === me.id), day),
-    myStreak: currentStreak(entries, me.id, today),
-    myRank: ranking.find((row) => row.member.id === me.id)?.rank ?? null,
-    prospectorCount: ranking.length,
-    enteredToday: ranking.filter((row) => row.hasEntry).length,
-    team: {
-      today: sumEntries(entries, day),
-      week: sumEntries(entries, { from: startOfWeek(today), to: today }),
-      month: sumEntries(entries, { from: startOfMonth(monthKeyOf(today)), to: today }),
-    },
-    podium: toPodium(ranking, me.id),
-    trend: eachDay({ from: addDays(today, -(TREND_DAYS - 1)), to: today }).map((date) => ({
-      date,
-      total: dailyTotals.get(date) ?? 0,
-    })),
-    feed: feed(prospects, input.members, 6),
-    establishmentsCount: groupEstablishments(prospects, input.members).length,
-  };
+/** L'accueil ne montre ni chiffres ni classement : seulement qui est connecté et la date. */
+export function buildHomeView(input: { me: Member; today: IsoDate }): HomeView {
+  return { today: input.today, me: summarize(input.me) };
 }
 
-function totalsByDay(entries: readonly Entry[]): Map<IsoDate, number> {
-  const totals = new Map<IsoDate, number>();
-  for (const entry of entries) totals.set(entry.date, (totals.get(entry.date) ?? 0) + entry.count);
-  return totals;
-}
 
 /* ------------------------------------------------------------------ */
 /* Prospection (ajout + mes derniers prospects)                         */
@@ -328,22 +260,14 @@ export function buildReportView(input: {
 /* Équipe, ressources, administration                                  */
 /* ------------------------------------------------------------------ */
 
+/** Organigramme : qui fait quoi, sans chiffres (les totaux sont dans le bilan). */
 export type TeamView = {
   meId: string;
   members: Member[];
-  monthTotals: Record<string, number>;
 };
 
-export function buildTeamView(input: { members: Member[]; prospects: Prospect[]; me: Member; today: IsoDate }): TeamView {
-  const totals = totalsByMember(entriesFromProspects(input.prospects), {
-    from: startOfMonth(monthKeyOf(input.today)),
-    to: input.today,
-  });
-  return {
-    meId: input.me.id,
-    members: visibleMembers(input.members),
-    monthTotals: Object.fromEntries(totals),
-  };
+export function buildTeamView(input: { members: Member[]; me: Member }): TeamView {
+  return { meId: input.me.id, members: visibleMembers(input.members) };
 }
 
 export type ResourcesView = {

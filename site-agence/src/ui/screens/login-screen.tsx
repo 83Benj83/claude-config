@@ -100,7 +100,7 @@ export function LoginScreen({ choices, demoAccounts }: { choices: LoginChoice[];
         <div className="max-w-md">
           <p className="font-display text-4xl leading-[1.05] font-bold tracking-tight xl:text-5xl">L&apos;espace de prospection de l&apos;équipe.</p>
           <p className="mt-5 text-lg leading-relaxed text-[var(--sky-muted)]">
-            Ajoute chaque commerce contacté, vérifie qu&apos;il ne l&apos;a pas déjà été, suis le classement et retrouve le guide du prospecteur.
+            Ajoute chaque commerce contacté, vérifie qu&apos;il ne l&apos;a pas déjà été, retrouve le guide du prospecteur et suis les contrats.
           </p>
         </div>
         <p className="text-sm text-[var(--sky-muted)]">{site.tagline}</p>

@@ -15,6 +15,6 @@ export default function TeamPage() {
 }
 
 async function Team() {
-  const { me, repository, today } = await screenContext();
-  return <TeamScreen view={await loadTeamView(repository, me, today)} />;
+  const { me, repository } = await screenContext();
+  return <TeamScreen view={await loadTeamView(repository, me)} />;
 }

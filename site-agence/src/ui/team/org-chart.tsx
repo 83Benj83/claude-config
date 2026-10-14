@@ -2,11 +2,10 @@
 
 import type { CSSProperties } from "react";
 import { Avatar } from "@/ui/primitives/avatar";
-import { formatInt } from "@/lib/format";
 import type { OrgNode } from "@/lib/stats";
 import type { Member } from "@/lib/types";
 
-type Context = { meId: string; monthTotals: Record<string, number> };
+type Context = { meId: string };
 
 /**
  * Organigramme : la direction en haut (plusieurs personnes côte à côte en cas
@@ -14,9 +13,9 @@ type Context = { meId: string; monthTotals: Record<string, number> };
  * dessous. Les niveaux plus profonds s'indentent dans la colonne, ce qui
  * reste lisible quand l'équipe grandit.
  */
-export function OrgChart({ roots, meId, monthTotals }: { roots: OrgNode[]; meId: string; monthTotals: Record<string, number> }) {
+export function OrgChart({ roots, meId }: { roots: OrgNode[]; meId: string }) {
   if (roots.length === 0) return null;
-  const context = { meId, monthTotals };
+  const context = { meId };
   // Direction : ceux qui ont une équipe, plus leurs collègues du même pôle (co-direction).
   const leaderDepartments = new Set(roots.filter((root) => root.reports.length > 0).map((root) => root.member.department).filter(Boolean));
   const leading = roots.filter((root) => root.reports.length > 0 || (root.member.department && leaderDepartments.has(root.member.department)));
@@ -107,7 +106,6 @@ function ReportList({ nodes, context }: { nodes: OrgNode[]; context: Context }) 
 
 function MemberCard({ member, context, emphasis = false }: { member: Member; context: Context; emphasis?: boolean }) {
   const isMe = member.id === context.meId;
-  const monthTotal = context.monthTotals[member.id] ?? 0;
   return (
     <article
       className={`flex items-center gap-3 rounded-2xl border bg-surface p-3 transition-[border-color,box-shadow] duration-200 hover:shadow-card ${
@@ -120,12 +118,7 @@ function MemberCard({ member, context, emphasis = false }: { member: Member; con
           <span className="truncate">{member.fullName}</span>
           {isMe && <span className="shrink-0 rounded-full bg-inverse px-1.5 py-px text-[0.625rem] font-semibold text-on-inverse">Toi</span>}
         </h3>
-        <p className="truncate text-sm text-muted">{member.jobTitle}</p>
-        {member.isProspector && (
-          <p className="mt-0.5 text-xs text-subtle">
-            Ce mois&nbsp;: <span className="font-medium text-fg tabular">{formatInt(monthTotal)}</span> prospects
-          </p>
-        )}
+        <p className="text-sm text-muted">{member.jobTitle}</p>
       </div>
     </article>
   );

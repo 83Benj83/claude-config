@@ -101,7 +101,7 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
   const today = todayIso();
   switch (pathname) {
     case "/":
-      return { kind: "screen", me, screen: <HomeScreen view={await loaders.loadHomeView(repository, me, today)} /> };
+      return { kind: "screen", me, screen: <HomeScreen view={loaders.loadHomeView(me, today)} /> };
     case "/prospection":
       return { kind: "screen", me, screen: <ProspectionScreen view={await loaders.loadProspectionView(repository, me, today)} /> };
     case "/recherche":
@@ -113,7 +113,7 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
       return { kind: "screen", me, screen: <ReportScreen key={view.month} view={view} /> };
     }
     case "/equipe":
-      return { kind: "screen", me, screen: <TeamScreen view={await loaders.loadTeamView(repository, me, today)} /> };
+      return { kind: "screen", me, screen: <TeamScreen view={await loaders.loadTeamView(repository, me)} /> };
     case "/ressources":
       return { kind: "screen", me, screen: <ResourcesScreen view={await loaders.loadResourcesView(repository, me)} /> };
     case "/agence":

@@ -3,7 +3,7 @@
 import { MagnifyingGlassIcon, TreeStructureIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { normalizeText } from "@/lib/establishments";
-import { formatInt, pluralize } from "@/lib/format";
+import { pluralize } from "@/lib/format";
 import { buildOrgTree } from "@/lib/stats";
 import type { Member } from "@/lib/types";
 import type { TeamView } from "@/lib/views";
@@ -26,7 +26,7 @@ export function TeamScreen({ view }: { view: TeamView }) {
     <div className="flex flex-col gap-6">
       <ScreenHeader
         title="L'équipe"
-        description={`${pluralize(view.members.length, "membre")}, dont ${pluralize(prospectors, "prospecteur")}. Le chiffre du mois se met à jour à chaque ajout.`}
+        description={`${pluralize(view.members.length, "membre")}, dont ${pluralize(prospectors, "prospecteur")} : qui fait quoi, et qui contacter.`}
       />
 
       <Segmented
@@ -47,7 +47,7 @@ export function TeamScreen({ view }: { view: TeamView }) {
         </Card>
       ) : tab === "organigramme" ? (
         <div className="dot-grid -mx-4 rounded-none px-4 py-8 sm:mx-0 sm:rounded-3xl sm:border sm:border-line sm:px-8 sm:py-10">
-          <OrgChart roots={roots} meId={view.meId} monthTotals={view.monthTotals} />
+          <OrgChart roots={roots} meId={view.meId} />
         </div>
       ) : (
         <Directory view={view} />
@@ -115,12 +115,6 @@ function Directory({ view }: { view: TeamView }) {
                           {manager ? ` · avec ${manager}` : ""}
                         </p>
                       </div>
-                      {member.isProspector && (
-                        <p className="shrink-0 text-right text-xs text-subtle">
-                          <span className="block text-base font-semibold text-fg tabular">{formatInt(view.monthTotals[member.id] ?? 0)}</span>
-                          ce mois
-                        </p>
-                      )}
                     </li>
                   );
                 })}

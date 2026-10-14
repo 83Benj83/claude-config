@@ -172,7 +172,7 @@ function StatisticsPanel({ view }: { view: AdminView }) {
             {since ? formatDayLong(todayIso(new Date(since))) : "début (jamais remis à zéro)"}
           </p>
           <p className="mt-3 text-sm text-muted">
-            Le classement, le bilan et les compteurs de l&apos;accueil ne comptent que les prospects ajoutés depuis cette date.
+            Le bilan, le classement et les compteurs de la prospection ne comptent que les prospects ajoutés depuis cette date.
           </p>
           <Link href="/bilan" className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-4" })}>
             <ChartBarIcon size={16} aria-hidden />

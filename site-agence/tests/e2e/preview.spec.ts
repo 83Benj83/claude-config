@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openSection, signOut } from "./helpers";
 
 /** Aperçu interactif construit avec sa base locale en mémoire (`npm run preview:local`). */
 const FILE = join(process.cwd(), "preview/dist-local/local.html");
@@ -21,7 +22,7 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await page.getByLabel("Mot de passe", { exact: true }).fill("lea2026");
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByRole("heading", { level: 1, name: /Léa/ })).toBeVisible();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Prospecter", exact: true }).click();
+  await openSection(page, "Prospecter");
   await page.getByLabel("Nom du restaurant").fill("Chez Aperçu");
   await page.getByLabel("Ville", { exact: true }).fill("Lyon");
   await page.locator("label").filter({ hasText: /^Téléphone$/ }).click();
@@ -29,26 +30,26 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await expect(page.getByRole("status").filter({ hasText: "Chez Aperçu ajouté" })).toBeVisible();
   await page.getByLabel("Nom du restaurant").fill("chez apercu");
   await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Déjà contacté ?", exact: true }).click();
+  await openSection(page, "Déjà contacté ?");
   await page.getByRole("searchbox", { name: "Nom du restaurant" }).fill("Aperçu");
   await expect(page.getByRole("button", { name: /Chez Aperçu/ })).toBeVisible();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Classement", exact: true }).click();
+  await openSection(page, "Classement");
   await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Bilan du mois", exact: true }).click();
+  await openSection(page, "Bilan du mois");
   await expect(page.getByRole("heading", { level: 1, name: "Bilan du mois" })).toBeVisible();
   // Contrats : consultables par l'équipe, gérés par les admins seulement.
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Contrats", exact: true }).click();
+  await openSection(page, "Contrats");
   await expect(page.getByRole("heading", { level: 1, name: "Contrats" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Nouveau contrat" })).toHaveCount(0);
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Guide du prospecteur", exact: true }).click();
+  await openSection(page, "Guide du prospecteur");
   await expect(page.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeVisible();
-  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await signOut(page);
   await page.getByRole("button", { name: "Changer d'identifiant" }).click();
   await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Camille");
   await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Camille/ }).click();
   await page.getByLabel("Mot de passe", { exact: true }).fill("camille2026");
   await page.getByRole("button", { name: "Se connecter" }).click();
-  await page.getByRole("navigation", { name: "Navigation principale" }).getByRole("link", { name: "Panel admin", exact: true }).click();
+  await openSection(page, "Panel admin");
   await page.getByRole("button", { name: "Nouvel identifiant" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByLabel("Identifiant", { exact: true }).fill("sami");
@@ -58,7 +59,7 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await sheet.getByRole("button", { name: "Créer l'identifiant" }).click();
   await expect(sheet.getByText("Accès à transmettre")).toBeVisible({ timeout: 15000 });
   await sheet.getByRole("button", { name: "Terminé" }).click();
-  await page.getByRole("button", { name: "Se déconnecter" }).click();
+  await signOut(page);
   await page.getByRole("button", { name: "Changer d'identifiant" }).click();
   await page.getByRole("searchbox", { name: "Filtrer les identifiants" }).fill("Sami");
   await page.getByRole("list", { name: "Identifiants" }).getByRole("button", { name: /Sami/ }).click();

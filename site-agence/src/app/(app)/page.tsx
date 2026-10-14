@@ -15,6 +15,6 @@ export default function HomePage() {
 }
 
 async function Home() {
-  const { me, repository, today } = await screenContext();
-  return <HomeScreen view={await loadHomeView(repository, me, today)} />;
+  const { me, today } = await screenContext();
+  return <HomeScreen view={loadHomeView(me, today)} />;
 }

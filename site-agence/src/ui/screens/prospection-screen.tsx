@@ -85,7 +85,7 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <ScreenHeader title="Prospecter" description="Chaque restaurant contacté compte dans ton quota et dans le classement." />
+      <ScreenHeader title="Prospecter" description="Note chaque commerce contacté : toute l'équipe saura qu'il a déjà été démarché." />
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <Card className="lg:col-span-7" aria-labelledby="nouveau-prospect">

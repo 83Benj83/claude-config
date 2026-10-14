@@ -43,10 +43,8 @@ async function historyData(repository: Repository, today: IsoDate) {
   return { members, prospects: countedSince(prospects, since) };
 }
 
-export async function loadHomeView(repository: Repository, me: Member, today: IsoDate) {
-  const data = await historyData(repository, today);
-  const view = buildHomeView({ ...data, me, today });
-  return { ...view, establishmentsCount: await repository.countEstablishments() };
+export function loadHomeView(me: Member, today: IsoDate) {
+  return buildHomeView({ me, today });
 }
 
 export async function loadProspectionView(repository: Repository, me: Member, today: IsoDate) {
@@ -78,8 +76,8 @@ export async function loadReportView(repository: Repository, me: Member, today: 
   return buildReportView({ members, prospects: countedSince(prospects, since), me, month, today });
 }
 
-export async function loadTeamView(repository: Repository, me: Member, today: IsoDate) {
-  return buildTeamView({ ...(await historyData(repository, today)), me, today });
+export async function loadTeamView(repository: Repository, me: Member) {
+  return buildTeamView({ members: await repository.listMembers(), me });
 }
 
 export async function loadContractsView(repository: Repository, me: Member, today: IsoDate) {

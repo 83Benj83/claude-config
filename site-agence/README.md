@@ -1,10 +1,10 @@
 # Astrinova : l'espace de l'équipe
 
-Application interne de l'agence, pensée pour le téléphone, la tablette et l'ordinateur. On passe d'une rubrique à l'autre par le menu (barre d'onglets en bas sur téléphone, rail sur tablette, menu latéral sur ordinateur), sans faire défiler une longue page.
+Application interne de l'agence, pensée pour le téléphone, la tablette et l'ordinateur. L'accueil reste simple ; on passe d'une rubrique à l'autre par le bouton **Menu**, en haut à gauche sur tous les écrans. Toutes les rubriques ont le même poids : aucune n'est mise en avant.
 
 | Rubrique | Ce qu'on y fait |
 | --- | --- |
-| **Accueil** (`/`) | Ma journée, recherche rapide « déjà contacté ? », toutes les rubriques en tuiles, podium du jour, derniers prospects |
+| **Accueil** (`/`) | Un mot de bienvenue et toutes les rubriques, sans chiffres ni classement |
 | **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. |
 | **Déjà contacté ?** (`/recherche`) | Chercher un établissement : oui ou non, par qui, quand et comment |
 | **Classement** (`/classement`) | Jour, semaine, mois, mis à jour à chaque ajout |
@@ -12,7 +12,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | **Contrats** (`/contrats`) | Contrats en cours (maquette, développement, validation) et effectués (en ligne), avec les totaux |
 | **Guide du prospecteur** (`/guide`) | Le guide complet en 15 sections : packs, abonnement, devis, messages, FAQ, objections, règles |
 | **Mails et liens** (`/ressources`) | E-mail et téléphones de l'équipe, liens utiles et modèles de message du guide, copiables en un clic |
-| **Organigramme** (`/equipe`) | Organigramme et annuaire, avec le total du mois de chacun |
+| **Organigramme** (`/equipe`) | Organigramme et annuaire : qui fait quoi |
 | **L'agence** (`/agence`) | Présentation : packs, parcours client, engagements |
 | **Panel admin** (`/admin`) | Admins : identifiants et mots de passe, statistiques et remise à zéro des compteurs |
 
@@ -151,7 +151,7 @@ src/
   ui/
     screens/           écrans (communs au site et à l'aperçu)
     guide/             blocs du guide (tableaux, modèles, FAQ…)
-    shell/             menu latéral, rail tablette, barre d'onglets mobile
+    shell/             barre du haut et menu (tiroir à gauche)
     primitives/        boutons, champs, panneaux, notifications…
   config/              contenu éditorial, menu
   content/             guide du prospecteur, mails et liens de départ
