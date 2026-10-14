@@ -5,6 +5,7 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | Rubrique | Ce qu'on y fait |
 | --- | --- |
 | **Accueil** (`/`) | Un mot de bienvenue et toutes les rubriques, sans chiffres ni classement |
+| **À contacter** (`/a-contacter`) | La liste des commerces sans site web à démarcher, ville par ville, avec téléphone, e-mail, Instagram et Facebook. On coche celui qu'on a contacté : il sort de la liste pour toute l'équipe et entre dans ses prospects du jour (annulable le jour même). Le commerce déjà contacté par quelqu'un est signalé. |
 | **Prospecter** (`/prospection`) | Ajouter chaque restaurant contacté : **nom, ville, moyen de contact** (coordonnées et note en option). Alerte en direct si l'établissement a déjà été contacté. **Importer une liste** : un fichier Excel (.xlsx), CSV ou texte, jusqu'à 500 lignes ; les colonnes sont reconnues d'après leur titre, chaque ligne est vérifiée (doublons, déjà contactés, champs manquants) avant l'enregistrement. |
 | **Déjà contacté ?** (`/recherche`) | Chercher un établissement : oui ou non, par qui, quand et comment |
 | **Classement** (`/classement`) | Semaine, mois et année, mis à jour à chaque ajout |
@@ -23,6 +24,8 @@ Application interne de l'agence, pensée pour le téléphone, la tablette et l'o
 | Action | Toute l'équipe | Admins |
 | --- | --- | --- |
 | Ajouter des prospects, chercher, voir le classement et le bilan | oui | oui |
+| Cocher un commerce de la liste « À contacter » (et annuler sa propre coche du jour) | oui | oui |
+| Retirer un commerce de la liste « À contacter » | non | oui |
 | Gérer les mails, liens et modèles | oui | oui |
 | Écrire dans l'échange, envoyer photos et fichiers | oui | oui |
 | Supprimer un message de l'échange | les siens | tous |
@@ -59,7 +62,7 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 
 Le plus simple : depuis le projet Vercel, onglet **Storage**, ajoute **Supabase** (plan Free, région **Paris**, préfixe des variables laissé vide). Vercel relie la base au projet et crée lui-même `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `POSTGRES_URL_NON_POOLING`.
 
-Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers ; 0004 : visites et journal des connexions).
+Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers ; 0004 : visites et journal des connexions ; 0005 : liste « À contacter »).
 
 Base créée directement sur [supabase.com](https://supabase.com) : exécute ces fichiers dans **SQL Editor**, puis récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 
@@ -94,6 +97,17 @@ Tout est vérifié avant l'écriture (identifiants en double, mots de passe trop
 3. Déploie, puis complète dans le **Panel admin** le pôle et le responsable de chacun : l'organigramme se construit tout seul.
 
 Les fonctions tournent à Paris, comme la base. [`.vercelignore`](.vercelignore) garde hors de l'envoi les fichiers d'identifiants, `.env*`, les tests et l'aperçu.
+
+### 5. Ajouter une liste « À contacter »
+
+Prépare un fichier JSON : un tableau de commerces `{ "nom", "ville", "categorie", "telephone", "email", "instagram", "facebook", "note" }` (nom et ville obligatoires ; Instagram en `@compte` ou en adresse https).
+
+```bash
+npm run leads:add -- liste.json --verifier   # vérifie sans rien écrire
+npm run leads:add -- liste.json --remplacer  # range l'ancienne liste, ajoute la nouvelle
+```
+
+Sans `--remplacer`, les commerces s'ajoutent à la liste en cours. Rien n'est écrit si une ligne est refusée.
 
 ## Personnaliser
 

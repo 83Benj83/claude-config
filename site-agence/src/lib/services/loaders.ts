@@ -1,4 +1,6 @@
 import { buildActivityView } from "../activity";
+import { nameKey } from "../establishments";
+import { buildLeadsView } from "../leads";
 import type { Repository } from "../data/repository";
 import { addDays, isMonthKey, monthKeyOf } from "../dates";
 import { ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_READ, MESSAGES_SHOWN } from "../rules";
@@ -102,6 +104,17 @@ export async function loadAdminView(repository: Repository, me: Member, today: I
     repository.listProspects(DATA_WINDOWS.month(monthKeyOf(today))),
   ]);
   return buildAdminView({ members, me, stats: { since, establishments, countedThisMonth: countedSince(month, since).length } });
+}
+
+/** Liste « À contacter » : les commerces à contacter (et qui les a déjà contactés), les coches du jour. */
+export async function loadLeadsView(repository: Repository, me: Member, today: IsoDate, now: Date = new Date()) {
+  const [leads, members] = await Promise.all([
+    repository.listLeads(new Date(now.getTime() - 24 * 60 * 60_000).toISOString()),
+    listTeam(repository),
+  ]);
+  const open = leads.filter((lead) => lead.status === "open");
+  const contacted = open.length > 0 ? await repository.findProspectsByNameKeys(open.map((lead) => nameKey(lead.name))) : [];
+  return buildLeadsView({ leads, members, contacted, me, today });
 }
 
 /** Activité des 7 derniers jours (admins) : visites, connexions, prospects et messages. */

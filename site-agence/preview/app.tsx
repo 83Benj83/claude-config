@@ -17,6 +17,7 @@ import { GuideScreen } from "@/ui/screens/guide-screen";
 import { GUIDE_HTML } from "@/content/guide-original";
 import { ChatScreen } from "@/ui/screens/chat-screen";
 import { HomeScreen } from "@/ui/screens/home-screen";
+import { LeadsScreen } from "@/ui/screens/leads-screen";
 import { LoginScreen } from "@/ui/screens/login-screen";
 import { ProspectionScreen } from "@/ui/screens/prospection-screen";
 import { RankingScreen } from "@/ui/screens/ranking-screen";
@@ -105,6 +106,8 @@ async function resolve(route: Route, repository: Repository, session: PreviewSes
   switch (pathname) {
     case "/":
       return { kind: "screen", me, screen: <HomeScreen view={loaders.loadHomeView(me, today)} /> };
+    case "/a-contacter":
+      return { kind: "screen", me, screen: <LeadsScreen view={await loaders.loadLeadsView(repository, me, today)} /> };
     case "/prospection":
       return { kind: "screen", me, screen: <ProspectionScreen view={await loaders.loadProspectionView(repository, me, today)} /> };
     case "/recherche":

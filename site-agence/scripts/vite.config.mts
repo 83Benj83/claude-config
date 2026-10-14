@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-/** Construction des scripts Node (import des identifiants, reprise de l'aperçu). */
+/** Construction des scripts Node (import des identifiants, reprise de l'aperçu, listes à contacter). */
 export default defineConfig({
   resolve: {
     alias: {
@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         "import-members": fileURLToPath(new URL("./import-members.ts", import.meta.url)),
         "import-preview": fileURLToPath(new URL("./import-preview.ts", import.meta.url)),
+        "add-leads": fileURLToPath(new URL("./add-leads.ts", import.meta.url)),
       },
     },
   },

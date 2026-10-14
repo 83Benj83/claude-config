@@ -28,7 +28,7 @@ test.describe("navigation", () => {
     await loginAs(page, "theo", "Théo Garnier");
     await expect(page.getByRole("heading", { level: 1, name: /Théo/ })).toBeVisible();
     const sections = page.getByRole("region", { name: "Les rubriques" });
-    await expect(sections.getByRole("link")).toHaveCount(10);
+    await expect(sections.getByRole("link")).toHaveCount(11);
     await expect(sections.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
     await expect(sections.getByRole("link", { name: "Activité" })).toHaveCount(0);
     await expect(page.getByText(/Podium|Rang du jour/)).toHaveCount(0);
@@ -53,6 +53,54 @@ test.describe("navigation", () => {
     await expect(page.getByRole("region", { name: "Les rubriques" }).getByRole("link", { name: "Panel admin" })).toBeVisible();
     await openSection(page, "Panel admin");
     await expect(page.getByRole("heading", { level: 1, name: "Panel admin" })).toBeVisible();
+  });
+});
+
+test.describe("à contacter", () => {
+  test("cocher un commerce : il quitte la liste pour tous et entre dans mes prospects ; annuler le remet", async ({ page, browser }) => {
+    // Un commerce différent par projet : les deux projets partagent le même serveur de démo.
+    const name = test.info().project.name === "mobile" ? "Boulangerie du Port" : "Pizzeria Il Forno";
+    await loginAs(page, "lea", "Léa Fontaine");
+    await openSection(page, "À contacter");
+    await expect(page.getByRole("heading", { level: 1, name: "À contacter" })).toBeVisible();
+
+    const card = page.getByRole("article", { name });
+    await expect(card.getByRole("list", { name: `Coordonnées de ${name}` }).getByRole("link")).not.toHaveCount(0);
+    await card.getByRole("button", { name: "Je l'ai contacté" }).click();
+    await card.getByRole("radio", { name: "Téléphone" }).check();
+    await card.getByRole("button", { name: "Ajouter à mes prospects" }).click();
+    await expect(page.getByText(`${name} ajouté à tes prospects du jour.`)).toBeVisible();
+    await expect(card).toBeHidden();
+    await expect(page.getByRole("list", { name: "Commerces cochés aujourd'hui" }).getByRole("listitem").filter({ hasText: name })).toContainText("par Léa Fontaine");
+
+    // Les autres ne le voient plus dans la liste.
+    const other = await newContextLike(browser);
+    const theo = await other.newPage();
+    await loginAs(theo, "theo", "Théo Garnier");
+    await theo.goto("/a-contacter");
+    await expect(theo.getByRole("heading", { level: 1, name: "À contacter" })).toBeVisible();
+    await expect(theo.getByRole("article", { name })).toHaveCount(0);
+    await expect(theo.getByRole("button", { name: `Annuler la coche de ${name}` })).toHaveCount(0);
+    await other.close();
+
+    // Il est dans mes prospects du jour.
+    await page.goto("/prospection");
+    await expect(page.getByRole("button", { name: new RegExp(`^Supprimer ${name} `) })).toBeVisible();
+
+    // Annuler : de retour dans la liste, retiré de mes prospects.
+    await page.goto("/a-contacter");
+    await page.getByRole("button", { name: `Annuler la coche de ${name}` }).click();
+    await expect(page.getByRole("article", { name })).toBeVisible();
+    await page.goto("/prospection");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: new RegExp(`^Supprimer ${name} `) })).toHaveCount(0);
+  });
+
+  test("seul un admin peut retirer un commerce de la liste", async ({ page }) => {
+    await loginAs(page, "theo", "Théo Garnier");
+    await page.goto("/a-contacter");
+    await expect(page.getByRole("heading", { level: 1, name: "À contacter" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Retirer .* de la liste$/ })).toHaveCount(0);
   });
 });
 
@@ -239,7 +287,7 @@ test("un admin crée un identifiant, la personne s'y connecte pour la première 
 
 test("aucun débordement horizontal sur les écrans principaux", async ({ page }) => {
   await loginAs(page, "mehdi", "Mehdi Belkacem");
-  for (const path of ["/", "/prospection", "/recherche", "/classement", "/bilan", "/contrats", "/guide", "/equipe", "/ressources", "/agence", "/admin", "/activite"]) {
+  for (const path of ["/", "/a-contacter", "/prospection", "/recherche", "/classement", "/bilan", "/contrats", "/guide", "/equipe", "/ressources", "/agence", "/admin", "/activite"]) {
     await page.goto(path);
     await expect(page.locator("main")).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

@@ -11,6 +11,7 @@ import {
 import type { Repository } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
 import * as contracts from "@/lib/services/contracts";
+import * as leads from "@/lib/services/leads";
 import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
 import * as messages from "@/lib/services/messages";
@@ -85,6 +86,10 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     async searchDirectory(input) {
       return prospects.searchDirectory(repository, String(input?.query ?? ""), String(input?.city ?? ""));
     },
+
+    claimLead: (input) => withMember((actor) => leads.claimLead(repository, actor, { id: input?.id, channel: input?.channel }, clock())),
+    releaseLead: (id) => withMember((actor) => leads.releaseLead(repository, actor, id, clock())),
+    deleteLead: (id) => withMember((actor) => leads.deleteLead(repository, actor, id)),
 
     saveResource: (input) => withMember((actor) => members.saveResource(repository, actor, input)),
     deleteResource: (id) => withMember((actor) => members.deleteResource(repository, actor, String(id))),

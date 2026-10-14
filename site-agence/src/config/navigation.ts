@@ -14,7 +14,8 @@ export type NavIcon =
   | "agency"
   | "chat"
   | "admin"
-  | "activity";
+  | "activity"
+  | "leads";
 
 export type NavItem = {
   href: string;
@@ -36,6 +37,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: "Prospection",
     items: [
+      { href: "/a-contacter", label: "À contacter", icon: "leads", tone: "violet", hint: "La liste du jour, à cocher" },
       { href: "/prospection", label: "Prospecter", icon: "add", tone: "violet", hint: "Ajouter un commerce contacté" },
       { href: "/recherche", label: "Déjà contacté ?", icon: "search", tone: "violet", hint: "Vérifier avant d'appeler" },
     ],

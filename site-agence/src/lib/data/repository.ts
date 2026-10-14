@@ -1,4 +1,4 @@
-import type { Contract, DateRange, Entry, IsoDate, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, Entry, IsoDate, Lead, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 
 /** Membre avec ses informations de connexion (jamais envoyées au navigateur). */
 export type Credentials = {
@@ -87,6 +87,20 @@ export interface Repository {
    */
   linkFiles(ids: string[], messageId: string, uploaderId: string): Promise<number>;
   deleteFile(id: string): Promise<void>;
+  /** Liste « À contacter » : les commerces encore à contacter, et ceux cochés depuis `doneSince`. */
+  listLeads(doneSince: string): Promise<Lead[]>;
+  getLead(id: string): Promise<Lead | null>;
+  addLeads(leads: Lead[]): Promise<void>;
+  /** Coche le commerce s'il est encore à contacter ; `false` si quelqu'un vient de le cocher. */
+  claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean>;
+  /** Le remet dans la liste (coche annulée). */
+  reopenLead(id: string): Promise<void>;
+  deleteLead(id: string): Promise<void>;
+  /** Range les commerces encore à contacter (avant une nouvelle liste) ; renvoie leur nombre. */
+  archiveOpenLeads(): Promise<number>;
+  /** Prospects dont le nom normalisé est l'un de ceux-ci (commerces déjà contactés). */
+  findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]>;
+
   /** Fichiers de l'échange : nombre et poids total. */
   storageUsage(): Promise<{ files: number; bytes: number }>;
 

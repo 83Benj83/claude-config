@@ -1,6 +1,6 @@
 import { AGENCY_RESOURCES } from "@/content/resources";
 import { addDays, isWeekend } from "../dates";
-import type { Channel, IsoDate, Member, Prospect, Resource } from "../types";
+import type { Channel, IsoDate, Lead, Member, Prospect, Resource } from "../types";
 
 /**
  * Données d'exemple du mode démo et de l'aperçu interactif : une équipe
@@ -168,3 +168,13 @@ export function generateDemoProspects(today: IsoDate): Prospect[] {
 
 /** Ressources de l'agence (contacts, liens, modèles du guide). */
 export const DEMO_RESOURCES: readonly Resource[] = AGENCY_RESOURCES;
+
+/** Liste « À contacter » de démonstration : trois commerces fictifs, sans site web. */
+export function demoLeads(today: IsoDate): Lead[] {
+  const base = { status: "open" as const, doneBy: null, doneAt: null, prospectId: null, listDay: today, createdAt: `${today}T06:00:00.000Z` };
+  return [
+    { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: "04 78 00 00 01", email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google" },
+    { ...base, id: "demo-lead-2", name: "Salon Coupe Nette", city: "Lyon", category: "Coiffeur", phone: null, email: "contact@coupenette.demo", instagram: null, facebook: "https://www.facebook.com/coupenette.demo", note: null },
+    { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: "04 91 00 00 02", email: null, instagram: null, facebook: null, note: "Ouvert le dimanche" },
+  ];
+}

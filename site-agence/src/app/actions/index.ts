@@ -26,6 +26,7 @@ import { todayIso } from "@/lib/dates";
 import type { DuplicateCheck, Establishment } from "@/lib/establishments";
 import { createRateLimiter } from "@/lib/rate-limit";
 import * as contracts from "@/lib/services/contracts";
+import * as leads from "@/lib/services/leads";
 import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
 import * as messages from "@/lib/services/messages";
@@ -169,6 +170,18 @@ export async function searchDirectory(input: { query: string; city: string }): P
   const actor = await getCurrentMember();
   if (!actor) return [];
   return prospects.searchDirectory(await getRepository(), String(input?.query ?? ""), String(input?.city ?? ""));
+}
+
+export async function claimLead(input: { id: string; channel: string }): Promise<ActionResult<{ prospect: Prospect }>> {
+  return withMember(async (actor) => leads.claimLead(await getRepository(), actor, { id: input?.id, channel: input?.channel }, clock()));
+}
+
+export async function releaseLead(id: string): Promise<ActionResult> {
+  return withMember(async (actor) => leads.releaseLead(await getRepository(), actor, id, clock()));
+}
+
+export async function deleteLead(id: string): Promise<ActionResult> {
+  return withMember(async (actor) => leads.deleteLead(await getRepository(), actor, id));
 }
 
 export async function saveResource(input: ResourceFormValues): Promise<ActionResult> {

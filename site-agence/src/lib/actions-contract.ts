@@ -74,6 +74,10 @@ export type AppActions = {
   analyzeImport(rows: ProspectFormValues[]): Promise<ActionResult<RowStatus[]>>;
   importProspects(input: { rows: ProspectFormValues[]; includeKnown: boolean }): Promise<ActionResult<{ added: number; skipped: number }>>;
   checkEstablishment(input: { name: string; city: string }): Promise<DuplicateCheck>;
+  /** Liste « À contacter » : cocher un commerce contacté, annuler la coche, retirer un commerce (admin). */
+  claimLead(input: { id: string; channel: string }): Promise<ActionResult<{ prospect: Prospect }>>;
+  releaseLead(id: string): Promise<ActionResult>;
+  deleteLead(id: string): Promise<ActionResult>;
   searchDirectory(input: { query: string; city: string }): Promise<Establishment[]>;
 
   saveResource(input: ResourceFormValues): Promise<ActionResult>;

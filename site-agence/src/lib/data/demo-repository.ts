@@ -1,9 +1,9 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { Contract, DateRange, Entry, IsoDate, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, Entry, IsoDate, Lead, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 import { countedSince, entriesFromProspects } from "../views";
-import { DEMO_MEMBERS, DEMO_RESOURCES, generateDemoProspects } from "./demo-seed";
+import { DEMO_MEMBERS, DEMO_RESOURCES, demoLeads, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
 type StoredMember = { member: Member; passwordHash: string | null; sessionVersion: number };
@@ -18,6 +18,7 @@ type DemoState = {
   files?: Map<string, { file: StoredFile; bytes: Uint8Array }>;
   presence?: PresenceDay[];
   logins?: LoginEvent[];
+  leads?: Lead[];
 };
 
 /** Peu d'itérations en démo : démarrage rapide, mots de passe publics de toute façon. */
@@ -37,6 +38,7 @@ export async function createDemoState(today: IsoDate): Promise<DemoState> {
     resources: DEMO_RESOURCES.map((r) => ({ ...r })),
     // Aucun contrat d'exemple : l'équipe saisit les siens.
     contracts: [],
+    leads: demoLeads(today),
   };
 }
 
@@ -218,6 +220,49 @@ export class DemoRepository implements Repository {
 
   async deleteFile(id: string): Promise<void> {
     this.files.delete(id);
+  }
+
+  private get leads(): Lead[] {
+    return (this.state.leads ??= []);
+  }
+
+  async listLeads(doneSince: string): Promise<Lead[]> {
+    return this.leads.filter((lead) => lead.status === "open" || (lead.status === "done" && (lead.doneAt ?? "") >= doneSince)).map(clone);
+  }
+
+  async getLead(id: string): Promise<Lead | null> {
+    const lead = this.leads.find((l) => l.id === id);
+    return lead ? clone(lead) : null;
+  }
+
+  async addLeads(leads: Lead[]): Promise<void> {
+    this.leads.push(...leads.map(clone));
+  }
+
+  async claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean> {
+    const index = this.leads.findIndex((l) => l.id === id && l.status === "open");
+    if (index < 0) return false;
+    this.leads[index] = { ...this.leads[index], status: "done", doneBy: memberId, doneAt: at, prospectId };
+    return true;
+  }
+
+  async reopenLead(id: string): Promise<void> {
+    this.state.leads = this.leads.map((l) => (l.id === id ? { ...l, status: "open", doneBy: null, doneAt: null, prospectId: null } : l));
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    this.state.leads = this.leads.filter((l) => l.id !== id);
+  }
+
+  async archiveOpenLeads(): Promise<number> {
+    const open = this.leads.filter((l) => l.status === "open").length;
+    this.state.leads = this.leads.map((l) => (l.status === "open" ? { ...l, status: "archived" } : l));
+    return open;
+  }
+
+  async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {
+    const wanted = new Set(nameKeys);
+    return this.state.prospects.filter((p) => wanted.has(nameKey(p.name))).map(clone);
   }
 
   async storageUsage(): Promise<{ files: number; bytes: number }> {

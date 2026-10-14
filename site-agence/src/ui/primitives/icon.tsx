@@ -15,6 +15,7 @@ import {
   HouseIcon,
   InstagramLogoIcon,
   LinkedinLogoIcon,
+  ListChecksIcon,
   MagnifyingGlassIcon,
   PaletteIcon,
   PaperPlaneTiltIcon,
@@ -62,6 +63,7 @@ const ICONS: Record<IconName | NavIcon | `channel-${Channel}`, PhosphorIcon> = {
   chat: ChatsCircleIcon,
   admin: ShieldStarIcon,
   activity: PulseIcon,
+  leads: ListChecksIcon,
   // moyens de contact
   "channel-telephone": PhoneIcon,
   "channel-email": EnvelopeSimpleIcon,

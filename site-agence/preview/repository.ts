@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Contract, DateRange, Entry, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
+import type { Contract, DateRange, Entry, Lead, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
 import { countedSince, entriesFromProspects } from "@/lib/views";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
@@ -222,6 +222,34 @@ export class PreviewRepository implements Repository {
   async storageUsage(): Promise<{ files: number; bytes: number }> {
     const attachments = [...this.store.messages.values()].flatMap((message) => message.attachments);
     return { files: attachments.length, bytes: attachments.reduce((sum, file) => sum + file.size, 0) };
+  }
+
+  // La liste « À contacter » n'existe que sur le site en ligne : vide dans l'aperçu.
+  async listLeads(): Promise<Lead[]> {
+    return [];
+  }
+
+  async getLead(): Promise<Lead | null> {
+    return null;
+  }
+
+  async addLeads(): Promise<void> {}
+
+  async claimLead(): Promise<boolean> {
+    return false;
+  }
+
+  async reopenLead(): Promise<void> {}
+
+  async deleteLead(): Promise<void> {}
+
+  async archiveOpenLeads(): Promise<number> {
+    return 0;
+  }
+
+  async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {
+    const wanted = new Set(nameKeys);
+    return (await this.listProspects()).filter((prospect) => wanted.has(nameKey(prospect.name)));
   }
 
   // L'aperçu ne suit ni les visites ni les connexions : la rubrique Activité y reste vide.

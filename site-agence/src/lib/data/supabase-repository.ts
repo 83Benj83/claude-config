@@ -12,6 +12,8 @@ import type {
   DateRange,
   Entry,
   IsoDate,
+  Lead,
+  LeadStatus,
   LoginEvent,
   Member,
   Message,
@@ -85,6 +87,62 @@ type FileRow = {
   kind: AttachmentKind;
   created_at: string;
 };
+
+type LeadRow = {
+  id: string;
+  name: string;
+  city: string;
+  category: string | null;
+  phone: string | null;
+  email: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  note: string | null;
+  list_day: IsoDate;
+  status: LeadStatus;
+  done_by: string | null;
+  done_at: string | null;
+  prospect_id: string | null;
+  created_at: string;
+};
+
+const LEAD_COLUMNS = "id, name, city, category, phone, email, instagram, facebook, note, list_day, status, done_by, done_at, prospect_id, created_at";
+
+const toLead = (row: LeadRow): Lead => ({
+  id: row.id,
+  name: row.name,
+  city: row.city,
+  category: row.category,
+  phone: row.phone,
+  email: row.email,
+  instagram: row.instagram,
+  facebook: row.facebook,
+  note: row.note,
+  listDay: row.list_day,
+  status: row.status,
+  doneBy: row.done_by,
+  doneAt: row.done_at,
+  prospectId: row.prospect_id,
+  createdAt: row.created_at,
+});
+
+const toLeadRow = (lead: Lead): LeadRow => ({
+  id: lead.id,
+  name: lead.name,
+  city: lead.city,
+  category: lead.category,
+  phone: lead.phone,
+  email: lead.email,
+  instagram: lead.instagram,
+  facebook: lead.facebook,
+  note: lead.note,
+  list_day: lead.listDay,
+  status: lead.status,
+  done_by: lead.doneBy,
+  done_at: lead.doneAt,
+  prospect_id: lead.prospectId,
+  created_at: lead.createdAt,
+});
 
 type PresenceRow = { member_id: string; day: IsoDate; first_seen_at: string; last_seen_at: string };
 type LoginEventRow = { id: number; member_id: string | null; login: string; ok: boolean; at: string };
@@ -542,6 +600,69 @@ export class SupabaseRepository implements Repository {
   async deleteFile(id: string): Promise<void> {
     check("la suppression du fichier", await this.db.storage.from(FILES_BUCKET).remove([id]));
     check("la suppression du fichier", await this.db.from("message_files").delete().eq("id", id));
+  }
+
+  async listLeads(doneSince: string): Promise<Lead[]> {
+    const [open, done] = await Promise.all([
+      this.db.from("leads").select(LEAD_COLUMNS).eq("status", "open").order("list_day", { ascending: false }).limit(PAGE_SIZE),
+      this.db.from("leads").select(LEAD_COLUMNS).eq("status", "done").gte("done_at", doneSince).limit(PAGE_SIZE),
+    ]);
+    const rows = [...(check("la lecture de la liste à contacter", open) as LeadRow[]), ...(check("la lecture de la liste à contacter", done) as LeadRow[])];
+    return rows.map(toLead);
+  }
+
+  async getLead(id: string): Promise<Lead | null> {
+    const row = check("la lecture du commerce", await this.db.from("leads").select(LEAD_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toLead(row as LeadRow) : null;
+  }
+
+  async addLeads(leads: Lead[]): Promise<void> {
+    for (let offset = 0; offset < leads.length; offset += 500) {
+      check("l'ajout de la liste", await this.db.from("leads").insert(leads.slice(offset, offset + 500).map(toLeadRow)));
+    }
+  }
+
+  async claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean> {
+    // Condition dans la requête : deux personnes qui cochent en même temps, une seule gagne.
+    const rows = check(
+      "la coche du commerce",
+      await this.db
+        .from("leads")
+        .update({ status: "done", done_by: memberId, done_at: at, prospect_id: prospectId })
+        .eq("id", id)
+        .eq("status", "open")
+        .select("id"),
+    ) as { id: string }[];
+    return rows.length === 1;
+  }
+
+  async reopenLead(id: string): Promise<void> {
+    check(
+      "l'annulation de la coche",
+      await this.db.from("leads").update({ status: "open", done_by: null, done_at: null, prospect_id: null }).eq("id", id),
+    );
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    check("le retrait du commerce", await this.db.from("leads").delete().eq("id", id));
+  }
+
+  async archiveOpenLeads(): Promise<number> {
+    const rows = check("le rangement de l'ancienne liste", await this.db.from("leads").update({ status: "archived" }).eq("status", "open").select("id"));
+    return (rows as { id: string }[]).length;
+  }
+
+  async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {
+    const prospects: Prospect[] = [];
+    const keys = [...new Set(nameKeys)].filter(Boolean);
+    for (let offset = 0; offset < keys.length; offset += 100) {
+      const rows = check(
+        "la recherche des commerces déjà contactés",
+        await this.db.from("prospects").select(PROSPECT_COLUMNS).in("name_key", keys.slice(offset, offset + 100)).limit(PAGE_SIZE),
+      ) as ProspectRow[];
+      prospects.push(...rows.map(toProspect));
+    }
+    return prospects;
   }
 
   async storageUsage(): Promise<{ files: number; bytes: number }> {

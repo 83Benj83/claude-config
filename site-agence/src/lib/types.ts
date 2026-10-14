@@ -136,6 +136,31 @@ export type Entry = {
 
 export type Period = "semaine" | "mois" | "annee";
 
+/** Commerce de la liste « À contacter » : à contacter, coché (devenu un prospect) ou rangé. */
+export type LeadStatus = "open" | "done" | "archived";
+
+export type Lead = {
+  id: string;
+  name: string;
+  city: string;
+  /** Type de commerce (restaurant, coiffeur…). */
+  category: string | null;
+  phone: string | null;
+  email: string | null;
+  /** Adresses https des pages Instagram et Facebook. */
+  instagram: string | null;
+  facebook: string | null;
+  note: string | null;
+  /** Jour de la liste (heure de Paris). */
+  listDay: IsoDate;
+  status: LeadStatus;
+  /** Qui l'a coché, quand, et le prospect alors créé. */
+  doneBy: string | null;
+  doneAt: string | null;
+  prospectId: string | null;
+  createdAt: string;
+};
+
 /** Présence d'un membre sur le site un jour donné (heure de Paris) : première et dernière visite. */
 export type PresenceDay = {
   memberId: string;

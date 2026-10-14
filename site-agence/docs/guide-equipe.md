@@ -13,6 +13,7 @@ Mot de passe oublié ? Demande à Paul ou Benjamin. Ne donne jamais ton mot de p
 Le bouton **Menu**, en haut à gauche, mène à toutes les rubriques, sur toutes les pages.
 
 **Ta journée de prospection**
+- **La liste du jour** : ouvre **À contacter**. Tu y trouves des commerces sans site web, ville par ville, avec leur téléphone, e-mail, Instagram ou Facebook. Quand tu en as contacté un, appuie sur **Je l'ai contacté**, choisis comment, et c'est tout : il passe dans tes prospects du jour et disparaît de la liste pour les autres. Une erreur ? **Annuler**, le jour même.
 - **Avant d'appeler** : ouvre **Déjà contacté ?** et tape le nom du commerce. Tu sais tout de suite si quelqu'un l'a déjà contacté, quand et comment.
 - **Après chaque contact** : ouvre **Prospecter** et ajoute le commerce (nom, ville, moyen de contact ; numéro et note si tu veux). Si quelqu'un l'a déjà contacté, le site te prévient.
 - **Une liste entière** : dans **Prospecter**, bouton **Importer une liste**. Tu peux envoyer un fichier Excel ou CSV. Le site vérifie chaque ligne avant d'enregistrer. Le bouton **Modèle à remplir** te donne un fichier prêt à compléter.
