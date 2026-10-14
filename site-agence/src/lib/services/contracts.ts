@@ -31,6 +31,9 @@ export async function saveContract(
   if (deliveredOn && deliveredOn < fields.signedOn) {
     return { ok: false, errors: { deliveredOn: "La mise en ligne ne peut pas précéder la signature." } };
   }
+  if (deliveredOn && deliveredOn > clock.today) {
+    return { ok: false, errors: { deliveredOn: "La mise en ligne ne peut pas être dans le futur." } };
+  }
 
   const contract: Contract = {
     ...fields,

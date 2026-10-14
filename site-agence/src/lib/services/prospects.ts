@@ -11,7 +11,7 @@ import {
   type Establishment,
 } from "../establishments";
 import { EDITABLE_PAST_DAYS } from "../rules";
-import { buildReportView } from "../views";
+import { buildReportView, countedSince } from "../views";
 import type { IsoDate, Member, Prospect } from "../types";
 import { fieldErrors, isEditableDate, prospectSchema } from "../validation";
 
@@ -89,14 +89,16 @@ export async function exportCsv(
 ): Promise<ActionResult<CsvExport>> {
   const month = isMonthKey(input.month) && input.month <= monthKeyOf(today) ? input.month : monthKeyOf(today);
   try {
-    const [members, prospects] = await Promise.all([
+    const [members, prospects, since] = await Promise.all([
       repository.listMembers(),
       repository.listProspects({ from: startOfMonth(month), to: endOfMonth(month) }),
+      repository.getStatsSince(),
     ]);
+    // La liste brute garde tout ; le bilan reprend les chiffres de l'écran (depuis la remise à zéro).
     if (input.kind === "prospects") {
       return { ok: true, data: { filename: `prospects-${month}.csv`, content: prospectsToCsv(prospects, members) } };
     }
-    const view = buildReportView({ members, prospects, me: actor, month, today });
+    const view = buildReportView({ members, prospects: countedSince(prospects, since), me: actor, month, today });
     return { ok: true, data: { filename: `bilan-prospection-${month}.csv`, content: monthReportToCsv(view.report) } };
   } catch (error) {
     console.error("[exportCsv]", error);

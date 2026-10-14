@@ -53,7 +53,7 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 ### 1. Créer la base Supabase (gratuit)
 
 1. Crée un projet sur [supabase.com](https://supabase.com).
-2. Dans **SQL Editor**, exécute le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+2. Dans **SQL Editor**, exécute le contenu de [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), puis celui de [`0002_contracts_settings.sql`](supabase/migrations/0002_contracts_settings.sql). Base déjà en service : exécute seulement le second (contrats, remise à zéro, téléphones).
 3. Récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 
 Supabase sert uniquement de base Postgres, interrogée par le serveur avec la clé secrète. Les tables ont la Row Level Security activée **sans aucune règle d'accès public** : depuis Internet, sans la clé secrète, la base ne renvoie rien.

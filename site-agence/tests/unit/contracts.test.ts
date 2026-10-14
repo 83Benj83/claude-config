@@ -4,7 +4,8 @@ import { DemoRepository } from "@/lib/data/demo-repository";
 import { countedSince } from "@/lib/services/loaders";
 import * as contracts from "@/lib/services/contracts";
 import * as members from "@/lib/services/members";
-import { buildContractsView } from "@/lib/views";
+import * as prospects from "@/lib/services/prospects";
+import { buildContractsView, buildProspectionView } from "@/lib/views";
 import { resourceSchema } from "@/lib/validation";
 import { makeMember, makeProspect } from "./helpers";
 
@@ -68,6 +69,8 @@ describe("contrats", () => {
     expect(!future.ok && future.errors?.signedOn).toBeTruthy();
     const before = await contracts.saveContract(repo, admin, form({ status: "termine", deliveredOn: "2026-10-01" }), clock);
     expect(!before.ok && before.errors?.deliveredOn).toBeTruthy();
+    const later = await contracts.saveContract(repo, admin, form({ status: "termine", deliveredOn: "2026-10-20" }), clock);
+    expect(!later.ok && later.errors?.deliveredOn).toBeTruthy();
     const amount = await contracts.saveContract(repo, admin, form({ amount: "beaucoup" }), clock);
     expect(!amount.ok && amount.errors?.amount).toBeTruthy();
     const stranger = await contracts.saveContract(repo, admin, form({ broughtBy: "inconnu" }), clock);
@@ -97,6 +100,26 @@ describe("remise à zéro des statistiques", () => {
     const after = makeProspect({ createdAt: "2026-10-14T11:00:00.000Z" });
     expect(countedSince([before, after], clock.now)).toEqual([after]);
     expect(countedSince([before, after], null)).toHaveLength(2);
+  });
+
+  test("la saisie garde mes prospects d'avant la remise à zéro, les compteurs repartent de zéro", () => {
+    const before = makeProspect({ memberId: julien.id, date: TODAY, createdAt: "2026-10-14T09:00:00.000Z" });
+    const after = makeProspect({ memberId: julien.id, date: TODAY, createdAt: "2026-10-14T11:00:00.000Z" });
+    const view = buildProspectionView({ prospects: [before, after], since: clock.now, me: julien, today: TODAY });
+    expect(view.mine.map((prospect) => prospect.id)).toEqual([after.id, before.id]);
+    expect(view).toMatchObject({ todayCount: 1, weekCount: 1 });
+  });
+
+  test("le bilan exporté reprend les chiffres de l'écran", async () => {
+    const repo = repository();
+    await repo.addProspect(makeProspect({ memberId: julien.id, date: TODAY, createdAt: "2026-10-14T09:00:00.000Z" }));
+    await members.resetStatistics(repo, admin, "zéro", clock.now);
+    await repo.addProspect(makeProspect({ memberId: julien.id, date: TODAY, createdAt: "2026-10-14T11:00:00.000Z" }));
+    const bilan = await prospects.exportCsv(repo, admin, { month: "2026-10", kind: "bilan" }, TODAY);
+    const list = await prospects.exportCsv(repo, admin, { month: "2026-10", kind: "prospects" }, TODAY);
+    if (!bilan.ok || !list.ok) throw new Error("export refusé");
+    expect(bilan.data.content).toMatch(/^1;Julien;[^;]*;1;/m);
+    expect(list.data.content.trim().split("\n")).toHaveLength(3);
   });
 });
 

@@ -168,14 +168,24 @@ export type ProspectionView = {
   mine: ProspectRow[];
 };
 
-export function buildProspectionView(input: { prospects: Prospect[]; me: Member; today: IsoDate }): ProspectionView {
-  const { prospects, me, today } = input;
+/** Prospects comptés dans les statistiques : ceux ajoutés depuis la dernière remise à zéro. */
+export function countedSince<T extends { createdAt: string }>(prospects: T[], since: string | null): T[] {
+  return since ? prospects.filter((prospect) => prospect.createdAt >= since) : prospects;
+}
+
+/**
+ * Saisie : la liste « mes prospects » garde tout ce qui reste modifiable (on
+ * peut corriger un ajout d'avant la remise à zéro) ; les compteurs, eux, partent
+ * de la remise à zéro.
+ */
+export function buildProspectionView(input: { prospects: Prospect[]; me: Member; today: IsoDate; since?: string | null }): ProspectionView {
+  const { prospects, me, today, since = null } = input;
   const oldestEditable = addDays(today, -EDITABLE_PAST_DAYS);
   const mine = prospects
     .filter((prospect) => prospect.memberId === me.id && prospect.date >= oldestEditable)
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
     .map((prospect) => ({ ...prospect, editable: true }));
-  const entries = entriesFromProspects(prospects.filter((p) => p.memberId === me.id));
+  const entries = entriesFromProspects(countedSince(prospects, since).filter((p) => p.memberId === me.id));
 
   return {
     today,
@@ -183,7 +193,7 @@ export function buildProspectionView(input: { prospects: Prospect[]; me: Member;
       .reverse()
       .map((value) => ({ value, label: formatRelativeDay(value, today) })),
     cities: knownCities(prospects),
-    todayCount: mine.filter((prospect) => prospect.date === today).length,
+    todayCount: countedSince(mine, since).filter((prospect) => prospect.date === today).length,
     weekCount: sumEntries(entries, { from: startOfWeek(today), to: today }),
     streak: currentStreak(entries, me.id, today),
     mine,

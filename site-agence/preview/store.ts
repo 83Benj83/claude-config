@@ -44,6 +44,11 @@ const MONTH_DOCS_LIMIT = 1000;
 
 const text = (value: unknown, max = 5000): string | null => (typeof value === "string" && value.length <= max ? value : null);
 const optionalText = (value: unknown, max = 5000) => text(value, max) ?? null;
+/** Horodatage lisible, remis au format ISO (sinon ignoré). */
+function isoTimestamp(value: unknown): string | null {
+  const parsed = typeof value === "string" ? Date.parse(value) : Number.NaN;
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
+}
 
 type Secret = { passwordHash: string | null; sessionVersion: number };
 
@@ -231,7 +236,7 @@ export class PreviewStore {
       }, fail),
       this.db.collection("settings").onSnapshot((snap) => {
         const app = snap.docs.find((doc) => doc.id === "app" && doc.exists)?.data();
-        this.statsSince = text(app?.statsSince, 40);
+        this.statsSince = isoTimestamp(app?.statsSince);
         loadedOne("settings");
       }, fail),
       this.db.collection("resources").onSnapshot((snap) => {

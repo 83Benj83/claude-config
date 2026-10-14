@@ -1,6 +1,6 @@
 import type { Repository } from "../data/repository";
 import { isMonthKey, monthKeyOf } from "../dates";
-import type { IsoDate, LoginChoice, Member, Prospect } from "../types";
+import type { IsoDate, LoginChoice, Member } from "../types";
 import {
   buildAdminView,
   buildContractsView,
@@ -11,8 +11,11 @@ import {
   buildReportView,
   buildResourcesView,
   buildTeamView,
+  countedSince,
   DATA_WINDOWS,
 } from "../views";
+
+export { countedSince };
 
 /**
  * Chargement des données de chaque écran : seule la fenêtre utile est lue,
@@ -28,11 +31,6 @@ export async function loadLoginChoices(repository: Repository): Promise<LoginCho
     .filter((member) => member.active)
     .sort((a, b) => a.fullName.localeCompare(b.fullName, "fr"))
     .map(({ id, login, fullName, avatarUrl }) => ({ id, login, fullName, avatarUrl }));
-}
-
-/** Prospects comptés dans les statistiques : ceux ajoutés depuis la dernière remise à zéro. */
-export function countedSince(prospects: Prospect[], since: string | null): Prospect[] {
-  return since ? prospects.filter((prospect) => prospect.createdAt >= since) : prospects;
 }
 
 /** Membres et prospects récents, limités à ce qui compte dans les statistiques. */
@@ -52,7 +50,8 @@ export async function loadHomeView(repository: Repository, me: Member, today: Is
 }
 
 export async function loadProspectionView(repository: Repository, me: Member, today: IsoDate) {
-  return buildProspectionView({ prospects: (await historyData(repository, today)).prospects, me, today });
+  const [prospects, since] = await Promise.all([repository.listProspects(DATA_WINDOWS.history(today)), repository.getStatsSince()]);
+  return buildProspectionView({ prospects, since, me, today });
 }
 
 export async function loadDirectoryView(repository: Repository, today: IsoDate) {
