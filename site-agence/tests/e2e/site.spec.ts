@@ -130,6 +130,27 @@ test.describe("équipe et ressources", () => {
     await expect(page).toHaveURL("/");
   });
 
+  test("le sommaire du guide mène à chaque section sans quitter le guide", async ({ page }) => {
+    await loginAs(page, "karim", "Karim Ouali");
+    await openSection(page, "Guide du prospecteur");
+    const guide = page.frameLocator('iframe[title="Guide du prospecteur"]');
+    const sommaire = guide.getByRole("navigation", { name: "Sommaire" });
+    for (const [label, id] of [
+      ["Les packs", "packs"],
+      ["Lexique", "lexique"],
+      ["Votre rôle", "role"],
+    ]) {
+      await sommaire.getByRole("link", { name: label }).click();
+      await expect(guide.locator(`#${id}`)).toBeInViewport();
+      await expect(sommaire.getByRole("link", { name: label })).toHaveClass(/is-here/);
+    }
+    // Lien vers une section depuis le texte du guide.
+    await guide.locator('#role a[href="#messages"]').click();
+    await expect(guide.locator("#messages")).toBeInViewport();
+    await expect(guide.getByRole("heading", { level: 1, name: "Guide du prospecteur" })).toBeAttached();
+    await expect(page).toHaveURL("/guide");
+  });
+
   test("un admin ajoute une ressource, visible et copiable par l'équipe", async ({ page }) => {
     const title = `Lien test ${unique()}`;
     await loginAs(page, "camille", "Camille Renaud");
