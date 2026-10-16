@@ -9,6 +9,7 @@ import { firstName, formatInt, pluralize } from "@/lib/format";
 import type { Channel } from "@/lib/types";
 import type { ProspectionView, ProspectRow } from "@/lib/views";
 import { ProspectLine } from "../feed-item";
+import { CallbackForm, emptyCallback } from "../rappels/callback-form";
 import { ImportList } from "../prospection/import-list";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
@@ -37,6 +38,7 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [mode, setMode] = useState<"contacted" | "callback">("contacted");
   const [duplicate, setDuplicate] = useState<DuplicateCheck | null>(null);
   const [pending, start] = useTransition();
   const nameRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,52 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
           <Card aria-labelledby="nouveau-prospect">
-            <CardHeader id="nouveau-prospect" title="Nouveau prospect" description="Nom, ville et moyen de contact sont obligatoires." />
+            <CardHeader
+              id="nouveau-prospect"
+              title={mode === "contacted" ? "Nouveau prospect" : "À rappeler plus tard"}
+              description={
+                mode === "contacted"
+                  ? "Nom, ville et moyen de contact sont obligatoires."
+                  : "Visible de toute l'équipe, avec ton nom : un rappel à faire, pas un prospect compté."
+              }
+            />
+            <div className="flex gap-2 px-5 pt-4 sm:px-6" role="group" aria-label="Type d'enregistrement">
+              {(
+                [
+                  ["contacted", "Contact effectué"],
+                  ["callback", "À rappeler plus tard"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={mode === value}
+                  onClick={() => setMode(value)}
+                  className={`h-10 rounded-full border px-4 text-sm font-medium transition-colors ${
+                    mode === value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-input bg-surface text-muted hover:text-fg"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {mode === "callback" && (
+              <div className="px-5 pt-5 pb-6 sm:px-6">
+                <CallbackForm
+                  today={view.today}
+                  initial={emptyCallback(view.today, { name: form.name, city: form.city })}
+                  onSubmit={async (values) => {
+                    const result = await actions.addCallback(values);
+                    if (result.ok) {
+                      toast(result.message ?? "Rappel enregistré.");
+                      setForm((current) => ({ ...current, name: "", contact: "", note: "" }));
+                    }
+                    return result;
+                  }}
+                />
+              </div>
+            )}
+            {mode === "contacted" && (
             <form onSubmit={submit} className="flex flex-col gap-5 px-5 pt-5 pb-6 sm:px-6" noValidate>
               <FormMessage>{message}</FormMessage>
               <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -187,6 +234,7 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
                 {pending ? "Ajout…" : "Ajouter le prospect"}
               </button>
             </form>
+            )}
           </Card>
           <ImportList today={view.today} />
         </div>

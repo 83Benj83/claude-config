@@ -15,8 +15,9 @@ import { Field, FormMessage, SelectField, TextArea, controlClasses } from "../pr
 import { Sheet } from "../primitives/sheet";
 import { Card, EmptyState, ScreenHeader } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
+import { MockupsPanel } from "../contracts/mockups-panel";
 
-type Tab = "en-cours" | "effectues";
+type Tab = "en-cours" | "effectues" | "maquettes";
 
 const STEP_LABELS: Record<ContractStatus, string> = {
   maquette: "Maquette",
@@ -41,7 +42,7 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
   const [editing, setEditing] = useState<Contract | "new" | null>(null);
 
   const needle = normalizeText(query);
-  const list = (tab === "en-cours" ? view.inProgress : view.done).filter(
+  const list = (tab === "effectues" ? view.done : view.inProgress).filter(
     (contract) => !needle || normalizeText(`${contract.client} ${contract.city ?? ""} ${contract.pack} ${contract.options ?? ""}`).includes(needle),
   );
   const empty = view.inProgress.length + view.done.length === 0;
@@ -72,7 +73,35 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
         <Figure label="Abonnements en ligne" value={`${formatEuros(view.totals.monthly)} / mois`} />
       </dl>
 
-      {empty ? (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Segmented
+          label="Rubrique affichée"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "en-cours", label: `En cours (${view.totals.inProgress})` },
+            { value: "effectues", label: `Effectués (${view.totals.done})` },
+            { value: "maquettes", label: `Maquettes (${view.mockups.inProgress.length + view.mockups.done.length})` },
+          ]}
+        />
+        {tab !== "maquettes" && !empty && (
+          <div className="relative sm:w-72">
+            <MagnifyingGlassIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-subtle" aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Commerce, ville, pack"
+              aria-label="Rechercher un contrat"
+              className={`${controlClasses} h-10 pl-10`}
+            />
+          </div>
+        )}
+      </div>
+
+      {tab === "maquettes" ? (
+        <MockupsPanel view={view} />
+      ) : empty ? (
         <Card>
           <EmptyState
             icon={<HandshakeIcon size={24} aria-hidden />}
@@ -91,47 +120,20 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
               : "Les contrats signés apparaîtront ici, de la maquette à la mise en ligne."}
           </EmptyState>
         </Card>
+      ) : list.length === 0 ? (
+        <Card>
+          <EmptyState title={needle ? "Aucun contrat ne correspond." : tab === "en-cours" ? "Aucun contrat en cours." : "Aucun contrat effectué pour l'instant."}>
+            {needle ? "Essaie un autre mot." : null}
+          </EmptyState>
+        </Card>
       ) : (
-        <>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Segmented
-              label="Contrats affichés"
-              value={tab}
-              onChange={setTab}
-              options={[
-                { value: "en-cours", label: `En cours (${view.totals.inProgress})` },
-                { value: "effectues", label: `Effectués (${view.totals.done})` },
-              ]}
-            />
-            <div className="relative sm:w-72">
-              <MagnifyingGlassIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-subtle" aria-hidden />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Commerce, ville, pack"
-                aria-label="Rechercher un contrat"
-                className={`${controlClasses} h-10 pl-10`}
-              />
-            </div>
-          </div>
-
-          {list.length === 0 ? (
-            <Card>
-              <EmptyState title={needle ? "Aucun contrat ne correspond." : tab === "en-cours" ? "Aucun contrat en cours." : "Aucun contrat effectué pour l'instant."}>
-                {needle ? "Essaie un autre mot." : null}
-              </EmptyState>
-            </Card>
-          ) : (
-            <ul className="grid gap-3 lg:grid-cols-2">
-              {list.map((contract) => (
-                <li key={contract.id} className="min-w-0">
-                  <ContractCard contract={contract} view={view} onEdit={() => setEditing(contract)} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <ul className="grid gap-3 lg:grid-cols-2">
+          {list.map((contract) => (
+            <li key={contract.id} className="min-w-0">
+              <ContractCard contract={contract} view={view} onEdit={() => setEditing(contract)} />
+            </li>
+          ))}
+        </ul>
       )}
 
       {view.canEdit && (

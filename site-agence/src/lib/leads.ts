@@ -7,7 +7,8 @@
 import { todayIso } from "./dates";
 import { groupEstablishments, normalizeText } from "./establishments";
 import { establishmentKey } from "./prospect-import";
-import type { Channel, IsoDate, Lead, Member, Prospect } from "./types";
+import { BATCH_SIZES } from "./rules";
+import type { Channel, IsoDate, Lead, LeadBatch, Member, Prospect } from "./types";
 
 /** Ce qu'une ligne d'une nouvelle liste apporte (le reste est fixé à l'enregistrement). */
 export type NewLead = Pick<Lead, "name" | "city" | "category" | "phone" | "email" | "instagram" | "facebook" | "note" | "listDay">;
@@ -111,6 +112,18 @@ export type LeadRow = {
 
 export type DoneLeadRow = { lead: Lead; doneByName: string; canUndo: boolean };
 
+/** Fichier extrait par le membre : ses commerces, ce qui est traité, et si on peut le clore. */
+export type MyBatchView = {
+  batch: LeadBatch;
+  rows: LeadRow[];
+  /** Commerces appelés ou mis en rappel. */
+  handled: number;
+  canFinish: boolean;
+};
+
+/** Fichier d'un collègue (information pour toute l'équipe). */
+export type OtherBatchView = { batch: LeadBatch; memberName: string; remaining: number };
+
 export type LeadsView = {
   today: IsoDate;
   /** Les admins peuvent retirer un commerce de la liste. */
@@ -118,22 +131,53 @@ export type LeadsView = {
   /** Jour de la liste la plus récente. */
   listDay: IsoDate | null;
   cities: { city: string; count: number }[];
+  /** Commerces libres : ceux des fichiers en cours n'y figurent pas. */
   open: LeadRow[];
   doneToday: DoneLeadRow[];
+  myBatch: MyBatchView | null;
+  otherBatches: OtherBatchView[];
+  batchSizes: readonly number[];
+  /** Commerces libres avec numéro de téléphone. */
+  withPhone: number;
+  /** Nom de la personne qui a ajouté chaque commerce (pour l'affichage), par id. */
+  addedByNames: Record<string, string>;
 };
 
-export function buildLeadsView(input: { leads: Lead[]; members: Member[]; contacted: Prospect[]; me: Member; today: IsoDate }): LeadsView {
+export function buildLeadsView(input: {
+  leads: Lead[];
+  members: Member[];
+  contacted: Prospect[];
+  me: Member;
+  today: IsoDate;
+  batches?: LeadBatch[];
+}): LeadsView {
   const { me, today } = input;
   const names = new Map(input.members.map((member) => [member.id, member.fullName]));
   const known = new Map(groupEstablishments(input.contacted, input.members).map((establishment) => [establishment.key, establishment]));
 
+  const toRow = (lead: Lead): LeadRow => {
+    const last = known.get(establishmentKey(lead.name, lead.city))?.contacts[0];
+    return { lead, contacts: leadContacts(lead), known: last ? { name: last.memberName, date: last.date, channel: last.channel } : null };
+  };
+  const bySort = (a: Lead, b: Lead) => a.city.localeCompare(b.city, "fr") || a.name.localeCompare(b.name, "fr");
+  // Les commerces qui ont un numéro d'abord : la prospection se fait surtout par téléphone.
   const open = input.leads
-    .filter((lead) => lead.status === "open")
-    .sort((a, b) => a.city.localeCompare(b.city, "fr") || a.name.localeCompare(b.name, "fr"))
-    .map((lead): LeadRow => {
-      const last = known.get(establishmentKey(lead.name, lead.city))?.contacts[0];
-      return { lead, contacts: leadContacts(lead), known: last ? { name: last.memberName, date: last.date, channel: last.channel } : null };
-    });
+    .filter((lead) => lead.status === "open" && !lead.batchId)
+    .sort((a, b) => Number(Boolean(b.phone)) - Number(Boolean(a.phone)) || bySort(a, b))
+    .map(toRow);
+
+  const batches = input.batches ?? [];
+  const mine = batches.find((batch) => batch.memberId === me.id && !batch.finishedAt) ?? null;
+  const myRows = mine ? input.leads.filter((lead) => lead.batchId === mine.id && lead.status === "open").sort(bySort).map(toRow) : [];
+  const handled = myRows.filter((row) => row.lead.outcome).length;
+  const myBatch: MyBatchView | null = mine ? { batch: mine, rows: myRows, handled, canFinish: myRows.length > 0 && handled === myRows.length } : null;
+  const otherBatches = batches
+    .filter((batch) => batch !== mine && !batch.finishedAt)
+    .map((batch) => ({
+      batch,
+      memberName: names.get(batch.memberId) ?? "Ancien membre",
+      remaining: input.leads.filter((lead) => lead.batchId === batch.id && lead.status === "open").length,
+    }));
 
   const cities = new Map<string, { city: string; count: number }>();
   for (const { lead } of open) {
@@ -142,7 +186,7 @@ export function buildLeadsView(input: { leads: Lead[]; members: Member[]; contac
   }
 
   const doneToday = input.leads
-    .filter((lead) => lead.status === "done" && lead.doneAt && todayIso(new Date(lead.doneAt)) === today)
+    .filter((lead) => lead.status === "done" && lead.outcome !== "callback" && lead.doneAt && todayIso(new Date(lead.doneAt)) === today)
     .sort((a, b) => (b.doneAt ?? "").localeCompare(a.doneAt ?? ""))
     .map((lead) => ({
       lead,
@@ -157,5 +201,10 @@ export function buildLeadsView(input: { leads: Lead[]; members: Member[]; contac
     cities: [...cities.values()],
     open,
     doneToday,
+    myBatch,
+    otherBatches,
+    batchSizes: BATCH_SIZES,
+    withPhone: open.filter((row) => row.lead.phone).length,
+    addedByNames: Object.fromEntries(input.leads.filter((lead) => lead.addedBy).map((lead) => [lead.id, names.get(lead.addedBy as string) ?? "Ancien membre"])),
   };
 }

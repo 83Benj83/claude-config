@@ -12,11 +12,17 @@ import type {
   DateRange,
   Entry,
   IsoDate,
+  Callback,
+  CallbackPriority,
   Lead,
+  LeadBatch,
+  LeadOutcome,
   LeadStatus,
   LoginEvent,
   Member,
   Message,
+  Mockup,
+  MockupStatus,
   PresenceDay,
   Prospect,
   Resource,
@@ -75,7 +81,17 @@ type ContractRow = {
   updated_at: string;
 };
 
-type MessageRow = { id: string; author_id: string; body: string; attachments: Attachment[]; created_at: string };
+type MessageRow = {
+  id: string;
+  author_id: string;
+  body: string;
+  attachments: Attachment[];
+  created_at: string;
+  channel: string;
+  reply_to: string | null;
+  pinned: boolean;
+  reactions: Record<string, string[]> | null;
+};
 
 type FileRow = {
   id: string;
@@ -103,10 +119,113 @@ type LeadRow = {
   done_by: string | null;
   done_at: string | null;
   prospect_id: string | null;
+  added_by: string | null;
+  batch_id: string | null;
+  outcome: LeadOutcome | null;
   created_at: string;
 };
 
-const LEAD_COLUMNS = "id, name, city, category, phone, email, instagram, facebook, note, list_day, status, done_by, done_at, prospect_id, created_at";
+type MockupRow = {
+  id: string;
+  client: string;
+  city: string | null;
+  contact: string | null;
+  status: MockupStatus;
+  started_on: IsoDate;
+  done_on: IsoDate | null;
+  preview_url: string | null;
+  made_by: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const MOCKUP_COLUMNS = "id, client, city, contact, status, started_on, done_on, preview_url, made_by, note, created_at, updated_at";
+
+const toMockup = (row: MockupRow): Mockup => ({
+  id: row.id,
+  client: row.client,
+  city: row.city,
+  contact: row.contact,
+  status: row.status,
+  startedOn: row.started_on,
+  doneOn: row.done_on,
+  previewUrl: row.preview_url,
+  madeBy: row.made_by,
+  note: row.note,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+type BatchRow = { id: string; member_id: string; size: number; created_at: string; finished_at: string | null };
+
+type CallbackRow = {
+  id: string;
+  name: string;
+  city: string | null;
+  phone: string | null;
+  contact_name: string | null;
+  due_on: IsoDate;
+  due_time: string | null;
+  priority: CallbackPriority;
+  note: string | null;
+  added_by: string;
+  lead_id: string | null;
+  status: "pending" | "done";
+  done_by: string | null;
+  done_at: string | null;
+  created_at: string;
+};
+
+const CALLBACK_COLUMNS = "id, name, city, phone, contact_name, due_on, due_time, priority, note, added_by, lead_id, status, done_by, done_at, created_at";
+const BATCH_COLUMNS = "id, member_id, size, created_at, finished_at";
+
+const toCallback = (row: CallbackRow): Callback => ({
+  id: row.id,
+  name: row.name,
+  city: row.city,
+  phone: row.phone,
+  contactName: row.contact_name,
+  dueOn: row.due_on,
+  dueTime: row.due_time,
+  priority: row.priority,
+  note: row.note,
+  addedBy: row.added_by,
+  leadId: row.lead_id,
+  status: row.status,
+  doneBy: row.done_by,
+  doneAt: row.done_at,
+  createdAt: row.created_at,
+});
+
+const toCallbackRow = (callback: Callback): CallbackRow => ({
+  id: callback.id,
+  name: callback.name,
+  city: callback.city,
+  phone: callback.phone,
+  contact_name: callback.contactName,
+  due_on: callback.dueOn,
+  due_time: callback.dueTime,
+  priority: callback.priority,
+  note: callback.note,
+  added_by: callback.addedBy,
+  lead_id: callback.leadId,
+  status: callback.status,
+  done_by: callback.doneBy,
+  done_at: callback.doneAt,
+  created_at: callback.createdAt,
+});
+
+const toBatch = (row: BatchRow): LeadBatch => ({
+  id: row.id,
+  memberId: row.member_id,
+  size: row.size,
+  createdAt: row.created_at,
+  finishedAt: row.finished_at,
+});
+
+const LEAD_COLUMNS =
+  "id, name, city, category, phone, email, instagram, facebook, note, list_day, status, done_by, done_at, prospect_id, added_by, batch_id, outcome, created_at";
 
 const toLead = (row: LeadRow): Lead => ({
   id: row.id,
@@ -123,6 +242,9 @@ const toLead = (row: LeadRow): Lead => ({
   doneBy: row.done_by,
   doneAt: row.done_at,
   prospectId: row.prospect_id,
+  addedBy: row.added_by,
+  batchId: row.batch_id,
+  outcome: row.outcome,
   createdAt: row.created_at,
 });
 
@@ -141,13 +263,16 @@ const toLeadRow = (lead: Lead): LeadRow => ({
   done_by: lead.doneBy,
   done_at: lead.doneAt,
   prospect_id: lead.prospectId,
+  added_by: lead.addedBy,
+  batch_id: lead.batchId,
+  outcome: lead.outcome,
   created_at: lead.createdAt,
 });
 
 type PresenceRow = { member_id: string; day: IsoDate; first_seen_at: string; last_seen_at: string };
 type LoginEventRow = { id: number; member_id: string | null; login: string; ok: boolean; at: string };
 
-const MESSAGE_COLUMNS = "id, author_id, body, attachments, created_at";
+const MESSAGE_COLUMNS = "id, author_id, body, attachments, created_at, channel, reply_to, pinned, reactions";
 const FILE_COLUMNS = "id, uploader_id, message_id, name, type, size, kind, created_at";
 /** Espace de stockage privé des fichiers de l'échange (lu par le serveur uniquement). */
 const FILES_BUCKET = "echange";
@@ -158,6 +283,10 @@ const toMessage = (row: MessageRow): Message => ({
   text: row.body,
   attachments: row.attachments ?? [],
   createdAt: row.created_at,
+  channel: row.channel,
+  replyTo: row.reply_to,
+  pinned: row.pinned,
+  reactions: row.reactions ?? {},
 });
 
 const toStoredFile = (row: FileRow): StoredFile => ({
@@ -475,6 +604,40 @@ export class SupabaseRepository implements Repository {
     );
   }
 
+  async listMockups(): Promise<Mockup[]> {
+    const rows = check("la lecture des maquettes", await this.db.from("mockups").select(MOCKUP_COLUMNS).order("started_on", { ascending: false }).limit(PAGE_SIZE));
+    return (rows as MockupRow[]).map(toMockup);
+  }
+
+  async getMockup(id: string): Promise<Mockup | null> {
+    const row = check("la lecture de la maquette", await this.db.from("mockups").select(MOCKUP_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toMockup(row as MockupRow) : null;
+  }
+
+  async saveMockup(mockup: Mockup): Promise<void> {
+    check(
+      "l'enregistrement de la maquette",
+      await this.db.from("mockups").upsert({
+        id: mockup.id,
+        client: mockup.client,
+        city: mockup.city,
+        contact: mockup.contact,
+        status: mockup.status,
+        started_on: mockup.startedOn,
+        done_on: mockup.doneOn,
+        preview_url: mockup.previewUrl,
+        made_by: mockup.madeBy,
+        note: mockup.note,
+        created_at: mockup.createdAt,
+        updated_at: mockup.updatedAt,
+      }),
+    );
+  }
+
+  async deleteMockup(id: string): Promise<void> {
+    check("la suppression de la maquette", await this.db.from("mockups").delete().eq("id", id));
+  }
+
   async deleteContract(id: string): Promise<void> {
     check("la suppression du contrat", await this.db.from("contracts").delete().eq("id", id));
   }
@@ -511,10 +674,11 @@ export class SupabaseRepository implements Repository {
     check("la suppression de la ressource", await this.db.from("resources").delete().eq("id", id));
   }
 
-  async listMessages(limit: number): Promise<Message[]> {
+  async listMessages(limit: number, channel?: string): Promise<Message[]> {
+    const query = this.db.from("messages").select(MESSAGE_COLUMNS);
     const rows = check(
       "la lecture des messages",
-      await this.db.from("messages").select(MESSAGE_COLUMNS).order("created_at", { ascending: false }).limit(limit),
+      await (channel ? query.eq("channel", channel) : query).order("created_at", { ascending: false }).limit(limit),
     );
     return (rows as MessageRow[]).map(toMessage);
   }
@@ -533,8 +697,16 @@ export class SupabaseRepository implements Repository {
         body: message.text,
         attachments: message.attachments,
         created_at: message.createdAt,
+        channel: message.channel,
+        reply_to: message.replyTo,
+        pinned: message.pinned,
+        reactions: message.reactions,
       }),
     );
+  }
+
+  async updateMessage(id: string, patch: Partial<Pick<Message, "pinned" | "reactions">>): Promise<void> {
+    check("la mise à jour du message", await this.db.from("messages").update(patch).eq("id", id));
   }
 
   async deleteMessage(id: string): Promise<void> {
@@ -639,7 +811,7 @@ export class SupabaseRepository implements Repository {
   async reopenLead(id: string): Promise<void> {
     check(
       "l'annulation de la coche",
-      await this.db.from("leads").update({ status: "open", done_by: null, done_at: null, prospect_id: null }).eq("id", id),
+      await this.db.from("leads").update({ status: "open", done_by: null, done_at: null, prospect_id: null, outcome: null, batch_id: null }).eq("id", id),
     );
   }
 
@@ -650,6 +822,133 @@ export class SupabaseRepository implements Repository {
   async archiveOpenLeads(): Promise<number> {
     const rows = check("le rangement de l'ancienne liste", await this.db.from("leads").update({ status: "archived" }).eq("status", "open").select("id"));
     return (rows as { id: string }[]).length;
+  }
+
+  async deferLead(id: string, memberId: string, at: string): Promise<boolean> {
+    const rows = check(
+      "le report du commerce",
+      await this.db
+        .from("leads")
+        .update({ status: "done", done_by: memberId, done_at: at, outcome: "callback" })
+        .eq("id", id)
+        .eq("status", "open")
+        .is("batch_id", null)
+        .select("id"),
+    ) as { id: string }[];
+    return rows.length === 1;
+  }
+
+  async setLeadOutcome(id: string, outcome: LeadOutcome | null): Promise<void> {
+    check("l'issue du commerce", await this.db.from("leads").update({ outcome }).eq("id", id).eq("status", "open").not("batch_id", "is", null));
+  }
+
+  async listActiveBatches(): Promise<LeadBatch[]> {
+    const rows = check("la lecture des fichiers en cours", await this.db.from("lead_batches").select(BATCH_COLUMNS).is("finished_at", null)) as BatchRow[];
+    return rows.map(toBatch);
+  }
+
+  async createBatch(batch: LeadBatch, size: number): Promise<{ batch: LeadBatch; leads: Lead[] } | null> {
+    const inserted = await this.db
+      .from("lead_batches")
+      .insert({ id: batch.id, member_id: batch.memberId, size: batch.size, created_at: batch.createdAt });
+    // Index unique : un seul fichier en cours par membre.
+    if (inserted.error?.code === "23505") return null;
+    check("la création du fichier", inserted);
+
+    const open = () => this.db.from("leads").select("id").eq("status", "open").is("batch_id", null);
+    const withPhone = check(
+      "la lecture de la liste",
+      await open().not("phone", "is", null).order("list_day", { ascending: true }).order("created_at", { ascending: true }).limit(size),
+    ) as { id: string }[];
+    const ids = withPhone.map((row) => row.id);
+    if (ids.length < size) {
+      const others = check(
+        "la lecture de la liste",
+        await open().is("phone", null).order("list_day", { ascending: true }).order("created_at", { ascending: true }).limit(size - ids.length),
+      ) as { id: string }[];
+      ids.push(...others.map((row) => row.id));
+    }
+    if (ids.length === 0) return { batch, leads: [] };
+
+    // Condition dans la requête : si quelqu'un a extrait les mêmes commerces au même instant, chacun garde les siens.
+    const reserved = check(
+      "la réservation des commerces",
+      await this.db.from("leads").update({ batch_id: batch.id }).in("id", ids).eq("status", "open").is("batch_id", null).select(LEAD_COLUMNS),
+    ) as LeadRow[];
+    return { batch, leads: reserved.map(toLead) };
+  }
+
+  async listBatchLeads(batchId: string): Promise<Lead[]> {
+    const rows = check(
+      "la lecture du fichier",
+      await this.db.from("leads").select(LEAD_COLUMNS).eq("batch_id", batchId).order("city").order("name").limit(PAGE_SIZE),
+    ) as LeadRow[];
+    return rows.map(toLead);
+  }
+
+  async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
+    // On ferme d'abord, de façon conditionnelle : un double clic ou deux appels simultanés ne créent qu'une fois les prospects.
+    const closed = check(
+      "la clôture du fichier",
+      await this.db.from("lead_batches").update({ finished_at: at }).eq("id", batchId).is("finished_at", null).select("id"),
+    ) as { id: string }[];
+    if (closed.length === 0) return false;
+    await this.addProspects(items.map((item) => item.prospect));
+    for (const { leadId, prospect } of items) {
+      check(
+        "la clôture du fichier",
+        await this.db.from("leads").update({ status: "done", done_by: memberId, done_at: at, prospect_id: prospect.id }).eq("id", leadId).eq("batch_id", batchId),
+      );
+    }
+    // Rappels et fiches non valides : traités aussi, pour ne jamais rester bloqués dans un fichier clos.
+    check(
+      "la clôture du fichier",
+      await this.db.from("leads").update({ status: "done", done_by: memberId, done_at: at }).eq("batch_id", batchId).eq("status", "open"),
+    );
+    return true;
+  }
+
+  async releaseBatch(batchId: string): Promise<number> {
+    const rows = check(
+      "la remise en liste",
+      await this.db.from("leads").update({ batch_id: null, outcome: null }).eq("batch_id", batchId).eq("status", "open").select("id"),
+    ) as { id: string }[];
+    check("la fermeture du fichier", await this.db.from("lead_batches").delete().eq("id", batchId));
+    return rows.length;
+  }
+
+  async listCallbacks(doneSince: string): Promise<Callback[]> {
+    const [pending, done] = await Promise.all([
+      this.db.from("callbacks").select(CALLBACK_COLUMNS).eq("status", "pending").order("due_on").order("due_time", { nullsFirst: false }).limit(PAGE_SIZE),
+      this.db.from("callbacks").select(CALLBACK_COLUMNS).eq("status", "done").gte("done_at", doneSince).order("done_at", { ascending: false }).limit(100),
+    ]);
+    const rows = [...(check("la lecture des rappels", pending) as CallbackRow[]), ...(check("la lecture des rappels", done) as CallbackRow[])];
+    return rows.map(toCallback);
+  }
+
+  async getCallback(id: string): Promise<Callback | null> {
+    const row = check("la lecture du rappel", await this.db.from("callbacks").select(CALLBACK_COLUMNS).eq("id", id).maybeSingle());
+    return row ? toCallback(row as CallbackRow) : null;
+  }
+
+  async saveCallback(callback: Callback): Promise<void> {
+    check("l'enregistrement du rappel", await this.db.from("callbacks").upsert(toCallbackRow(callback)));
+  }
+
+  async completeCallback(id: string, memberId: string, at: string): Promise<boolean> {
+    const rows = check(
+      "la validation du rappel",
+      await this.db.from("callbacks").update({ status: "done", done_by: memberId, done_at: at }).eq("id", id).eq("status", "pending").select("id"),
+    ) as { id: string }[];
+    return rows.length === 1;
+  }
+
+  async reopenCallback(id: string): Promise<void> {
+    check("l'annulation du rappel fait", await this.db.from("callbacks").update({ status: "pending", done_by: null, done_at: null }).eq("id", id));
+  }
+
+  async deleteCallback(id: string): Promise<void> {
+    check("la suppression du rappel", await this.db.from("callbacks").delete().eq("id", id));
   }
 
   async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {

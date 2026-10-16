@@ -127,6 +127,27 @@ export type Contract = {
   updatedAt: string;
 };
 
+export type MockupStatus = "en_cours" | "terminee";
+
+/** Une maquette de site : en cours de réalisation, ou terminée (avant ou sans contrat signé). */
+export type Mockup = {
+  id: string;
+  /** Nom du commerce. */
+  client: string;
+  city: string | null;
+  contact: string | null;
+  status: MockupStatus;
+  startedOn: IsoDate;
+  doneOn: IsoDate | null;
+  /** Lien vers la maquette. */
+  previewUrl: string | null;
+  /** Membre qui la réalise. */
+  madeBy: string | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 /** Nombre de prospections d'un membre sur un jour (dérivé des prospects). */
 export type Entry = {
   memberId: string;
@@ -138,6 +159,12 @@ export type Period = "semaine" | "mois" | "annee";
 
 /** Commerce de la liste « À contacter » : à contacter, coché (devenu un prospect) ou rangé. */
 export type LeadStatus = "open" | "done" | "archived";
+
+/**
+ * Issue d'un commerce d'un lot en cours : appelé (compté au classement à la
+ * clôture du lot) ou à rappeler plus tard (il rejoint les rappels).
+ */
+export type LeadOutcome = "contacted" | "callback";
 
 export type Lead = {
   id: string;
@@ -158,6 +185,45 @@ export type Lead = {
   doneBy: string | null;
   doneAt: string | null;
   prospectId: string | null;
+  /** Membre qui l'a ajouté à la liste (`null` : liste importée par un admin). */
+  addedBy: string | null;
+  /** Lot dans lequel un membre l'a extrait : il disparaît alors de la liste des autres. */
+  batchId: string | null;
+  outcome: LeadOutcome | null;
+  createdAt: string;
+};
+
+/** Fichier de commerces extrait de la liste par un membre (10 à 50), clos quand tout est contacté. */
+export type LeadBatch = {
+  id: string;
+  memberId: string;
+  size: number;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+export type CallbackPriority = "faible" | "moyenne" | "haute" | "urgente";
+
+/** Appel à refaire plus tard : visible de toute l'équipe jusqu'à ce qu'il soit fait. */
+export type Callback = {
+  id: string;
+  /** Commerce à rappeler. */
+  name: string;
+  city: string | null;
+  phone: string | null;
+  /** Interlocuteur (personne à demander). */
+  contactName: string | null;
+  dueOn: IsoDate;
+  /** Heure souhaitée `HH:MM` (heure de Paris), facultative. */
+  dueTime: string | null;
+  priority: CallbackPriority;
+  note: string | null;
+  /** Membre qui a enregistré le rappel. */
+  addedBy: string;
+  leadId: string | null;
+  status: "pending" | "done";
+  doneBy: string | null;
+  doneAt: string | null;
   createdAt: string;
 };
 
@@ -205,6 +271,14 @@ export type Message = {
   text: string;
   attachments: Attachment[];
   createdAt: string;
+  /** Salon de l'échange (`general` par défaut). */
+  channel: string;
+  /** Message auquel celui-ci répond. */
+  replyTo: string | null;
+  /** Épinglé en haut du salon par un admin. */
+  pinned: boolean;
+  /** Réactions : emoji -> membres qui l'ont choisi. */
+  reactions: Record<string, string[]>;
 };
 
 /** Fichier envoyé : d'abord en attente, puis rattaché au message publié. */

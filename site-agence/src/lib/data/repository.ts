@@ -1,4 +1,4 @@
-import type { Contract, DateRange, Entry, IsoDate, Lead, LoginEvent, Member, MemberPatch, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Callback, Contract, DateRange, Entry, IsoDate, Lead, LeadBatch, LeadOutcome, LoginEvent, Member, MemberPatch, Mockup, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 
 /** Membre avec ses informations de connexion (jamais envoyées au navigateur). */
 export type Credentials = {
@@ -68,8 +68,16 @@ export interface Repository {
   saveContract(contract: Contract): Promise<void>;
   deleteContract(id: string): Promise<void>;
 
+  listMockups(): Promise<Mockup[]>;
+  getMockup(id: string): Promise<Mockup | null>;
+  /** Crée ou remplace la maquette (même `id`). */
+  saveMockup(mockup: Mockup): Promise<void>;
+  deleteMockup(id: string): Promise<void>;
+
   /** Derniers messages de l'échange, du plus récent au plus ancien. Supprimer un message détache ses fichiers. */
-  listMessages(limit: number): Promise<Message[]>;
+  listMessages(limit: number, channel?: string): Promise<Message[]>;
+  /** Épingle ou réactions : seuls ces champs changent. */
+  updateMessage(id: string, patch: Partial<Pick<Message, "pinned" | "reactions">>): Promise<void>;
   getMessage(id: string): Promise<Message | null>;
   addMessage(message: Message): Promise<void>;
   deleteMessage(id: string): Promise<void>;
@@ -93,13 +101,45 @@ export interface Repository {
   addLeads(leads: Lead[]): Promise<void>;
   /** Coche le commerce s'il est encore à contacter ; `false` si quelqu'un vient de le cocher. */
   claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean>;
+  /** Sort le commerce de la liste pour un rappel (il n'est pas compté) ; `false` si quelqu'un l'a pris entre-temps. */
+  deferLead(id: string, memberId: string, at: string): Promise<boolean>;
   /** Le remet dans la liste (coche annulée). */
   reopenLead(id: string): Promise<void>;
   deleteLead(id: string): Promise<void>;
   /** Range les commerces encore à contacter (avant une nouvelle liste) ; renvoie leur nombre. */
   archiveOpenLeads(): Promise<number>;
+  /** Marque l'issue d'un commerce d'un fichier en cours (`null` : l'efface). */
+  setLeadOutcome(id: string, outcome: LeadOutcome | null): Promise<void>;
+  /** Fichiers en cours (non clos), tous membres confondus. */
+  listActiveBatches(): Promise<LeadBatch[]>;
+  /**
+   * Crée le fichier du membre et y réserve jusqu'à `size` commerces encore à
+   * contacter (avec téléphone d'abord, les plus anciens d'abord). Renvoie `null`
+   * s'il a déjà un fichier en cours.
+   */
+  createBatch(batch: LeadBatch, size: number): Promise<{ batch: LeadBatch; leads: Lead[] } | null>;
+  /** Commerces d'un fichier. */
+  listBatchLeads(batchId: string): Promise<Lead[]>;
+  /**
+   * Clôt le fichier : les commerces appelés sont cochés (prospects fournis), ceux à
+   * rappeler sont rangés ; plus rien n'est réservé.
+   */
+  /** Clôture atomique : false si le fichier était déjà clos (aucun prospect créé dans ce cas). */
+  finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean>;
+  /** Abandonne le fichier : ses commerces non traités reviennent dans la liste. */
+  releaseBatch(batchId: string): Promise<number>;
   /** Prospects dont le nom normalisé est l'un de ceux-ci (commerces déjà contactés). */
   findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]>;
+
+  /** Rappels : tous ceux à faire, et ceux faits depuis `doneSince`. */
+  listCallbacks(doneSince: string): Promise<Callback[]>;
+  getCallback(id: string): Promise<Callback | null>;
+  /** Crée ou remplace le rappel (même `id`). */
+  saveCallback(callback: Callback): Promise<void>;
+  /** Le marque fait s'il ne l'est pas encore ; `false` si quelqu'un vient de le faire. */
+  completeCallback(id: string, memberId: string, at: string): Promise<boolean>;
+  reopenCallback(id: string): Promise<void>;
+  deleteCallback(id: string): Promise<void>;
 
   /** Fichiers de l'échange : nombre et poids total. */
   storageUsage(): Promise<{ files: number; bytes: number }>;

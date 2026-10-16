@@ -9,7 +9,8 @@ import { addDays, eachDay, endOfMonth, formatRelativeDay, monthKeyOf, periodWind
 import { groupEstablishments, knownCities, type Establishment } from "./establishments";
 import { EDITABLE_PAST_DAYS } from "./rules";
 import { buildMonthReport, buildRanking, currentStreak, sumEntries, type MonthReport, type RankingRow } from "./stats";
-import type { Channel, Contract, Entry, IsoDate, Member, Message, MonthKey, Period, Prospect, Resource } from "./types";
+import { CHAT_CHANNELS, DEFAULT_CHANNEL, isChatChannel } from "./chat";
+import type { Channel, Contract, Entry, IsoDate, Member, Message, Mockup, MonthKey, Period, Prospect, Resource } from "./types";
 
 /** Nombre de prospections par membre et par jour, à partir des prospects. */
 export function entriesFromProspects(prospects: readonly Prospect[]): Entry[] {
@@ -324,13 +325,15 @@ export type ContractsView = {
   names: Record<string, string>;
   inProgress: Contract[];
   done: Contract[];
+  /** Maquettes en cours (les plus anciennes d'abord) et terminées (les plus récentes d'abord). */
+  mockups: { inProgress: Mockup[]; done: Mockup[] };
   totals: { inProgress: number; done: number; signed: number; monthly: number };
 };
 
 /** Ordre des étapes d'un contrat en cours. */
 export const CONTRACT_STEPS = ["maquette", "developpement", "validation", "termine"] as const;
 
-export function buildContractsView(input: { contracts: Contract[]; members: Member[]; me: Member; today: IsoDate }): ContractsView {
+export function buildContractsView(input: { contracts: Contract[]; mockups?: Mockup[]; members: Member[]; me: Member; today: IsoDate }): ContractsView {
   const step = (contract: Contract) => CONTRACT_STEPS.indexOf(contract.status);
   const inProgress = input.contracts
     .filter((contract) => contract.status !== "termine")
@@ -348,6 +351,10 @@ export function buildContractsView(input: { contracts: Contract[]; members: Memb
     names: Object.fromEntries(input.members.map((member) => [member.id, member.fullName])),
     inProgress,
     done,
+    mockups: {
+      inProgress: (input.mockups ?? []).filter((m) => m.status === "en_cours").sort((a, b) => a.startedOn.localeCompare(b.startedOn)),
+      done: (input.mockups ?? []).filter((m) => m.status === "terminee").sort((a, b) => (b.doneOn ?? "").localeCompare(a.doneOn ?? "")),
+    },
     totals: {
       inProgress: inProgress.length,
       done: done.length,
@@ -362,36 +369,71 @@ export function buildContractsView(input: { contracts: Contract[]; members: Memb
 /* Échange                                                             */
 /* ------------------------------------------------------------------ */
 
+export type ReactionSummary = { emoji: string; count: number; mine: boolean; names: string[] };
+
 export type MessageRow = Message & {
   authorName: string;
   authorAvatarUrl: string | null;
   mine: boolean;
   /** L'auteur et les admins peuvent supprimer un message. */
   canDelete: boolean;
+  /** Extrait du message auquel celui-ci répond. */
+  reply: { id: string; authorName: string; text: string } | null;
+  reactionList: ReactionSummary[];
 };
+
+export type ChannelSummary = { id: string; label: string; description: string; count: number; canPost: boolean };
 
 export type MessagesView = {
   meId: string;
   /** Instant du chargement : la vue la plus récente l'emporte à l'écran. */
   loadedAt: string;
+  channel: string;
+  channels: ChannelSummary[];
+  canPin: boolean;
   /** Du plus ancien au plus récent, comme dans une discussion. */
   messages: MessageRow[];
+  /** Messages épinglés du salon, les plus récents d'abord. */
+  pinned: MessageRow[];
 };
 
-export function buildMessagesView(input: { messages: Message[]; members: Member[]; me: Member; now: string }): MessagesView {
+export function buildMessagesView(input: { messages: Message[]; members: Member[]; me: Member; now: string; channel?: string }): MessagesView {
+  const channel = isChatChannel(input.channel) ? input.channel : DEFAULT_CHANNEL;
   const byId = new Map(input.members.map((member) => [member.id, member]));
-  const messages = [...input.messages]
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-    .map((message) => {
-      const author = byId.get(message.authorId);
-      const mine = message.authorId === input.me.id;
-      return {
-        ...message,
-        authorName: author?.fullName ?? "Ancien membre",
-        authorAvatarUrl: author?.avatarUrl ?? null,
-        mine,
-        canDelete: mine || input.me.isAdmin,
-      };
-    });
-  return { meId: input.me.id, loadedAt: input.now, messages };
+  const sorted = [...input.messages].filter((m) => m.channel === channel).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const known = new Map(sorted.map((message) => [message.id, message]));
+  const nameOf = (id: string) => byId.get(id)?.fullName ?? "Ancien membre";
+
+  const messages = sorted.map((message): MessageRow => {
+    const author = byId.get(message.authorId);
+    const mine = message.authorId === input.me.id;
+    const parent = message.replyTo ? known.get(message.replyTo) : undefined;
+    return {
+      ...message,
+      authorName: author?.fullName ?? "Ancien membre",
+      authorAvatarUrl: author?.avatarUrl ?? null,
+      mine,
+      canDelete: mine || input.me.isAdmin,
+      reply: parent ? { id: parent.id, authorName: nameOf(parent.authorId), text: parent.text || (parent.attachments.length ? "Pièce jointe" : "") } : null,
+      reactionList: Object.entries(message.reactions)
+        .filter(([, who]) => who.length > 0)
+        .map(([emoji, who]) => ({ emoji, count: who.length, mine: who.includes(input.me.id), names: who.map(nameOf) })),
+    };
+  });
+
+  return {
+    meId: input.me.id,
+    loadedAt: input.now,
+    channel,
+    channels: CHAT_CHANNELS.map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      description: entry.description,
+      count: entry.id === channel ? messages.length : 0,
+      canPost: !entry.adminOnly || input.me.isAdmin,
+    })),
+    canPin: input.me.isAdmin,
+    messages,
+    pinned: messages.filter((m) => m.pinned).reverse(),
+  };
 }

@@ -11,6 +11,8 @@ import {
 import type { Repository } from "@/lib/data/repository";
 import { todayIso } from "@/lib/dates";
 import * as contracts from "@/lib/services/contracts";
+import * as callbacks from "@/lib/services/callbacks";
+import * as mockups from "@/lib/services/mockups";
 import * as leads from "@/lib/services/leads";
 import { loadMessagesView } from "@/lib/services/loaders";
 import * as members from "@/lib/services/members";
@@ -90,23 +92,51 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     claimLead: (input) => withMember((actor) => leads.claimLead(repository, actor, { id: input?.id, channel: input?.channel }, clock())),
     releaseLead: (id) => withMember((actor) => leads.releaseLead(repository, actor, id, clock())),
     deleteLead: (id) => withMember((actor) => leads.deleteLead(repository, actor, id)),
+    addLead: (input) =>
+      withMember(async (actor) => {
+        const result = await leads.addLead(repository, actor, input, clock());
+        return result.ok ? { ok: true as const, data: { id: result.data.lead.id }, message: result.message } : result;
+      }),
+    deferLead: (input) => withMember((actor) => leads.deferLead(repository, actor, { id: input?.id, callback: input?.callback }, clock())),
+    extractBatch: (input) => withMember((actor) => leads.extractBatch(repository, actor, input?.size, clock())),
+    handleBatchLead: (input) =>
+      withMember((actor) => leads.handleBatchLead(repository, actor, { id: input?.id, outcome: input?.outcome, callback: input?.callback }, clock())),
+    finishBatch: () => withMember((actor) => leads.finishBatch(repository, actor, clock())),
+    releaseBatch: (id) => withMember((actor) => leads.releaseBatch(repository, actor, id)),
+    addCallback: (input) =>
+      withMember(async (actor) => {
+        const result = await callbacks.addCallback(repository, actor, input, clock());
+        return result.ok ? { ok: true as const, data: null, message: result.message } : result;
+      }),
+    completeCallback: (id) => withMember((actor) => callbacks.completeCallback(repository, actor, id, clock())),
+    reopenCallback: (id) => withMember((actor) => callbacks.reopenCallback(repository, actor, id)),
+    rescheduleCallback: (input) =>
+      withMember((actor) => callbacks.rescheduleCallback(repository, actor, { id: input?.id, dueOn: input?.dueOn, dueTime: input?.dueTime, priority: input?.priority }, clock())),
+    deleteCallback: (id) => withMember((actor) => callbacks.deleteCallback(repository, actor, id)),
 
     saveResource: (input) => withMember((actor) => members.saveResource(repository, actor, input)),
     deleteResource: (id) => withMember((actor) => members.deleteResource(repository, actor, String(id))),
     saveMember: (input) => withMember((actor) => members.saveMember(repository, actor, input)),
     saveContract: (input) => withMember((actor) => contracts.saveContract(repository, actor, input, clock())),
     deleteContract: (id) => withMember((actor) => contracts.deleteContract(repository, actor, String(id))),
+    saveMockup: (input) => withMember((actor) => mockups.saveMockup(repository, actor, input, clock())),
+    deleteMockup: (id) => withMember((actor) => mockups.deleteMockup(repository, actor, String(id))),
     resetStatistics: (input) => withMember((actor) => members.resetStatistics(repository, actor, String(input?.confirmation ?? ""), clock().now)),
 
-    async listMessages() {
+    async listMessages(channel) {
       const actor = await currentMemberOf(repository, session);
       if (!actor?.welcomedAt) return null;
-      return loadMessagesView(repository, actor, clock().now);
+      return loadMessagesView(repository, actor, clock().now, channel);
     },
     uploadAttachment: (form) =>
       withMember((actor) => messages.uploadAttachment(repository, actor, form instanceof FormData ? form.get("file") : null, clock().now)),
     discardAttachment: (id) => withMember((actor) => messages.discardAttachment(repository, actor, String(id))),
-    sendMessage: (input) => withMember((actor) => messages.sendMessage(repository, actor, { text: input?.text, attachmentIds: input?.attachmentIds }, clock().now)),
+    sendMessage: (input) =>
+      withMember((actor) =>
+        messages.sendMessage(repository, actor, { text: input?.text, attachmentIds: input?.attachmentIds, channel: input?.channel, replyTo: input?.replyTo }, clock().now),
+      ),
+    toggleReaction: (input) => withMember((actor) => messages.toggleReaction(repository, actor, { id: input?.id, emoji: input?.emoji })),
+    togglePin: (id) => withMember((actor) => messages.togglePin(repository, actor, String(id))),
     deleteMessage: (id) => withMember((actor) => messages.deleteMessage(repository, actor, String(id))),
     async chatStatus() {
       const actor = await currentMemberOf(repository, session);

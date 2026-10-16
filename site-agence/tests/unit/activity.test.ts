@@ -29,7 +29,7 @@ const logins: LoginEvent[] = [
   { id: "3", memberId: null, login: "inconnu", ok: false, at: "2026-10-13T21:00:00.000Z" },
 ];
 
-const message = (authorId: string, createdAt: string): Message => ({ id: createdAt, authorId, text: "Salut", attachments: [], createdAt });
+const message = (authorId: string, createdAt: string): Message => ({ id: createdAt, authorId, text: "Salut", attachments: [], createdAt, channel: "general", replyTo: null, pinned: false, reactions: {} });
 const contract = (status: Contract["status"]): Contract =>
   ({ id: status, client: "Client", status, signedOn: "2026-10-01" }) as Contract;
 

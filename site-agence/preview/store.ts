@@ -183,7 +183,23 @@ function readMessage(id: string, data: Record<string, unknown>): Message | null 
     ? data.attachments.slice(0, MESSAGE_MAX_FILES).flatMap((item) => readAttachment(item) ?? [])
     : [];
   if (!authorId || !createdAt || (!body && attachments.length === 0)) return null;
-  return { id, authorId, text: body, attachments, createdAt };
+  const reactions: Record<string, string[]> = {};
+  if (typeof data.reactions === "object" && data.reactions !== null) {
+    for (const [emoji, who] of Object.entries(data.reactions as Record<string, unknown>)) {
+      if (Array.isArray(who)) reactions[emoji] = who.filter((item): item is string => typeof item === "string").slice(0, 200);
+    }
+  }
+  return {
+    id,
+    authorId,
+    text: body,
+    attachments,
+    createdAt,
+    channel: text(data.channel, 40) ?? "general",
+    replyTo: text(data.replyTo, 64),
+    pinned: data.pinned === true,
+    reactions,
+  };
 }
 
 export const monthDocId = (memberId: string, month: string) => `${memberId}_${month}`;

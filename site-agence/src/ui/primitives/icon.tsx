@@ -16,6 +16,8 @@ import {
   InstagramLogoIcon,
   LinkedinLogoIcon,
   ListChecksIcon,
+  PhoneCallIcon,
+  ArrowSquareOutIcon,
   MagnifyingGlassIcon,
   PaletteIcon,
   PaperPlaneTiltIcon,
@@ -64,6 +66,8 @@ const ICONS: Record<IconName | NavIcon | `channel-${Channel}`, PhosphorIcon> = {
   admin: ShieldStarIcon,
   activity: PulseIcon,
   leads: ListChecksIcon,
+  callbacks: PhoneCallIcon,
+  external: ArrowSquareOutIcon,
   // moyens de contact
   "channel-telephone": PhoneIcon,
   "channel-email": EnvelopeSimpleIcon,

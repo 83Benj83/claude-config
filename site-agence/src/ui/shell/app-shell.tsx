@@ -140,6 +140,7 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
   return (
     <Link
       href={item.href}
+      {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       aria-label={item.label}

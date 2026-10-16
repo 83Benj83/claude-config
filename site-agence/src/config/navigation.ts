@@ -15,7 +15,9 @@ export type NavIcon =
   | "chat"
   | "admin"
   | "activity"
-  | "leads";
+  | "leads"
+  | "callbacks"
+  | "external";
 
 export type NavItem = {
   href: string;
@@ -26,6 +28,8 @@ export type NavItem = {
   /** Une phrase pour le menu et les rubriques de l'accueil. */
   hint: string;
   adminOnly?: boolean;
+  /** Lien vers un autre site : s'ouvre dans un nouvel onglet. */
+  external?: boolean;
 };
 
 export type NavGroup = { title: string; items: NavItem[] };
@@ -38,6 +42,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: "Prospection",
     items: [
       { href: "/a-contacter", label: "À contacter", icon: "leads", tone: "violet", hint: "La liste du jour, à cocher" },
+      { href: "/rappels", label: "Rappels", icon: "callbacks", tone: "violet", hint: "Qui rappeler, et quand" },
       { href: "/prospection", label: "Prospecter", icon: "add", tone: "violet", hint: "Ajouter un commerce contacté" },
       { href: "/recherche", label: "Déjà contacté ?", icon: "search", tone: "violet", hint: "Vérifier avant d'appeler" },
     ],
@@ -70,6 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin", label: "Panel admin", icon: "admin", tone: "violet", hint: "Identifiants et statistiques", adminOnly: true },
       { href: "/activite", label: "Activité", icon: "activity", tone: "violet", hint: "Qui est venu, connexions, chiffres", adminOnly: true },
+      { href: "https://getnovaai.vercel.app/business.html", label: "Nova AI Business", icon: "external", tone: "violet", hint: "Ouvre l'outil dans un nouvel onglet", adminOnly: true, external: true },
     ],
   },
 ];

@@ -1,9 +1,11 @@
 import { buildActivityView } from "../activity";
 import { nameKey } from "../establishments";
+import { DEFAULT_CHANNEL, isChatChannel } from "../chat";
+import { buildCallbacksView } from "../callbacks";
 import { buildLeadsView } from "../leads";
 import type { Repository } from "../data/repository";
 import { addDays, isMonthKey, monthKeyOf } from "../dates";
-import { ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_READ, MESSAGES_SHOWN } from "../rules";
+import { CALLBACK_DONE_VISIBLE_HOURS, ACTIVITY_DAYS, ACTIVITY_MESSAGES, EDITABLE_PAST_DAYS, LOGIN_EVENTS_READ, MESSAGES_SHOWN } from "../rules";
 import type { IsoDate, LoginChoice, Member } from "../types";
 import {
   buildAdminView,
@@ -88,8 +90,8 @@ export async function loadTeamView(repository: Repository, me: Member) {
 }
 
 export async function loadContractsView(repository: Repository, me: Member, today: IsoDate) {
-  const [contracts, members] = await Promise.all([repository.listContracts(), listTeam(repository)]);
-  return buildContractsView({ contracts, members, me, today });
+  const [contracts, mockups, members] = await Promise.all([repository.listContracts(), repository.listMockups(), listTeam(repository)]);
+  return buildContractsView({ contracts, mockups, members, me, today });
 }
 
 export async function loadResourcesView(repository: Repository, me: Member) {
@@ -108,13 +110,14 @@ export async function loadAdminView(repository: Repository, me: Member, today: I
 
 /** Liste « À contacter » : les commerces à contacter (et qui les a déjà contactés), les coches du jour. */
 export async function loadLeadsView(repository: Repository, me: Member, today: IsoDate, now: Date = new Date()) {
-  const [leads, members] = await Promise.all([
+  const [leads, members, batches] = await Promise.all([
     repository.listLeads(new Date(now.getTime() - 24 * 60 * 60_000).toISOString()),
     listTeam(repository),
+    repository.listActiveBatches(),
   ]);
-  const open = leads.filter((lead) => lead.status === "open");
+  const open = leads.filter((lead) => lead.status === "open" && !lead.batchId);
   const contacted = open.length > 0 ? await repository.findProspectsByNameKeys(open.map((lead) => nameKey(lead.name))) : [];
-  return buildLeadsView({ leads, members, contacted, me, today });
+  return buildLeadsView({ leads, members, contacted, me, today, batches });
 }
 
 /** Activité des 7 derniers jours (admins) : visites, connexions, prospects et messages. */
@@ -135,7 +138,17 @@ export async function loadActivityView(repository: Repository, today: IsoDate, n
   return buildActivityView({ members, presence, logins, prospects, messages, contracts, storage, establishments, statsSince, today });
 }
 
-export async function loadMessagesView(repository: Repository, me: Member, now: string) {
-  const [messages, members] = await Promise.all([repository.listMessages(MESSAGES_SHOWN), listTeam(repository)]);
-  return buildMessagesView({ messages, members, me, now });
+export async function loadMessagesView(repository: Repository, me: Member, now: string, channel?: string) {
+  const selected = isChatChannel(channel) ? channel : DEFAULT_CHANNEL;
+  const [messages, members] = await Promise.all([repository.listMessages(MESSAGES_SHOWN, selected), listTeam(repository)]);
+  return buildMessagesView({ messages, members, me, now, channel: selected });
+}
+
+/** Rappels à faire (toute l'équipe) et ceux faits ces dernières 48 heures. */
+export async function loadCallbacksView(repository: Repository, me: Member, today: IsoDate, now: Date = new Date()) {
+  const [callbacks, members] = await Promise.all([
+    repository.listCallbacks(new Date(now.getTime() - CALLBACK_DONE_VISIBLE_HOURS * 60 * 60_000).toISOString()),
+    listTeam(repository),
+  ]);
+  return buildCallbacksView({ callbacks, members, me, today });
 }

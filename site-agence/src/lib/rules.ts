@@ -31,3 +31,8 @@ export const LOGIN_EVENTS_KEPT_DAYS = 90;
 export const ACTIVITY_MESSAGES = 500;
 /** Espace de stockage des fichiers compris dans l'offre gratuite de Supabase. */
 export const STORAGE_QUOTA_BYTES = 1024 ** 3;
+
+/** Tailles possibles d'un fichier de commerces extrait de la liste « À contacter ». */
+export const BATCH_SIZES = [10, 20, 30, 40, 50] as const;
+/** Rappels faits : gardés visibles pendant ce délai (heures). */
+export const CALLBACK_DONE_VISIBLE_HOURS = 48;

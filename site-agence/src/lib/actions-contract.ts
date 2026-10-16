@@ -61,6 +61,34 @@ export type ContractFormValues = {
   note: string;
 };
 
+/** Saisie d'un rappel (formulaire de la rubrique Rappels, de la liste et de la prospection). */
+export type CallbackFormValues = {
+  name: string;
+  city: string;
+  phone: string;
+  contactName: string;
+  dueOn: string;
+  dueTime: string;
+  priority: string;
+  note: string;
+};
+
+/** Ajout d'un numéro à contacter par un membre. */
+export type LeadFormValues = { name: string; city: string; phone: string; category: string; note: string };
+
+export type MockupFormValues = {
+  id: string;
+  client: string;
+  city: string;
+  contact: string;
+  status: string;
+  startedOn: string;
+  doneOn: string;
+  previewUrl: string;
+  madeBy: string;
+  note: string;
+};
+
 export type CsvExport = { filename: string; content: string };
 
 export type AppActions = {
@@ -78,6 +106,21 @@ export type AppActions = {
   claimLead(input: { id: string; channel: string }): Promise<ActionResult<{ prospect: Prospect }>>;
   releaseLead(id: string): Promise<ActionResult>;
   deleteLead(id: string): Promise<ActionResult>;
+  /** Tous les membres peuvent ajouter un numéro à contacter. */
+  addLead(input: LeadFormValues): Promise<ActionResult<{ id: string }>>;
+  /** « À rappeler plus tard » depuis la liste : le commerce rejoint les rappels. */
+  deferLead(input: { id: string; callback: CallbackFormValues }): Promise<ActionResult>;
+  /** Fichiers de 10 à 50 commerces. */
+  extractBatch(input: { size: number }): Promise<ActionResult<{ count: number }>>;
+  handleBatchLead(input: { id: string; outcome: "contacted" | "callback" | "none"; callback?: CallbackFormValues }): Promise<ActionResult>;
+  finishBatch(): Promise<ActionResult<{ counted: number }>>;
+  releaseBatch(id: string): Promise<ActionResult>;
+  /** Rappels (appels à refaire). */
+  addCallback(input: CallbackFormValues): Promise<ActionResult>;
+  completeCallback(id: string): Promise<ActionResult>;
+  reopenCallback(id: string): Promise<ActionResult>;
+  rescheduleCallback(input: { id: string; dueOn: string; dueTime: string; priority?: string }): Promise<ActionResult>;
+  deleteCallback(id: string): Promise<ActionResult>;
   searchDirectory(input: { query: string; city: string }): Promise<Establishment[]>;
 
   saveResource(input: ResourceFormValues): Promise<ActionResult>;
@@ -87,15 +130,19 @@ export type AppActions = {
 
   saveContract(input: ContractFormValues): Promise<ActionResult>;
   deleteContract(id: string): Promise<ActionResult>;
+  saveMockup(input: MockupFormValues): Promise<ActionResult>;
+  deleteMockup(id: string): Promise<ActionResult>;
 
   exportCsv(input: { month: string; kind: "bilan" | "prospects" }): Promise<ActionResult<CsvExport>>;
 
   /** Échange : `null` si la session a expiré. */
-  listMessages(): Promise<MessagesView | null>;
+  listMessages(channel?: string): Promise<MessagesView | null>;
   /** Un fichier par appel (champ `file`), envoyé dès qu'il est choisi. */
   uploadAttachment(form: FormData): Promise<ActionResult<Attachment>>;
   discardAttachment(id: string): Promise<ActionResult>;
-  sendMessage(input: { text: string; attachmentIds: string[] }): Promise<ActionResult>;
+  sendMessage(input: { text: string; attachmentIds: string[]; channel?: string; replyTo?: string | null }): Promise<ActionResult>;
+  toggleReaction(input: { id: string; emoji: string }): Promise<ActionResult>;
+  togglePin(id: string): Promise<ActionResult>;
   deleteMessage(id: string): Promise<ActionResult>;
   chatStatus(): Promise<ChatStatus>;
 };

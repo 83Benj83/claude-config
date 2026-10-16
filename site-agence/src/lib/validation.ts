@@ -163,3 +163,51 @@ export function fieldErrors(error: z.ZodError): Record<string, string> {
   }
   return errors;
 }
+
+/* ------------------------------------------------------------------ */
+/* Rappels                                                             */
+/* ------------------------------------------------------------------ */
+
+export const CALLBACK_PRIORITIES = ["faible", "moyenne", "haute", "urgente"] as const;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const CALLBACK_PHONE = /^\+?[\d .()-]{8,30}$/;
+
+/** Un appel à refaire : commerce, quand, et ce qu'il faut savoir avant de rappeler. */
+export const callbackSchema = z.object({
+  name: line(2, 120, "Indique le nom du commerce."),
+  city: optionalLine(80),
+  phone: optionalLine(30).refine((v) => v === null || (CALLBACK_PHONE.test(v) && v.replace(/\D/g, "").length >= 9), "Numéro de téléphone invalide."),
+  contactName: optionalLine(80),
+  dueOn: z.string().refine(isIsoDate, "Choisis le jour du rappel."),
+  dueTime: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || TIME.test(v), "Heure invalide.")
+    .transform((v) => (v === "" ? null : v)),
+  priority: z.enum(CALLBACK_PRIORITIES, { error: "Choisis l'importance." }),
+  note: optionalText(500),
+});
+export type CallbackInput = z.output<typeof callbackSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Maquettes                                                           */
+/* ------------------------------------------------------------------ */
+
+export const mockupSchema = z.object({
+  id: z
+    .string()
+    .max(64)
+    .transform((value) => (value === "" ? null : value)),
+  client: line(2, 120, "Indique le nom du commerce."),
+  city: optionalLine(80),
+  contact: optionalLine(160),
+  status: z.enum(["en_cours", "terminee"], { error: "Choisis l'état." }),
+  startedOn: z.string().refine(isIsoDate, "Indique la date de début."),
+  doneOn: optionalDate,
+  previewUrl: optionalLine(300).refine((value) => value === null || /^https?:\/\/\S+$/.test(value), "Le lien doit commencer par https://"),
+  madeBy: z
+    .string()
+    .max(64)
+    .transform((value) => (value === "" ? null : value)),
+  note: optionalText(500),
+});

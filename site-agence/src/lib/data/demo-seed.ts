@@ -169,12 +169,39 @@ export function generateDemoProspects(today: IsoDate): Prospect[] {
 /** Ressources de l'agence (contacts, liens, modèles du guide). */
 export const DEMO_RESOURCES: readonly Resource[] = AGENCY_RESOURCES;
 
-/** Liste « À contacter » de démonstration : trois commerces fictifs, sans site web. */
+/** Liste « À contacter » de démonstration : des commerces fictifs, sans site web, surtout à appeler. */
 export function demoLeads(today: IsoDate): Lead[] {
-  const base = { status: "open" as const, doneBy: null, doneAt: null, prospectId: null, listDay: today, createdAt: `${today}T06:00:00.000Z` };
-  return [
-    { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: "04 78 00 00 01", email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google" },
+  const base = {
+    status: "open" as const,
+    doneBy: null,
+    doneAt: null,
+    prospectId: null,
+    addedBy: null,
+    batchId: null,
+    outcome: null,
+    listDay: today,
+    createdAt: `${today}T06:00:00.000Z`,
+  };
+  const phone = (n: number) => `04 78 00 00 ${String(n).padStart(2, "0")}`;
+  const leads: Lead[] = [
+    { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: phone(1), email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google" },
     { ...base, id: "demo-lead-2", name: "Salon Coupe Nette", city: "Lyon", category: "Coiffeur", phone: null, email: "contact@coupenette.demo", instagram: null, facebook: "https://www.facebook.com/coupenette.demo", note: null },
     { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: "04 91 00 00 02", email: null, instagram: null, facebook: null, note: "Ouvert le dimanche" },
   ];
+  const cities = ["Lyon", "Marseille", "Toulon"];
+  for (let n = 4; n <= 15; n += 1) {
+    leads.push({
+      ...base,
+      id: `demo-lead-${n}`,
+      name: `Commerce de démonstration ${n}`,
+      city: cities[n % cities.length],
+      category: n % 2 ? "Restaurant" : "Artisan",
+      phone: phone(n),
+      email: null,
+      instagram: null,
+      facebook: null,
+      note: null,
+    });
+  }
+  return leads;
 }

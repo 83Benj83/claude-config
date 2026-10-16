@@ -28,7 +28,7 @@ test.describe("navigation", () => {
     await loginAs(page, "theo", "Théo Garnier");
     await expect(page.getByRole("heading", { level: 1, name: /Théo/ })).toBeVisible();
     const sections = page.getByRole("region", { name: "Les rubriques" });
-    await expect(sections.getByRole("link")).toHaveCount(11);
+    await expect(sections.getByRole("link")).toHaveCount(12);
     await expect(sections.getByRole("link", { name: "Panel admin" })).toHaveCount(0);
     await expect(sections.getByRole("link", { name: "Activité" })).toHaveCount(0);
     await expect(page.getByText(/Podium|Rang du jour/)).toHaveCount(0);
@@ -59,14 +59,18 @@ test.describe("navigation", () => {
 test.describe("à contacter", () => {
   test("cocher un commerce : il quitte la liste pour tous et entre dans mes prospects ; annuler le remet", async ({ page, browser }) => {
     // Un commerce différent par projet : les deux projets partagent le même serveur de démo.
-    const name = test.info().project.name === "mobile" ? "Boulangerie du Port" : "Pizzeria Il Forno";
+    // (le test de fichier terminé, passé avant, a déjà pris les premiers commerces : on prend le dernier de la liste sur mobile.)
+    let name = "Pizzeria Il Forno";
     await loginAs(page, "lea", "Léa Fontaine");
     await openSection(page, "À contacter");
     await expect(page.getByRole("heading", { level: 1, name: "À contacter" })).toBeVisible();
+    if (test.info().project.name === "mobile") {
+      name = (await page.getByRole("article").filter({ has: page.getByRole("list", { name: /^Coordonnées de/ }) }).last().getByRole("heading").first().innerText()).trim();
+    }
 
     const card = page.getByRole("article", { name });
     await expect(card.getByRole("list", { name: `Coordonnées de ${name}` }).getByRole("link")).not.toHaveCount(0);
-    await card.getByRole("button", { name: "Je l'ai contacté" }).click();
+    await card.getByRole("button", { name: "Effectué" }).click();
     await card.getByRole("radio", { name: "Téléphone" }).check();
     await card.getByRole("button", { name: "Ajouter à mes prospects" }).click();
     await expect(page.getByText(`${name} ajouté à tes prospects du jour.`)).toBeVisible();

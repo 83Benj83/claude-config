@@ -1,5 +1,6 @@
 import type { ActionResult } from "../actions-contract";
 import { ACCEPTED_FILES_LABEL, cleanFileName, fileTypeOf, matchesSignature } from "../attachments";
+import { CHAT_CHANNELS, DEFAULT_CHANNEL, isChatChannel, isReaction } from "../chat";
 import type { Repository } from "../data/repository";
 import { ATTACHMENT_MAX_BYTES, MESSAGE_MAX_FILES, MESSAGE_MAX_LENGTH, PENDING_FILES_MAX, PENDING_FILES_TTL_MS } from "../rules";
 import type { Attachment, Member, StoredFile } from "../types";
@@ -79,9 +80,20 @@ export async function discardAttachment(repository: Repository, actor: Member, i
 export async function sendMessage(
   repository: Repository,
   actor: Member,
-  input: { text: unknown; attachmentIds: unknown },
+  input: { text: unknown; attachmentIds: unknown; channel?: unknown; replyTo?: unknown },
   now: string,
 ): Promise<ActionResult> {
+  const channel = input?.channel === undefined || input.channel === null ? DEFAULT_CHANNEL : input.channel;
+  if (!isChatChannel(channel)) return { ok: false, message: "Salon inconnu." };
+  if (CHAT_CHANNELS.find((entry) => entry.id === channel)?.adminOnly && !actor.isAdmin) {
+    return { ok: false, message: "Seuls les admins écrivent dans ce salon." };
+  }
+  let replyTo: string | null = null;
+  if (input?.replyTo) {
+    const parent = await repository.getMessage(String(input.replyTo));
+    if (!parent || parent.channel !== channel) return { ok: false, message: "Le message auquel tu réponds n'existe plus." };
+    replyTo = parent.id;
+  }
   const text = String(input?.text ?? "")
     .replace(/\r\n?/g, "\n")
     .trim();
@@ -113,6 +125,10 @@ export async function sendMessage(
     text,
     attachments: usable.map(toAttachment),
     createdAt: now,
+    channel,
+    replyTo,
+    pinned: false,
+    reactions: {},
   };
   await repository.addMessage(message);
   const linked = await repository.linkFiles(ids, message.id, actor.id);
@@ -153,4 +169,26 @@ export async function readAttachment(repository: Repository, actor: Member, id: 
   if (!file || (!file.messageId && file.uploaderId !== actor.id)) return null;
   const bytes = await repository.readFile(id);
   return bytes ? { file, bytes } : null;
+}
+
+/** Ajoute ou retire sa réaction à un message (un clic de plus l'enlève). */
+export async function toggleReaction(repository: Repository, actor: Member, input: { id: unknown; emoji: unknown }): Promise<ActionResult> {
+  if (!isReaction(input?.emoji)) return { ok: false, message: "Réaction inconnue." };
+  const message = await repository.getMessage(String(input?.id ?? ""));
+  if (!message) return { ok: false, message: "Ce message n'existe plus." };
+  const current = message.reactions[input.emoji] ?? [];
+  const next = current.includes(actor.id) ? current.filter((id) => id !== actor.id) : [...current, actor.id];
+  const reactions = { ...message.reactions, [input.emoji]: next };
+  if (next.length === 0) delete reactions[input.emoji];
+  await repository.updateMessage(message.id, { reactions });
+  return { ok: true, data: null };
+}
+
+/** Épingle (ou retire) un message en haut de son salon : réservé aux admins. */
+export async function togglePin(repository: Repository, actor: Member, id: unknown): Promise<ActionResult> {
+  if (!actor.isAdmin) return { ok: false, message: "Seuls les admins épinglent un message." };
+  const message = await repository.getMessage(String(id ?? ""));
+  if (!message) return { ok: false, message: "Ce message n'existe plus." };
+  await repository.updateMessage(message.id, { pinned: !message.pinned });
+  return { ok: true, data: null, message: message.pinned ? "Message désépinglé." : "Message épinglé." };
 }

@@ -20,6 +20,9 @@ const lead = (id: string, overrides: Partial<Lead> = {}): Lead => ({
   doneBy: null,
   doneAt: null,
   prospectId: null,
+  addedBy: null,
+  batchId: null,
+  outcome: null,
   createdAt: "2026-10-14T06:00:00.000Z",
   ...overrides,
 });

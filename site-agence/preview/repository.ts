@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Contract, DateRange, Entry, Lead, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
+import type { Mockup, Callback, Contract, DateRange, Entry, Lead, LeadBatch, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
 import { countedSince, entriesFromProspects } from "@/lib/views";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
@@ -160,8 +160,16 @@ export class PreviewRepository implements Repository {
     await this.store.putStatsSince(at);
   }
 
-  async listMessages(limit: number): Promise<Message[]> {
-    return [...this.store.messages.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  async listMessages(limit: number, channel?: string): Promise<Message[]> {
+    return [...this.store.messages.values()]
+      .filter((message) => !channel || message.channel === channel)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  async updateMessage(id: string, patch: Partial<Pick<Message, "pinned" | "reactions">>): Promise<void> {
+    const message = this.store.messages.get(id);
+    if (message) await this.store.putMessage({ ...message, ...patch });
   }
 
   async getMessage(id: string): Promise<Message | null> {
@@ -224,6 +232,19 @@ export class PreviewRepository implements Repository {
     return { files: attachments.length, bytes: attachments.reduce((sum, file) => sum + file.size, 0) };
   }
 
+  // Les maquettes n'existent que sur le site en ligne : vides dans l'aperçu.
+  async listMockups(): Promise<Mockup[]> {
+    return [];
+  }
+
+  async getMockup(): Promise<Mockup | null> {
+    return null;
+  }
+
+  async saveMockup(): Promise<void> {}
+
+  async deleteMockup(): Promise<void> {}
+
   // La liste « À contacter » n'existe que sur le site en ligne : vide dans l'aperçu.
   async listLeads(): Promise<Lead[]> {
     return [];
@@ -246,6 +267,51 @@ export class PreviewRepository implements Repository {
   async archiveOpenLeads(): Promise<number> {
     return 0;
   }
+
+  async deferLead(): Promise<boolean> {
+    return false;
+  }
+
+  async setLeadOutcome(): Promise<void> {}
+
+  async listActiveBatches(): Promise<LeadBatch[]> {
+    return [];
+  }
+
+  async createBatch(): Promise<null> {
+    return null;
+  }
+
+  async listBatchLeads(): Promise<Lead[]> {
+    return [];
+  }
+
+  async finishBatch(): Promise<boolean> {
+    return false;
+  }
+
+  async releaseBatch(): Promise<number> {
+    return 0;
+  }
+
+  // Les rappels n'existent que sur le site en ligne : vides dans l'aperçu.
+  async listCallbacks(): Promise<Callback[]> {
+    return [];
+  }
+
+  async getCallback(): Promise<Callback | null> {
+    return null;
+  }
+
+  async saveCallback(): Promise<void> {}
+
+  async completeCallback(): Promise<boolean> {
+    return false;
+  }
+
+  async reopenCallback(): Promise<void> {}
+
+  async deleteCallback(): Promise<void> {}
 
   async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {
     const wanted = new Set(nameKeys);

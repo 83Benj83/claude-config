@@ -1,7 +1,7 @@
 import { todayIso } from "../dates";
 import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
-import type { Contract, DateRange, Entry, IsoDate, Lead, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
+import type { Contract, DateRange, Entry, IsoDate, Callback, Mockup, Lead, LeadBatch, LeadOutcome, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 import { countedSince, entriesFromProspects } from "../views";
 import { DEMO_MEMBERS, DEMO_RESOURCES, demoLeads, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
@@ -19,6 +19,9 @@ type DemoState = {
   presence?: PresenceDay[];
   logins?: LoginEvent[];
   leads?: Lead[];
+  batches?: LeadBatch[];
+  callbacks?: Callback[];
+  mockups?: Mockup[];
 };
 
 /** Peu d'itérations en démo : démarrage rapide, mots de passe publics de toute façon. */
@@ -170,8 +173,16 @@ export class DemoRepository implements Repository {
     return (this.state.files ??= new Map());
   }
 
-  async listMessages(limit: number): Promise<Message[]> {
-    return [...this.messages].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit).map(clone);
+  async listMessages(limit: number, channel?: string): Promise<Message[]> {
+    return this.messages
+      .filter((m) => !channel || m.channel === channel)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map(clone);
+  }
+
+  async updateMessage(id: string, patch: Partial<Pick<Message, "pinned" | "reactions">>): Promise<void> {
+    this.state.messages = this.messages.map((m) => (m.id === id ? { ...m, ...clone(patch) } : m));
   }
 
   async getMessage(id: string): Promise<Message | null> {
@@ -222,6 +233,29 @@ export class DemoRepository implements Repository {
     this.files.delete(id);
   }
 
+  private get mockups(): Mockup[] {
+    return (this.state.mockups ??= []);
+  }
+
+  async listMockups(): Promise<Mockup[]> {
+    return this.mockups.map(clone);
+  }
+
+  async getMockup(id: string): Promise<Mockup | null> {
+    const mockup = this.mockups.find((m) => m.id === id);
+    return mockup ? clone(mockup) : null;
+  }
+
+  async saveMockup(mockup: Mockup): Promise<void> {
+    const index = this.mockups.findIndex((m) => m.id === mockup.id);
+    if (index < 0) this.mockups.push(clone(mockup));
+    else this.mockups[index] = clone(mockup);
+  }
+
+  async deleteMockup(id: string): Promise<void> {
+    this.state.mockups = this.mockups.filter((m) => m.id !== id);
+  }
+
   private get leads(): Lead[] {
     return (this.state.leads ??= []);
   }
@@ -240,14 +274,104 @@ export class DemoRepository implements Repository {
   }
 
   async claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean> {
-    const index = this.leads.findIndex((l) => l.id === id && l.status === "open");
+    const index = this.leads.findIndex((l) => l.id === id && l.status === "open" && !l.batchId);
     if (index < 0) return false;
     this.leads[index] = { ...this.leads[index], status: "done", doneBy: memberId, doneAt: at, prospectId };
     return true;
   }
 
   async reopenLead(id: string): Promise<void> {
-    this.state.leads = this.leads.map((l) => (l.id === id ? { ...l, status: "open", doneBy: null, doneAt: null, prospectId: null } : l));
+    this.state.leads = this.leads.map((l) =>
+      l.id === id ? { ...l, status: "open", doneBy: null, doneAt: null, prospectId: null, outcome: null, batchId: null } : l,
+    );
+  }
+
+  async deferLead(id: string, memberId: string, at: string): Promise<boolean> {
+    const index = this.leads.findIndex((l) => l.id === id && l.status === "open" && !l.batchId);
+    if (index < 0) return false;
+    this.leads[index] = { ...this.leads[index], status: "done", doneBy: memberId, doneAt: at, outcome: "callback" };
+    return true;
+  }
+
+  async setLeadOutcome(id: string, outcome: LeadOutcome | null): Promise<void> {
+    this.state.leads = this.leads.map((l) => (l.id === id && l.status === "open" ? { ...l, outcome } : l));
+  }
+
+  private get batches(): LeadBatch[] {
+    return (this.state.batches ??= []);
+  }
+
+  async listActiveBatches(): Promise<LeadBatch[]> {
+    return this.batches.filter((b) => !b.finishedAt).map(clone);
+  }
+
+  async createBatch(batch: LeadBatch, size: number): Promise<{ batch: LeadBatch; leads: Lead[] } | null> {
+    if (this.batches.some((b) => b.memberId === batch.memberId && !b.finishedAt)) return null;
+    this.batches.push(clone(batch));
+    const free = this.leads.filter((l) => l.status === "open" && !l.batchId);
+    const chosen = [...free.filter((l) => l.phone), ...free.filter((l) => !l.phone)].slice(0, size).map((l) => l.id);
+    this.state.leads = this.leads.map((l) => (chosen.includes(l.id) ? { ...l, batchId: batch.id } : l));
+    return { batch: clone(batch), leads: this.leads.filter((l) => l.batchId === batch.id).map(clone) };
+  }
+
+  async listBatchLeads(batchId: string): Promise<Lead[]> {
+    return this.leads.filter((l) => l.batchId === batchId).map(clone);
+  }
+
+  async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
+    const batch = this.batches.find((b) => b.id === batchId);
+    if (!batch || batch.finishedAt) return false;
+    this.state.batches = this.batches.map((b) => (b.id === batchId ? { ...b, finishedAt: at } : b));
+    await this.addProspects(items.map((item) => item.prospect));
+    const byLead = new Map(items.map((item) => [item.leadId, item.prospect.id]));
+    this.state.leads = this.leads.map((l) => {
+      if (l.batchId !== batchId) return l;
+      if (byLead.has(l.id)) return { ...l, status: "done", doneBy: memberId, doneAt: at, prospectId: byLead.get(l.id) ?? null };
+      if (l.status === "open") return { ...l, status: "done", doneBy: memberId, doneAt: at };
+      return l;
+    });
+    return true;
+  }
+
+  async releaseBatch(batchId: string): Promise<number> {
+    const back = this.leads.filter((l) => l.batchId === batchId && l.status === "open").length;
+    this.state.leads = this.leads.map((l) => (l.batchId === batchId && l.status === "open" ? { ...l, batchId: null, outcome: null } : l));
+    this.state.batches = this.batches.filter((b) => b.id !== batchId);
+    return back;
+  }
+
+  private get callbacks(): Callback[] {
+    return (this.state.callbacks ??= []);
+  }
+
+  async listCallbacks(doneSince: string): Promise<Callback[]> {
+    return this.callbacks.filter((c) => c.status === "pending" || (c.doneAt ?? "") >= doneSince).map(clone);
+  }
+
+  async getCallback(id: string): Promise<Callback | null> {
+    const callback = this.callbacks.find((c) => c.id === id);
+    return callback ? clone(callback) : null;
+  }
+
+  async saveCallback(callback: Callback): Promise<void> {
+    const index = this.callbacks.findIndex((c) => c.id === callback.id);
+    if (index < 0) this.callbacks.push(clone(callback));
+    else this.callbacks[index] = clone(callback);
+  }
+
+  async completeCallback(id: string, memberId: string, at: string): Promise<boolean> {
+    const index = this.callbacks.findIndex((c) => c.id === id && c.status === "pending");
+    if (index < 0) return false;
+    this.callbacks[index] = { ...this.callbacks[index], status: "done", doneBy: memberId, doneAt: at };
+    return true;
+  }
+
+  async reopenCallback(id: string): Promise<void> {
+    this.state.callbacks = this.callbacks.map((c) => (c.id === id ? { ...c, status: "pending", doneBy: null, doneAt: null } : c));
+  }
+
+  async deleteCallback(id: string): Promise<void> {
+    this.state.callbacks = this.callbacks.filter((c) => c.id !== id);
   }
 
   async deleteLead(id: string): Promise<void> {

@@ -23,7 +23,21 @@ const iconButton =
  * Zone d'écriture : texte, photos et fichiers. Chaque fichier part dès qu'il
  * est choisi ; le message est envoyé quand tout est prêt.
  */
-export function Composer({ onSent }: { onSent: () => void }) {
+export function Composer({
+  channel,
+  channelLabel,
+  canPost,
+  replyTo,
+  onCancelReply,
+  onSent,
+}: {
+  channel: string;
+  channelLabel: string;
+  canPost: boolean;
+  replyTo: { id: string; authorName: string; text: string } | null;
+  onCancelReply: () => void;
+  onSent: () => void;
+}) {
   const { actions, canUpload } = usePlatform();
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Pending[]>([]);
@@ -112,6 +126,8 @@ export function Composer({ onSent }: { onSent: () => void }) {
       const result = await actions.sendMessage({
         text,
         attachmentIds: ready.map((item) => item.attachment.id),
+        channel,
+        replyTo: replyTo?.id ?? null,
       });
       if (!result.ok) {
         setError(result.message ?? GENERIC_ERROR);
@@ -120,6 +136,7 @@ export function Composer({ onSent }: { onSent: () => void }) {
       setText("");
       setPending([]);
       setError(null);
+      onCancelReply();
       onSent();
     });
   };
@@ -132,8 +149,26 @@ export function Composer({ onSent }: { onSent: () => void }) {
     send();
   };
 
+  if (!canPost) {
+    return (
+      <p className="border-t border-line bg-surface px-4 py-4 text-center text-sm text-muted">
+        Salon en lecture seule : seuls les admins écrivent dans « {channelLabel} ».
+      </p>
+    );
+  }
+
   return (
     <div className="border-t border-line bg-surface px-2 pt-2 pb-2.5 sm:px-4 sm:pt-3">
+      {replyTo && (
+        <p className="mb-2 flex items-center gap-2 rounded-xl border-l-2 border-accent bg-surface-2 py-1.5 pr-1.5 pl-3 text-xs text-muted">
+          <span className="min-w-0 flex-1 truncate">
+            Réponse à <strong className="font-semibold text-fg">{replyTo.authorName}</strong> : {replyTo.text}
+          </span>
+          <button type="button" onClick={onCancelReply} className="grid size-6 shrink-0 place-items-center rounded-full hover:bg-surface" aria-label="Annuler la réponse">
+            <XIcon size={12} aria-hidden />
+          </button>
+        </p>
+      )}
       {pending.length > 0 && (
         <ul className="mb-2 flex flex-wrap gap-1.5 px-1" aria-label="Fichiers à envoyer">
           {pending.map((item) => (
@@ -201,7 +236,7 @@ export function Composer({ onSent }: { onSent: () => void }) {
           onChange={(event) => setText(event.target.value)}
           onKeyDown={onKeyDown}
           rows={1}
-          placeholder="Écris un message…"
+          placeholder={`Écris dans ${channelLabel}…`}
           aria-label="Message"
           aria-invalid={tooLong || undefined}
           className={`${controlClasses} field-sizing-content max-h-40 min-h-11 flex-1 resize-none rounded-3xl py-2.5`}

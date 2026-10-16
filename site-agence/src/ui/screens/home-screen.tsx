@@ -71,6 +71,7 @@ function SectionTile({ item }: { item: NavItem }) {
   return (
     <Link
       href={item.href}
+      {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       aria-label={item.label}
       aria-describedby={unread ? `${hintId} ${badgeId}` : hintId}
       className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--tone)] min-[340px]:flex-col min-[340px]:items-start min-[340px]:gap-3 sm:flex-row sm:items-center sm:gap-4"
