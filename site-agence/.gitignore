@@ -55,3 +55,4 @@ next-env.d.ts
 # Listes réelles d’identifiants : jamais dans le dépôt
 /scripts/*.csv
 !/scripts/identifiants.exemple.csv
+a-coller-dans-supabase.sql
