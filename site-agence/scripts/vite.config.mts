@@ -19,6 +19,7 @@ export default defineConfig({
         "import-preview": fileURLToPath(new URL("./import-preview.ts", import.meta.url)),
         "add-leads": fileURLToPath(new URL("./add-leads.ts", import.meta.url)),
         "leads-seed": fileURLToPath(new URL("./leads-seed.ts", import.meta.url)),
+        "prospects-seed": fileURLToPath(new URL("./prospects-seed.ts", import.meta.url)),
       },
     },
   },

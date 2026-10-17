@@ -18,7 +18,8 @@
     "members:import": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-members.mjs",
     "members:from-preview": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/import-preview.mjs",
     "leads:add": "vite build --config scripts/vite.config.mts --logLevel warn && node --env-file-if-exists=.env.local scripts/.build/add-leads.mjs",
-    "leads:seed-sql": "vite build --config scripts/vite.config.mts --logLevel warn && node scripts/.build/leads-seed.mjs"
+    "leads:seed-sql": "vite build --config scripts/vite.config.mts --logLevel warn && node scripts/.build/leads-seed.mjs",
+    "prospects:seed-sql": "vite build --config scripts/vite.config.mts --logLevel warn && node scripts/.build/prospects-seed.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
