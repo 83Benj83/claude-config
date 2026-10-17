@@ -1,7 +1,7 @@
 import { monthKeyOf } from "@/lib/dates";
 import { cityKey, nameKey } from "@/lib/establishments";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "@/lib/data/repository";
-import type { Mockup, Callback, Contract, DateRange, Entry, Lead, LeadBatch, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
+import type { Callback, Contract, DateRange, Entry, Lead, LeadBatch, LeadOutcome, LoginEvent, Member, Message, Mockup, PresenceDay, Prospect, Resource, StoredFile } from "@/lib/types";
 import { countedSince, entriesFromProspects } from "@/lib/views";
 import { monthDocId, type PreviewStore, type StoredMember } from "./store";
 
@@ -232,86 +232,150 @@ export class PreviewRepository implements Repository {
     return { files: attachments.length, bytes: attachments.reduce((sum, file) => sum + file.size, 0) };
   }
 
-  // Les maquettes n'existent que sur le site en ligne : vides dans l'aperçu.
+  /* ----------------------------- Maquettes ----------------------------- */
+
   async listMockups(): Promise<Mockup[]> {
-    return [];
+    return [...this.store.mockups.values()];
   }
 
-  async getMockup(): Promise<Mockup | null> {
-    return null;
+  async getMockup(id: string): Promise<Mockup | null> {
+    return this.store.mockups.get(id) ?? null;
   }
 
-  async saveMockup(): Promise<void> {}
-
-  async deleteMockup(): Promise<void> {}
-
-  // La liste « À contacter » n'existe que sur le site en ligne : vide dans l'aperçu.
-  async listLeads(): Promise<Lead[]> {
-    return [];
+  async saveMockup(mockup: Mockup): Promise<void> {
+    await this.store.putDoc("mockups", mockup);
   }
 
-  async getLead(): Promise<Lead | null> {
-    return null;
+  async deleteMockup(id: string): Promise<void> {
+    await this.store.removeDoc("mockups", id);
   }
 
-  async addLeads(): Promise<void> {}
+  /* ---------------------- Liste « À contacter » ------------------------ */
 
-  async claimLead(): Promise<boolean> {
-    return false;
+  private get leads(): Lead[] {
+    return [...this.store.leads.values()];
   }
 
-  async reopenLead(): Promise<void> {}
+  private async patchLead(id: string, patch: Partial<Lead>): Promise<void> {
+    const lead = this.store.leads.get(id);
+    if (lead) await this.store.putDoc("leads", { ...lead, ...patch });
+  }
 
-  async deleteLead(): Promise<void> {}
+  async listLeads(doneSince: string): Promise<Lead[]> {
+    return this.leads.filter((lead) => lead.status === "open" || (lead.status === "done" && (lead.doneAt ?? "") >= doneSince));
+  }
+
+  async getLead(id: string): Promise<Lead | null> {
+    return this.store.leads.get(id) ?? null;
+  }
+
+  async addLeads(leads: Lead[]): Promise<void> {
+    await Promise.all(leads.map((lead) => this.store.putDoc("leads", lead)));
+  }
+
+  async claimLead(id: string, memberId: string, at: string, prospectId: string): Promise<boolean> {
+    const lead = this.store.leads.get(id);
+    if (!lead || lead.status !== "open" || lead.batchId) return false;
+    await this.store.putDoc("leads", { ...lead, status: "done", doneBy: memberId, doneAt: at, prospectId });
+    return true;
+  }
+
+  async reopenLead(id: string): Promise<void> {
+    await this.patchLead(id, { status: "open", doneBy: null, doneAt: null, prospectId: null, outcome: null, batchId: null });
+  }
+
+  async deleteLead(id: string): Promise<void> {
+    await this.store.removeDoc("leads", id);
+  }
 
   async archiveOpenLeads(): Promise<number> {
-    return 0;
+    const open = this.leads.filter((lead) => lead.status === "open");
+    await Promise.all(open.map((lead) => this.store.putDoc("leads", { ...lead, status: "archived" })));
+    return open.length;
   }
 
-  async deferLead(): Promise<boolean> {
-    return false;
+  async deferLead(id: string, memberId: string, at: string): Promise<boolean> {
+    const lead = this.store.leads.get(id);
+    if (!lead || lead.status !== "open" || lead.batchId) return false;
+    await this.store.putDoc("leads", { ...lead, status: "done", doneBy: memberId, doneAt: at, outcome: "callback" });
+    return true;
   }
 
-  async setLeadOutcome(): Promise<void> {}
+  async setLeadOutcome(id: string, outcome: LeadOutcome | null): Promise<void> {
+    const lead = this.store.leads.get(id);
+    if (lead && lead.status === "open" && lead.batchId) await this.store.putDoc("leads", { ...lead, outcome });
+  }
 
   async listActiveBatches(): Promise<LeadBatch[]> {
-    return [];
+    return [...this.store.batches.values()].filter((batch) => !batch.finishedAt);
   }
 
-  async createBatch(): Promise<null> {
-    return null;
+  async createBatch(batch: LeadBatch, size: number): Promise<{ batch: LeadBatch; leads: Lead[] } | null> {
+    if ((await this.listActiveBatches()).some((other) => other.memberId === batch.memberId)) return null;
+    await this.store.putDoc("batches", batch);
+    const free = this.leads
+      .filter((lead) => lead.status === "open" && !lead.batchId)
+      .sort((a, b) => a.listDay.localeCompare(b.listDay) || a.createdAt.localeCompare(b.createdAt));
+    const chosen = [...free.filter((lead) => lead.phone), ...free.filter((lead) => !lead.phone)].slice(0, size);
+    const leads = chosen.map((lead) => ({ ...lead, batchId: batch.id }));
+    await Promise.all(leads.map((lead) => this.store.putDoc("leads", lead)));
+    return { batch, leads };
   }
 
-  async listBatchLeads(): Promise<Lead[]> {
-    return [];
+  async listBatchLeads(batchId: string): Promise<Lead[]> {
+    return this.leads.filter((lead) => lead.batchId === batchId);
   }
 
-  async finishBatch(): Promise<boolean> {
-    return false;
+  async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
+    const batch = this.store.batches.get(batchId);
+    if (!batch || batch.finishedAt) return false;
+    await this.store.putDoc("batches", { ...batch, finishedAt: at });
+    await this.addProspects(items.map((item) => item.prospect));
+    const byLead = new Map(items.map((item) => [item.leadId, item.prospect.id]));
+    await Promise.all(
+      this.leads
+        .filter((lead) => lead.batchId === batchId && lead.status === "open")
+        .map((lead) => this.store.putDoc("leads", { ...lead, status: "done", doneBy: memberId, doneAt: at, prospectId: byLead.get(lead.id) ?? null })),
+    );
+    return true;
   }
 
-  async releaseBatch(): Promise<number> {
-    return 0;
+  async releaseBatch(batchId: string): Promise<number> {
+    const back = this.leads.filter((lead) => lead.batchId === batchId && lead.status === "open");
+    await Promise.all(back.map((lead) => this.store.putDoc("leads", { ...lead, batchId: null, outcome: null })));
+    await this.store.removeDoc("batches", batchId);
+    return back.length;
   }
 
-  // Les rappels n'existent que sur le site en ligne : vides dans l'aperçu.
-  async listCallbacks(): Promise<Callback[]> {
-    return [];
+  /* ------------------------------ Rappels ------------------------------ */
+
+  async listCallbacks(doneSince: string): Promise<Callback[]> {
+    return [...this.store.callbacks.values()].filter((callback) => callback.status === "pending" || (callback.doneAt ?? "") >= doneSince);
   }
 
-  async getCallback(): Promise<Callback | null> {
-    return null;
+  async getCallback(id: string): Promise<Callback | null> {
+    return this.store.callbacks.get(id) ?? null;
   }
 
-  async saveCallback(): Promise<void> {}
-
-  async completeCallback(): Promise<boolean> {
-    return false;
+  async saveCallback(callback: Callback): Promise<void> {
+    await this.store.putDoc("callbacks", callback);
   }
 
-  async reopenCallback(): Promise<void> {}
+  async completeCallback(id: string, memberId: string, at: string): Promise<boolean> {
+    const callback = this.store.callbacks.get(id);
+    if (!callback || callback.status !== "pending") return false;
+    await this.store.putDoc("callbacks", { ...callback, status: "done", doneBy: memberId, doneAt: at });
+    return true;
+  }
 
-  async deleteCallback(): Promise<void> {}
+  async reopenCallback(id: string): Promise<void> {
+    const callback = this.store.callbacks.get(id);
+    if (callback) await this.store.putDoc("callbacks", { ...callback, status: "pending", doneBy: null, doneAt: null });
+  }
+
+  async deleteCallback(id: string): Promise<void> {
+    await this.store.removeDoc("callbacks", id);
+  }
 
   async findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]> {
     const wanted = new Set(nameKeys);

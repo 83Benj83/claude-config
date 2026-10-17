@@ -12,7 +12,11 @@
  * - `settings/app`      : réglages (date de remise à zéro des statistiques) ;
  * - `contracts/<id>`    : contrats en cours et effectués ;
  * - `messages/<id>`     : messages de l'échange (les fichiers joints sont des
- *   fichiers de l'Artifact, désignés par leur identifiant).
+ *   fichiers de l'Artifact, désignés par leur identifiant) ;
+ * - `leads/<id>`        : commerces de la liste « À contacter » ;
+ * - `batches/<id>`      : fichiers de 10 à 50 commerces extraits par un membre ;
+ * - `callbacks/<id>`    : rappels de l'équipe ;
+ * - `mockups/<id>`      : maquettes en cours et terminées.
  *
  * Tout ce qui vient de la base est relu et filtré : un document mal formé
  * est ignoré plutôt que d'interrompre l'affichage.
@@ -21,7 +25,22 @@ import { isChannel } from "@/lib/channels";
 import { isIsoDate } from "@/lib/dates";
 import { FILE_TYPES } from "@/lib/attachments";
 import { ATTACHMENT_MAX_BYTES, MESSAGE_MAX_FILES, MESSAGE_MAX_LENGTH, MESSAGES_SHOWN } from "@/lib/rules";
-import type { Attachment, Contract, ContractPack, ContractStatus, Member, Message, Prospect, Resource, ResourceKind } from "@/lib/types";
+import type {
+  Attachment,
+  Callback,
+  CallbackPriority,
+  Contract,
+  ContractPack,
+  ContractStatus,
+  Lead,
+  LeadBatch,
+  Member,
+  Message,
+  Mockup,
+  Prospect,
+  Resource,
+  ResourceKind,
+} from "@/lib/types";
 
 export type DbError = { code: string; message: string };
 type DocSnapshot = { id: string; exists: boolean; data(): Record<string, unknown> | undefined };
@@ -202,6 +221,108 @@ function readMessage(id: string, data: Record<string, unknown>): Message | null 
   };
 }
 
+const httpsUrl = (value: unknown, max = 160) => {
+  const url = text(value, max);
+  return url && /^https:\/\/\S+$/.test(url) ? url : null;
+};
+const LEAD_STATUSES = ["open", "done", "archived"] as const;
+const PRIORITIES: CallbackPriority[] = ["faible", "moyenne", "haute", "urgente"];
+
+function readLead(id: string, data: Record<string, unknown>): Lead | null {
+  const name = text(data.name, 120);
+  const city = text(data.city, 80);
+  const listDay = isoDate(data.listDay);
+  if (!name || !city || !listDay) return null;
+  const tips = Array.isArray(data.tips) ? data.tips.flatMap((tip) => text(tip, 160) ?? []).slice(0, 3) : [];
+  return {
+    id,
+    name,
+    city,
+    category: optionalText(data.category, 60),
+    phone: optionalText(data.phone, 30),
+    email: optionalText(data.email, 160),
+    instagram: httpsUrl(data.instagram),
+    facebook: httpsUrl(data.facebook),
+    note: optionalText(data.note, 300),
+    address: optionalText(data.address, 160),
+    tips,
+    listDay,
+    status: LEAD_STATUSES.find((status) => status === data.status) ?? "open",
+    doneBy: optionalText(data.doneBy, 80),
+    doneAt: isoTimestamp(data.doneAt),
+    prospectId: optionalText(data.prospectId, 100),
+    addedBy: optionalText(data.addedBy, 80),
+    batchId: optionalText(data.batchId, 100),
+    outcome: data.outcome === "contacted" || data.outcome === "callback" ? data.outcome : null,
+    createdAt: isoTimestamp(data.createdAt) ?? `${listDay}T06:00:00.000Z`,
+  };
+}
+
+function readBatch(id: string, data: Record<string, unknown>): LeadBatch | null {
+  const memberId = text(data.memberId, 80);
+  const createdAt = isoTimestamp(data.createdAt);
+  if (!memberId || !createdAt || typeof data.size !== "number") return null;
+  return { id, memberId, size: data.size, createdAt, finishedAt: isoTimestamp(data.finishedAt) };
+}
+
+function readCallback(id: string, data: Record<string, unknown>): Callback | null {
+  const name = text(data.name, 120);
+  const dueOn = isoDate(data.dueOn);
+  const addedBy = text(data.addedBy, 80);
+  const createdAt = isoTimestamp(data.createdAt);
+  if (!name || !dueOn || !addedBy || !createdAt) return null;
+  const dueTime = text(data.dueTime, 5);
+  return {
+    id,
+    name,
+    city: optionalText(data.city, 80),
+    phone: optionalText(data.phone, 30),
+    contactName: optionalText(data.contactName, 80),
+    dueOn,
+    dueTime: dueTime && /^\d{2}:\d{2}$/.test(dueTime) ? dueTime : null,
+    priority: PRIORITIES.find((priority) => priority === data.priority) ?? "moyenne",
+    note: optionalText(data.note, 500),
+    addedBy,
+    leadId: optionalText(data.leadId, 100),
+    status: data.status === "done" ? "done" : "pending",
+    doneBy: optionalText(data.doneBy, 80),
+    doneAt: isoTimestamp(data.doneAt),
+    createdAt,
+  };
+}
+
+function readMockup(id: string, data: Record<string, unknown>): Mockup | null {
+  const client = text(data.client, 120);
+  const startedOn = isoDate(data.startedOn);
+  if (!client || !startedOn) return null;
+  const previewUrl = text(data.previewUrl, 300);
+  return {
+    id,
+    client,
+    city: optionalText(data.city, 80),
+    contact: optionalText(data.contact, 160),
+    status: data.status === "terminee" ? "terminee" : "en_cours",
+    startedOn,
+    doneOn: isoDate(data.doneOn),
+    previewUrl: previewUrl && /^https?:\/\/\S+$/.test(previewUrl) ? previewUrl : null,
+    madeBy: optionalText(data.madeBy, 80),
+    note: optionalText(data.note, 500),
+    createdAt: isoTimestamp(data.createdAt) ?? `${startedOn}T12:00:00.000Z`,
+    updatedAt: isoTimestamp(data.updatedAt) ?? `${startedOn}T12:00:00.000Z`,
+  };
+}
+
+/** Collections d'un document par élément (identifiant = id de l'élément). */
+type DocKinds = { leads: Lead; batches: LeadBatch; callbacks: Callback; mockups: Mockup };
+const DOC_READERS: { [K in keyof DocKinds]: (id: string, data: Record<string, unknown>) => DocKinds[K] | null } = {
+  leads: readLead,
+  batches: readBatch,
+  callbacks: readCallback,
+  mockups: readMockup,
+};
+/** Collections attendues avant d'afficher l'aperçu. */
+const COLLECTIONS = 11;
+
 export const monthDocId = (memberId: string, month: string) => `${memberId}_${month}`;
 
 type Status = "loading" | "ready" | "error";
@@ -219,6 +340,10 @@ export class PreviewStore {
   contracts = new Map<string, Contract>();
   /** Derniers messages de l'échange. */
   messages = new Map<string, Message>();
+  leads = new Map<string, Lead>();
+  batches = new Map<string, LeadBatch>();
+  callbacks = new Map<string, Callback>();
+  mockups = new Map<string, Mockup>();
   /** Depuis quand les prospects comptent dans les statistiques (`null` : depuis toujours). */
   statsSince: string | null = null;
   status: Status = "loading";
@@ -242,7 +367,7 @@ export class PreviewStore {
     };
     const loadedOne = (name: string) => {
       this.loaded.add(name);
-      if (this.loaded.size === 7 && this.status === "loading") this.status = "ready";
+      if (this.loaded.size === COLLECTIONS && this.status === "loading") this.status = "ready";
       this.emit();
     };
 
@@ -312,7 +437,44 @@ export class PreviewStore {
         );
         loadedOne("resources");
       }, fail),
+      ...(Object.keys(DOC_READERS) as (keyof DocKinds)[]).map((kind) =>
+        this.db.collection(kind).onSnapshot((snap) => {
+          const read = DOC_READERS[kind] as (id: string, data: Record<string, unknown>) => DocKinds[typeof kind] | null;
+          const items = new Map(
+            snap.docs.flatMap((doc) => {
+              const item = doc.exists ? read(doc.id, doc.data() ?? {}) : null;
+              return item ? [[doc.id, item] as const] : [];
+            }),
+          );
+          this.setDocs(kind, items);
+          loadedOne(kind);
+        }, fail),
+      ),
     );
+  }
+
+  private setDocs<K extends keyof DocKinds>(kind: K, items: Map<string, DocKinds[K]>) {
+    (this as unknown as Record<K, Map<string, DocKinds[K]>>)[kind] = items;
+  }
+
+  private docs<K extends keyof DocKinds>(kind: K): Map<string, DocKinds[K]> {
+    return (this as unknown as Record<K, Map<string, DocKinds[K]>>)[kind];
+  }
+
+  /** Enregistre un élément (commerce, fichier, rappel, maquette) : affiché tout de suite, puis envoyé. */
+  async putDoc<K extends keyof DocKinds>(kind: K, item: DocKinds[K]): Promise<void> {
+    this.setDocs(kind, new Map(this.docs(kind)).set(item.id, item));
+    this.emit();
+    const { id, ...body } = item;
+    await this.enqueue(`${kind}/${id}`, () => this.db.collection(kind).doc(id).set(body as Record<string, unknown>));
+  }
+
+  async removeDoc(kind: keyof DocKinds, id: string): Promise<void> {
+    const items = new Map(this.docs(kind));
+    items.delete(id);
+    this.setDocs(kind, items);
+    this.emit();
+    await this.enqueue(`${kind}/${id}`, () => this.db.collection(kind).doc(id).delete());
   }
 
   stop() {

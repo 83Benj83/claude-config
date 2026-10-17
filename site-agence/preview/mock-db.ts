@@ -4,14 +4,33 @@
  * publiée.
  */
 import { todayIso } from "@/lib/dates";
+import { parseLead } from "@/lib/leads";
+import parisLeads from "../data/leads-paris-2026-10.json";
+import varLeads from "../data/leads-var-2026-10.json";
 import type { Db } from "./store";
 import { buildSeed } from "./seed-data";
+
+/** Les listes « À contacter » réelles (Paris et Var), comme dans la base de l'aperçu publié. */
+function leadDocs(today: string) {
+  return [...parisLeads, ...varLeads].flatMap((row, index) => {
+    const parsed = parseLead(row, today);
+    if (!parsed.ok) return [];
+    const { listDay, ...lead } = parsed.lead;
+    return [
+      {
+        collection: "leads",
+        id: `lead-${index + 1}`,
+        data: { ...lead, listDay, status: "open", doneBy: null, doneAt: null, prospectId: null, addedBy: null, batchId: null, outcome: null, createdAt: `${today}T06:00:00.000Z` },
+      },
+    ];
+  });
+}
 
 type Listener = { collection: string; order?: { field: string; dir: "asc" | "desc" }; limit?: number; next: (snap: unknown) => void };
 
 export async function createMockDb(): Promise<Db> {
   const collections = new Map<string, Map<string, Record<string, unknown>>>();
-  for (const doc of await buildSeed(todayIso(), { iterations: 2_000 })) {
+  for (const doc of [...(await buildSeed(todayIso(), { iterations: 2_000 })), ...leadDocs(todayIso())]) {
     if (!collections.has(doc.collection)) collections.set(doc.collection, new Map());
     collections.get(doc.collection)!.set(doc.id, structuredClone(doc.data));
   }
