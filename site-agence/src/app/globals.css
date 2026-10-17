@@ -389,6 +389,17 @@ dialog[open]::backdrop {
   }
 }
 
+/* Détail d'une ligne qu'on déplie : fondu et léger glissement. */
+.reveal-in {
+  animation: reveal-in 220ms var(--ease-out-expo) both;
+}
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 /* Changement d'écran : fondu très court, sans décalage de mise en page. */
 .screen-in {
   animation: fade-in 200ms ease-out both;

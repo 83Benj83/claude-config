@@ -1,6 +1,6 @@
 "use client";
 
-import { PhoneCallIcon } from "@phosphor-icons/react";
+import { PhoneCallIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState, useTransition, type FormEvent } from "react";
 import type { ActionResult, CallbackFormValues } from "@/lib/actions-contract";
 import { PRIORITY_LABELS } from "@/lib/callbacks";
@@ -57,6 +57,8 @@ export function CallbackForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Commerce déjà connu avec son numéro : l'essentiel d'abord (date, heure, info), le reste sur demande.
+  const [extrasOpen, setExtrasOpen] = useState(!lockedName || !initial.phone);
 
   const set = <K extends keyof CallbackFormValues>(key: K, value: CallbackFormValues[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -69,6 +71,7 @@ export function CallbackForm({
       const result = await onSubmit(form);
       if (!result.ok) {
         setErrors(result.errors ?? {});
+        if (result.errors && ["phone", "contactName", "priority"].some((key) => result.errors?.[key])) setExtrasOpen(true);
         setMessage(result.message ?? null);
         return;
       }
@@ -90,20 +93,6 @@ export function CallbackForm({
           <Field label="Ville" optional value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} maxLength={80} />
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label="Téléphone"
-          optional
-          type="tel"
-          inputMode="tel"
-          value={form.phone}
-          onChange={(e) => set("phone", e.target.value)}
-          error={errors.phone}
-          maxLength={30}
-        />
-        <Field label="Personne à demander" optional value={form.contactName} onChange={(e) => set("contactName", e.target.value)} error={errors.contactName} maxLength={80} />
-      </div>
-
       <ChipGroup
         label="Quand rappeler ?"
         name={`quand-${initial.name || "nouveau"}`}
@@ -123,17 +112,8 @@ export function CallbackForm({
         />
         <Field label="Heure" optional type="time" value={form.dueTime} onChange={(e) => set("dueTime", e.target.value)} error={errors.dueTime} />
       </div>
-
-      <ChipGroup<CallbackPriority>
-        label="Importance"
-        name={`importance-${initial.name || "nouveau"}`}
-        value={form.priority as CallbackPriority}
-        onChange={(value) => set("priority", value)}
-        error={errors.priority}
-        options={CALLBACK_PRIORITIES.map((value) => ({ value, label: PRIORITY_LABELS[value] }))}
-      />
       <TextArea
-        label="Infos utiles"
+        label="Info complémentaire"
         optional
         value={form.note}
         onChange={(e) => set("note", e.target.value)}
@@ -142,6 +122,41 @@ export function CallbackForm({
         maxLength={500}
         placeholder="Ex. gérant en déplacement, intéressé par le pack Pro"
       />
+
+      {extrasOpen ? (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Téléphone"
+              optional
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              onChange={(e) => set("phone", e.target.value)}
+              error={errors.phone}
+              maxLength={30}
+            />
+            <Field label="Personne à demander" optional value={form.contactName} onChange={(e) => set("contactName", e.target.value)} error={errors.contactName} maxLength={80} />
+          </div>
+          <ChipGroup<CallbackPriority>
+            label="Importance"
+            name={`importance-${initial.name || "nouveau"}`}
+            value={form.priority as CallbackPriority}
+            onChange={(value) => set("priority", value)}
+            error={errors.priority}
+            options={CALLBACK_PRIORITIES.map((value) => ({ value, label: PRIORITY_LABELS[value] }))}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setExtrasOpen(true)}
+          className="flex items-center gap-1.5 self-start text-sm font-medium text-accent-ink underline-offset-2 hover:underline"
+        >
+          <PlusIcon size={14} weight="bold" aria-hidden />
+          Plus de détails (téléphone, personne à demander, importance)
+        </button>
+      )}
       <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={pending} className={buttonClasses({ size: "lg" })}>
           <PhoneCallIcon size={18} weight="bold" aria-hidden />

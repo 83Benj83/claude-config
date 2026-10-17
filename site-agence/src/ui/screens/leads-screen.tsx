@@ -1,15 +1,15 @@
 "use client";
 
-import { ArrowCounterClockwiseIcon, CheckCircleIcon, ListChecksIcon, PlusIcon, UsersIcon } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon, CheckCircleIcon, ListChecksIcon, MagnifyingGlassIcon, PlusIcon, UsersIcon } from "@phosphor-icons/react";
 import { useState, useTransition } from "react";
 import { GENERIC_ERROR } from "@/lib/actions-contract";
 import { APP_TIME_ZONE, formatDayLong } from "@/lib/dates";
 import { normalizeText } from "@/lib/establishments";
 import { pluralize } from "@/lib/format";
-import type { DoneLeadRow, LeadRow, LeadsView } from "@/lib/leads";
+import { arrondissement, type DoneLeadRow, type LeadRow, type LeadsView } from "@/lib/leads";
 import { AddLead } from "../leads/add-lead";
 import { ExtractBatch, MyBatch } from "../leads/batch-panel";
-import { LeadCard } from "../leads/lead-card";
+import { LEAD_LIST_CLASSES, LeadCard } from "../leads/lead-card";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { Card, CardHeader, EmptyState, ScreenHeader } from "../primitives/surface";
@@ -25,7 +25,9 @@ const timeFormatter = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute
 export function LeadsScreen({ view }: { view: LeadsView }) {
   const [city, setCity] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const rows = city ? view.open.filter((row) => normalizeText(row.lead.city) === city) : view.open;
+  const [query, setQuery] = useState("");
+  const inCity = city ? view.open.filter((row) => normalizeText(row.lead.city) === city) : view.open;
+  const rows = query.trim() ? inCity.filter((row) => matches(row, query)) : inCity;
   const groups = groupByCity(rows);
 
   return (
@@ -84,7 +86,22 @@ export function LeadsScreen({ view }: { view: LeadsView }) {
                 ))}
               </div>
             )}
+            {view.open.length > SEARCH_FROM && (
+              <label className="relative block max-w-md">
+                <span className="sr-only">Rechercher un commerce</span>
+                <MagnifyingGlassIcon size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-subtle" aria-hidden />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Nom, secteur, arrondissement…"
+                  className="h-11 w-full rounded-full border border-line-input bg-surface pr-4 pl-10 text-[0.9375rem] text-fg placeholder:text-subtle focus:border-accent"
+                />
+              </label>
+            )}
           </div>
+
+          {groups.length === 0 && <p className="text-sm text-muted">Aucun commerce ne correspond à « {query.trim()} ».</p>}
 
           {groups.map((group) => (
             <section key={group.city} aria-label={group.city} className="flex flex-col gap-3">
@@ -92,7 +109,7 @@ export function LeadsScreen({ view }: { view: LeadsView }) {
                 {group.city}
                 <span className="text-sm font-medium text-subtle">{pluralize(group.rows.length, "commerce")}</span>
               </h2>
-              <ul className="grid gap-3 lg:grid-cols-2">
+              <ul className={LEAD_LIST_CLASSES}>
                 {group.rows.map((row) => (
                   <li key={row.lead.id} className="min-w-0">
                     <LeadCard row={row} today={view.today} canManage={view.canManage} addedBy={view.addedByNames[row.lead.id]} />
@@ -107,6 +124,19 @@ export function LeadsScreen({ view }: { view: LeadsView }) {
       {view.doneToday.length > 0 && <DoneToday rows={view.doneToday} />}
     </div>
   );
+}
+
+/** Au-delà de ce nombre de commerces, une recherche aide à s'y retrouver. */
+const SEARCH_FROM = 12;
+
+/** Recherche sans accents dans le nom, le secteur, l'adresse et l'arrondissement (« 11e »). */
+function matches(row: LeadRow, query: string) {
+  const { lead } = row;
+  const haystack = normalizeText([lead.name, lead.category, lead.address, arrondissement(lead.address), lead.city].filter(Boolean).join(" "));
+  return normalizeText(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word));
 }
 
 function groupByCity(rows: LeadRow[]) {

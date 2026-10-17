@@ -11,7 +11,7 @@ import { buttonClasses } from "../primitives/button";
 import { ChipGroup } from "../primitives/choice";
 import { Card, CardHeader } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
-import { LeadCard } from "./lead-card";
+import { LEAD_LIST_CLASSES, LeadCard } from "./lead-card";
 
 /** Extraire un fichier de 10 à 50 commerces : ils disparaissent de la liste des autres. */
 export function ExtractBatch({ view }: { view: LeadsView }) {
@@ -138,7 +138,7 @@ export function MyBatch({ view }: { view: LeadsView }) {
         <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${percent}%` }} />
       </div>
 
-      <ul className="grid gap-3 lg:grid-cols-2">
+      <ul className={LEAD_LIST_CLASSES}>
         {mine.rows.map((row) => (
           <li key={row.lead.id} className="min-w-0">
             <LeadCard row={row} today={view.today} canManage={false} addedBy={view.addedByNames[row.lead.id]} batch />

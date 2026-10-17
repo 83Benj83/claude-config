@@ -179,14 +179,16 @@ export function demoLeads(today: IsoDate): Lead[] {
     addedBy: null,
     batchId: null,
     outcome: null,
+    address: null,
+    tips: [] as string[],
     listDay: today,
     createdAt: `${today}T06:00:00.000Z`,
   };
   const phone = (n: number) => `04 78 00 00 ${String(n).padStart(2, "0")}`;
   const leads: Lead[] = [
-    { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: phone(1), email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google" },
+    { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: phone(1), email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google", address: "8 rue Mercière, 69002 Lyon", tips: ["Pas de site : seulement Instagram (1 200 abonnés)", "Pizzas au feu de bois, ouvert depuis 2015", "Angle : carte en ligne + commande à emporter"] },
     { ...base, id: "demo-lead-2", name: "Salon Coupe Nette", city: "Lyon", category: "Coiffeur", phone: null, email: "contact@coupenette.demo", instagram: null, facebook: "https://www.facebook.com/coupenette.demo", note: null },
-    { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: "04 91 00 00 02", email: null, instagram: null, facebook: null, note: "Ouvert le dimanche" },
+    { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: "04 91 00 00 02", email: null, instagram: null, facebook: null, note: "Ouvert le dimanche", address: "2 quai du Port, 13002 Marseille", tips: ["Aucun site ni réseau social trouvé", "Clientèle de touristes sur le Vieux-Port", "Angle : commandes de gâteaux en ligne"] },
   ];
   const cities = ["Lyon", "Marseille", "Toulon"];
   for (let n = 4; n <= 15; n += 1) {

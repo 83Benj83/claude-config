@@ -138,6 +138,11 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     toggleReaction: (input) => withMember((actor) => messages.toggleReaction(repository, actor, { id: input?.id, emoji: input?.emoji })),
     togglePin: (id) => withMember((actor) => messages.togglePin(repository, actor, String(id))),
     deleteMessage: (id) => withMember((actor) => messages.deleteMessage(repository, actor, String(id))),
+    async callbacksDue() {
+      const actor = await currentMemberOf(repository, session);
+      if (!actor?.welcomedAt) return 0;
+      return callbacks.callbacksDue(repository, clock());
+    },
     async chatStatus() {
       const actor = await currentMemberOf(repository, session);
       if (!actor?.welcomedAt) return { latestAt: null, latestAuthorId: null };

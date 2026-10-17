@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildLeadsView, contactFor, facebookUrl, instagramUrl, leadContacts, parseLead } from "@/lib/leads";
+import { arrondissement, buildLeadsView, contactFor, facebookUrl, instagramUrl, leadContacts, parseLead } from "@/lib/leads";
 import type { Lead } from "@/lib/types";
 import { makeMember, makeProspect } from "./helpers";
 
@@ -15,6 +15,8 @@ const lead = (id: string, overrides: Partial<Lead> = {}): Lead => ({
   instagram: null,
   facebook: null,
   note: null,
+  address: null,
+  tips: [],
   listDay: today,
   status: "open",
   doneBy: null,
@@ -44,9 +46,33 @@ describe("reading a lead", () => {
         instagram: "https://www.instagram.com/lezinc/",
         facebook: "https://www.facebook.com/lezinc",
         note: null,
+        address: null,
+        tips: [],
         listDay: today,
       },
     });
+  });
+
+  test("address and up to 3 call tips (list or « | »), each trimmed and capped", () => {
+    const parsed = parseLead(
+      { nom: "Le Zinc", ville: "Paris", adresse: " 12 rue Oberkampf, 75011 Paris ", tips: [" Pas de site ", "", "Bar à vins", "Terrasse", "En trop"] },
+      today,
+    );
+    expect(parsed.ok && parsed.lead.address).toBe("12 rue Oberkampf, 75011 Paris");
+    expect(parsed.ok && parsed.lead.tips).toEqual(["Pas de site", "Bar à vins", "Terrasse"]);
+    const piped = parseLead({ name: "X", city: "Y", "infos appel": "Un | Deux" }, today);
+    expect(piped.ok && piped.lead.tips).toEqual(["Un", "Deux"]);
+    const long = parseLead({ name: "X", city: "Y", tips: ["a".repeat(400)] }, today);
+    expect(long.ok && long.lead.tips[0]).toHaveLength(160);
+  });
+
+  test("Paris arrondissement read from the address", () => {
+    expect(arrondissement("12 rue Oberkampf, 75011 Paris")).toBe("11e");
+    expect(arrondissement("3 rue de Rivoli 75001 Paris")).toBe("1er");
+    expect(arrondissement("Avenue Foch, 75116 Paris")).toBe("16e");
+    expect(arrondissement("15 bd Bazeilles, 83000 Toulon")).toBeNull();
+    expect(arrondissement("75021 Paris")).toBeNull();
+    expect(arrondissement(null)).toBeNull();
   });
 
   test("name and city are required; unsafe links are dropped", () => {

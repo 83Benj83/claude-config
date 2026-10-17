@@ -20,6 +20,8 @@ const lead = (id: string, overrides: Partial<Lead> = {}): Lead => ({
   instagram: null,
   facebook: null,
   note: "Pas de site",
+  address: null,
+  tips: [],
   listDay: TODAY,
   status: "open",
   doneBy: null,

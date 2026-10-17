@@ -317,6 +317,12 @@ export async function deleteMessage(id: string): Promise<ActionResult> {
   return withMember(async (actor) => messages.deleteMessage(await getRepository(), actor, String(id)));
 }
 
+export async function callbacksDue(): Promise<number> {
+  const actor = await getCurrentMember();
+  if (!actor?.welcomedAt) return 0;
+  return callbacks.callbacksDue(await getRepository(), clock());
+}
+
 export async function chatStatus(): Promise<ChatStatus> {
   const actor = await getCurrentMember();
   if (!actor?.welcomedAt) return { latestAt: null, latestAuthorId: null };

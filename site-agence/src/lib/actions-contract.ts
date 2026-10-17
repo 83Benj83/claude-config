@@ -145,6 +145,8 @@ export type AppActions = {
   togglePin(id: string): Promise<ActionResult>;
   deleteMessage(id: string): Promise<ActionResult>;
   chatStatus(): Promise<ChatStatus>;
+  /** Rappels à faire aujourd'hui ou en retard (toute l'équipe). */
+  callbacksDue(): Promise<number>;
 };
 
 /** Dernier message de l'échange, pour signaler les nouveaux messages. */

@@ -12,6 +12,7 @@ import { usePlatform } from "../platform";
 import { NovaLogo } from "../primitives/brand-mark";
 import { Icon } from "../primitives/icon";
 import { NewBadge } from "../shell/app-shell";
+import { DueBadge, useCallbacksDue } from "../shell/callbacks-due";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -68,12 +69,14 @@ function SectionTile({ item }: { item: NavItem }) {
   const hintId = useId();
   const badgeId = useId();
   const unread = useChatUnread() && item.href === "/echange";
+  const due = useCallbacksDue();
+  const showDue = item.href === "/rappels" && due > 0;
   return (
     <Link
       href={item.href}
       {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       aria-label={item.label}
-      aria-describedby={unread ? `${hintId} ${badgeId}` : hintId}
+      aria-describedby={unread || showDue ? `${hintId} ${badgeId}` : hintId}
       className="group flex h-full items-center gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card transition-[border-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[var(--tone)] min-[340px]:flex-col min-[340px]:items-start min-[340px]:gap-3 sm:flex-row sm:items-center sm:gap-4"
     >
       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--tone-soft)] text-[var(--tone-ink)]">
@@ -83,6 +86,7 @@ function SectionTile({ item }: { item: NavItem }) {
         <span className="flex items-center gap-2">
           <span className="font-display text-[0.9375rem] font-bold tracking-tight text-fg">{item.label}</span>
           {unread && <NewBadge id={badgeId} />}
+          {showDue && <DueBadge id={badgeId} count={due} />}
         </span>
         <span id={hintId} className="block text-xs text-subtle">
           {item.hint}

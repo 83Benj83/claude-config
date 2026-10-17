@@ -10,10 +10,15 @@
 Mot de passe oublié ? Demande à Paul ou Benjamin. Ne donne jamais ton mot de passe à quelqu'un d'autre.
 
 **Se repérer**
-Le bouton **Menu**, en haut à gauche, mène à toutes les rubriques, sur toutes les pages.
+Le bouton **Menu**, en haut à gauche, mène à toutes les rubriques, sur toutes les pages. Une pastille sur **Rappels** indique combien d'appels sont à refaire aujourd'hui (ou en retard).
+
+**Sur ton téléphone, comme une application**
+Ouvre le site, puis **Ajouter à l'écran d'accueil** (iPhone : bouton Partager ; Android : menu ⋮). L'espace s'ouvre alors en plein écran, avec l'icône Astrinova.
 
 **Ta journée de prospection**
-- **La liste du jour** : ouvre **À contacter**. Tu y trouves des commerces sans site web, ville par ville, avec leur téléphone, e-mail, Instagram ou Facebook. Quand tu en as contacté un, appuie sur **Je l'ai contacté**, choisis comment, et c'est tout : il passe dans tes prospects du jour et disparaît de la liste pour les autres. Une erreur ? **Annuler**, le jour même.
+- **La liste du jour** : ouvre **À contacter**. Tu y trouves des commerces sans site web, ville par ville, une ligne chacun : le nom, le secteur et le numéro, avec un bouton vert pour appeler. La **flèche** déplie le reste : les **3 infos utiles pour l'appel** (ce qui lui manque, un fait sur le commerce, un angle d'accroche), l'adresse, Instagram ou Facebook. Une recherche (nom, secteur, « 11e »…) aide quand la liste est longue.
+  - Appel fait : **Effectué**, choisis comment, et c'est tout : il passe dans tes prospects du jour et disparaît de la liste pour les autres. Une erreur ? **Annuler**, le jour même.
+  - Pas joignable ou pas le bon moment : **À rappeler plus tard**, avec la date, l'heure et une info complémentaire (le reste, comme l'importance, est dans « Plus de détails »). Il part dans les **Rappels** de toute l'équipe.
   - **Ajouter un numéro** : tout le monde peut ajouter un commerce à appeler (le téléphone est obligatoire).
   - **Extraire un fichier** : prends 10, 20, 30, 40 ou 50 commerces d'un coup ; ils disparaissent de la liste des autres. Pour chacun, coche **Effectué** (il compte dans le classement à la fin) ou **À rappeler plus tard** (il part dans les rappels). Quand tout est traité, **Fichier terminé**. Tu peux aussi rendre le fichier tant que rien n'est traité.
 - **Rappels** : les appels à refaire, pour toute l'équipe, avec qui rappeler, quand, et qui l'a noté. Une coche et il disparaît. On peut aussi en créer un depuis **Prospecter** (« À rappeler plus tard »).

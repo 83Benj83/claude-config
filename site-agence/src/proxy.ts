@@ -31,7 +31,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Tout sauf les fichiers statiques, les images optimisées et les icônes.
-    "/((?!_next/static|_next/image|icon.svg|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml)$).*)",
+    // Tout sauf les fichiers statiques, les images optimisées, les icônes et le manifeste de l'application.
+    "/((?!_next/static|_next/image|icon.svg|app-icon/|manifest.webmanifest|robots.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|txt|xml)$).*)",
   ],
 };

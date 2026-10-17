@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: site.description,
   // Espace interne : ne doit pas apparaître dans les moteurs de recherche.
   robots: { index: false, follow: false },
+  // Ajouté à l'écran d'accueil d'un iPhone : icône et nom de l'application.
+  icons: { apple: "/app-icon/apple" },
+  appleWebApp: { capable: true, title: site.name, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

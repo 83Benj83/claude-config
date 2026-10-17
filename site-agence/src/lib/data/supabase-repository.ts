@@ -114,6 +114,8 @@ type LeadRow = {
   instagram: string | null;
   facebook: string | null;
   note: string | null;
+  address: string | null;
+  tips: string[] | null;
   list_day: IsoDate;
   status: LeadStatus;
   done_by: string | null;
@@ -225,7 +227,7 @@ const toBatch = (row: BatchRow): LeadBatch => ({
 });
 
 const LEAD_COLUMNS =
-  "id, name, city, category, phone, email, instagram, facebook, note, list_day, status, done_by, done_at, prospect_id, added_by, batch_id, outcome, created_at";
+  "id, name, city, category, phone, email, instagram, facebook, note, address, tips, list_day, status, done_by, done_at, prospect_id, added_by, batch_id, outcome, created_at";
 
 const toLead = (row: LeadRow): Lead => ({
   id: row.id,
@@ -237,6 +239,8 @@ const toLead = (row: LeadRow): Lead => ({
   instagram: row.instagram,
   facebook: row.facebook,
   note: row.note,
+  address: row.address,
+  tips: row.tips ?? [],
   listDay: row.list_day,
   status: row.status,
   doneBy: row.done_by,
@@ -258,6 +262,8 @@ const toLeadRow = (lead: Lead): LeadRow => ({
   instagram: lead.instagram,
   facebook: lead.facebook,
   note: lead.note,
+  address: lead.address,
+  tips: lead.tips,
   list_day: lead.listDay,
   status: lead.status,
   done_by: lead.doneBy,

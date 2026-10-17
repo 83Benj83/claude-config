@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type BrowserContextOptions, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContextOptions, type Locator, type Page } from "@playwright/test";
 
 /** Mot de passe des comptes de démonstration : identifiant + « 2026 ». */
 export const demoPassword = (login: string) => `${login}2026`;
@@ -58,4 +58,12 @@ export async function newContextLike(browser: Browser) {
   const { baseURL, locale, timezoneId, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } = test.info().project.use;
   const options: BrowserContextOptions = { baseURL, locale, timezoneId, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch };
   return browser.newContext(options);
+}
+
+/** Déplie une ligne de la liste « À contacter » (nom + numéro) pour voir le détail et les boutons. */
+export async function openLead(card: Locator) {
+  const toggle = card.locator("h3 button[aria-expanded]");
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }

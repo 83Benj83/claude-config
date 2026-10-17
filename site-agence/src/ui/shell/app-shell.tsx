@@ -9,6 +9,7 @@ import { Avatar } from "../primitives/avatar";
 import { BrandMark } from "../primitives/brand-mark";
 import { Icon } from "../primitives/icon";
 import { Sheet } from "../primitives/sheet";
+import { CallbacksDueProvider, DueBadge, useCallbacksDue } from "./callbacks-due";
 import { ThemeToggle } from "./theme-toggle";
 
 /*
@@ -27,6 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <ChatUnreadProvider>
+      <CallbacksDueProvider>
       <div className="min-h-dvh">
         <a
           href="#contenu"
@@ -43,6 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {me && <MenuDrawer open={menuOpen} onClose={closeMenu} />}
       </div>
+      </CallbacksDueProvider>
     </ChatUnreadProvider>
   );
 }
@@ -75,6 +78,8 @@ function DemoNotice() {
 function TopBar({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenMenu: () => void }) {
   const { me } = usePlatform();
   const unread = useChatUnread();
+  const due = useCallbacksDue();
+  const notices = [unread ? "nouveaux messages dans l'échange" : null, due > 0 ? `${due} rappel${due > 1 ? "s" : ""} à faire aujourd'hui` : null].filter(Boolean);
   return (
     <header className="sticky top-0 z-40 border-b border-line/80 before:absolute before:inset-0 before:-z-10 before:bg-bg/85 before:backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-3 px-3 sm:px-5 lg:px-7">
@@ -84,17 +89,19 @@ function TopBar({ menuOpen, onOpenMenu }: { menuOpen: boolean; onOpenMenu: () =>
             onClick={onOpenMenu}
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
-            aria-describedby={unread ? "menu-nouveaux" : undefined}
+            aria-describedby={notices.length > 0 ? "menu-nouveaux" : undefined}
             className="relative flex h-11 shrink-0 items-center gap-2 rounded-xl border border-line bg-surface px-3 text-sm font-semibold text-fg shadow-card transition-colors hover:border-accent hover:text-accent-ink"
           >
             <ListIcon size={22} weight="bold" aria-hidden />
             Menu
-            {unread && <span className="tone-coral absolute -top-1 -right-1 size-3 rounded-full bg-[var(--tone)] ring-2 ring-bg" aria-hidden />}
+            {notices.length > 0 && (
+              <span className={`${unread ? "tone-coral" : "tone-violet"} absolute -top-1 -right-1 size-3 rounded-full bg-[var(--tone)] ring-2 ring-bg`} aria-hidden />
+            )}
           </button>
         )}
-        {unread && (
-          <span id="menu-nouveaux" className="sr-only">
-            Nouveaux messages dans l&apos;échange
+        {notices.length > 0 && (
+          <span id="menu-nouveaux" className="sr-only first-letter:uppercase">
+            {notices.join(" ; ")}
           </span>
         )}
         <BrandMark />
@@ -137,6 +144,8 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
   const hintId = useId();
   const badgeId = useId();
   const unread = useChatUnread() && item.href === "/echange";
+  const due = useCallbacksDue();
+  const showDue = item.href === "/rappels" && due > 0;
   return (
     <Link
       href={item.href}
@@ -144,7 +153,7 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       aria-label={item.label}
-      aria-describedby={unread ? `${hintId} ${badgeId}` : hintId}
+      aria-describedby={unread || showDue ? `${hintId} ${badgeId}` : hintId}
       className={`tone-${item.tone} flex items-center gap-3 rounded-2xl px-2.5 py-2 transition-colors ${
         active ? "bg-[var(--tone-soft)]" : "hover:bg-surface-2"
       }`}
@@ -161,6 +170,7 @@ function MenuLink({ item, onNavigate }: { item: NavItem; onNavigate: () => void 
         </span>
       </span>
       {unread && <NewBadge id={badgeId} />}
+      {showDue && <DueBadge id={badgeId} count={due} />}
     </Link>
   );
 }

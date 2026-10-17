@@ -62,7 +62,7 @@ En production, le mode démo ne s'active jamais par accident : sans variables Su
 
 Le plus simple : depuis le projet Vercel, onglet **Storage**, ajoute **Supabase** (plan Free, région **Paris**, préfixe des variables laissé vide). Vercel relie la base au projet et crée lui-même `SUPABASE_URL`, `SUPABASE_SECRET_KEY` et `POSTGRES_URL_NON_POOLING`.
 
-Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers ; 0004 : visites et journal des connexions ; 0005 : liste « À contacter » ; 0006 : rappels et fichiers de 10 à 50 commerces ; 0007 : maquettes ; 0008 : salons de l'échange). Attention : les migrations ne passent que sur un déploiement de **production** ; un déploiement de prévisualisation de cette branche partage la base et n'aurait pas les nouvelles tables.
+Les tables se créent seules : avant chaque mise en ligne, Vercel lance `npm run db:migrate` ([`scripts/db-migrate.mjs`](scripts/db-migrate.mjs), voir [`vercel.json`](vercel.json)), qui applique dans l'ordre les fichiers de [`supabase/migrations`](supabase/migrations) pas encore passés (0002 : contrats, remise à zéro, téléphones ; 0003 : échange et espace de stockage privé des fichiers ; 0004 : visites et journal des connexions ; 0005 : liste « À contacter » ; 0006 : rappels et fichiers de 10 à 50 commerces ; 0007 : maquettes ; 0008 : salons de l'échange ; 0009 : adresse et infos utiles pour l'appel ; 0010 : 100 commerces à Paris). Attention : les migrations ne passent que sur un déploiement de **production** ; un déploiement de prévisualisation de cette branche partage la base et n'aurait pas les nouvelles tables.
 
 Base créée directement sur [supabase.com](https://supabase.com) : exécute ces fichiers dans **SQL Editor**, puis récupère l'URL du projet et la **clé secrète** (**Project Settings > API Keys**).
 
@@ -100,7 +100,7 @@ Les fonctions tournent à Paris, comme la base. [`.vercelignore`](.vercelignore)
 
 ### 5. Ajouter une liste « À contacter »
 
-Prépare un fichier JSON : un tableau de commerces `{ "nom", "ville", "categorie", "telephone", "email", "instagram", "facebook", "note" }` (nom et ville obligatoires ; Instagram en `@compte` ou en adresse https).
+Prépare un fichier JSON : un tableau de commerces `{ "nom", "ville", "categorie", "telephone", "email", "instagram", "facebook", "note", "adresse", "tips" }` (nom et ville obligatoires ; Instagram en `@compte` ou en adresse https ; `tips` : jusqu'à 3 infos utiles pour l'appel, affichées quand on déplie la ligne).
 
 ```bash
 npm run leads:add -- liste.json --verifier   # vérifie sans rien écrire
@@ -108,6 +108,8 @@ npm run leads:add -- liste.json --remplacer  # range l'ancienne liste, ajoute la
 ```
 
 Sans `--remplacer`, les commerces s'ajoutent à la liste en cours. Rien n'est écrit si une ligne est refusée.
+
+Sans accès direct à la base, une liste peut aussi arriver avec la prochaine mise en ligne : `npm run leads:seed-sql -- liste.json supabase/migrations/00XX_nom.sql "Titre"` écrit une migration qui l'ajoute une seule fois (un commerce déjà présent, même nom et même ville, est ignoré). C'est ainsi qu'est chargée la liste de Paris ([`data/leads-paris-2026-10.json`](data/leads-paris-2026-10.json), migration `0010_leads_paris.sql`).
 
 ## Personnaliser
 

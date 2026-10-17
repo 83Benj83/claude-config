@@ -23,6 +23,8 @@ const lead = (id: string, overrides: Partial<Lead> = {}): Lead => ({
   instagram: null,
   facebook: null,
   note: null,
+  address: null,
+  tips: [],
   listDay: TODAY,
   status: "open",
   doneBy: null,
@@ -218,5 +220,20 @@ describe("fichiers de 10 à 50 commerces", () => {
     expect((await leads.releaseBatch(repository, theo, batch.id)).ok).toBe(false);
     expect(await leads.releaseBatch(repository, lea, batch.id)).toMatchObject({ ok: true });
     expect((await repository.listLeads("2026-10-01T00:00:00Z")).every((l) => !l.batchId)).toBe(true);
+  });
+});
+
+describe("pastille des rappels", () => {
+  test("compte les rappels à faire aujourd'hui ou en retard, pas ceux à venir ni ceux déjà faits", async () => {
+    const repository = repositoryWith([]);
+    const yesterday = { today: "2026-10-13", now: "2026-10-13T09:00:00.000Z" };
+    await callbacks.addCallback(repository, lea, callbackInput({ name: "En retard", dueOn: "2026-10-13" }), yesterday);
+    await callbacks.addCallback(repository, lea, callbackInput({ name: "Aujourd'hui", dueOn: TODAY }), clock);
+    await callbacks.addCallback(repository, theo, callbackInput({ name: "Demain", dueOn: "2026-10-15" }), clock);
+    const done = await callbacks.addCallback(repository, theo, callbackInput({ name: "Déjà fait", dueOn: TODAY }), clock);
+    expect(await callbacks.callbacksDue(repository, clock)).toBe(3);
+    if (!done.ok) throw new Error(done.message);
+    await callbacks.completeCallback(repository, lea, done.data.callback.id, clock);
+    expect(await callbacks.callbacksDue(repository, clock)).toBe(2);
   });
 });

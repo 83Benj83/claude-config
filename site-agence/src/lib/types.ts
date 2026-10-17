@@ -178,6 +178,10 @@ export type Lead = {
   instagram: string | null;
   facebook: string | null;
   note: string | null;
+  /** Adresse postale (rue, code postal, ville). */
+  address: string | null;
+  /** Jusqu'à 3 infos courtes utiles pour l'appel (ce qui manque, un fait, un angle). */
+  tips: string[];
   /** Jour de la liste (heure de Paris). */
   listDay: IsoDate;
   status: LeadStatus;

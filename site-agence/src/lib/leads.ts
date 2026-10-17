@@ -11,7 +11,7 @@ import { BATCH_SIZES } from "./rules";
 import type { Channel, IsoDate, Lead, LeadBatch, Member, Prospect } from "./types";
 
 /** Ce qu'une ligne d'une nouvelle liste apporte (le reste est fixé à l'enregistrement). */
-export type NewLead = Pick<Lead, "name" | "city" | "category" | "phone" | "email" | "instagram" | "facebook" | "note" | "listDay">;
+export type NewLead = Pick<Lead, "name" | "city" | "category" | "phone" | "email" | "instagram" | "facebook" | "note" | "address" | "tips" | "listDay">;
 
 /** Adresses Instagram et Facebook : https seulement, sur le bon site, 160 caractères au plus. */
 const MAX_URL = 160;
@@ -49,6 +49,8 @@ const emailOf = (value: string | null) => (value && /^[^\s@]+@[^\s@]+\.[a-z]{2,}
 
 /** Noms de colonnes acceptés (français ou anglais, sans accents). */
 const FIELDS: Record<keyof Omit<NewLead, "listDay">, string[]> = {
+  address: ["adresse", "address"],
+  tips: ["tips", "infos appel", "infos utiles", "arguments"],
   name: ["nom", "name", "enseigne", "commerce"],
   city: ["ville", "city"],
   category: ["categorie", "category", "type", "activite"],
@@ -58,6 +60,27 @@ const FIELDS: Record<keyof Omit<NewLead, "listDay">, string[]> = {
   facebook: ["facebook", "fb"],
   note: ["note", "notes", "infos", "commentaire"],
 };
+
+/** Infos utiles pour l'appel : 3 au plus, 160 caractères chacune (liste, ou texte séparé par « | »). */
+export const MAX_TIPS = 3;
+const MAX_TIP = 160;
+
+function tipsOf(value: unknown): string[] {
+  const items = Array.isArray(value) ? value : typeof value === "string" ? value.split("|") : [];
+  return items
+    .map((item) => line(item, MAX_TIP))
+    .filter((item): item is string => Boolean(item))
+    .slice(0, MAX_TIPS);
+}
+
+/** Arrondissement parisien tiré de l'adresse (« 75011 » → « 11e »), sinon `null`. */
+export function arrondissement(address: string | null): string | null {
+  const code = address?.match(/\b75(0\d{2}|116)\b/)?.[1];
+  if (!code) return null;
+  const number = code === "116" ? 16 : Number(code);
+  if (number < 1 || number > 20) return null;
+  return number === 1 ? "1er" : `${number}e`;
+}
 
 /** Une ligne d'une liste (objet JSON) : nom et ville obligatoires, coordonnées vérifiées. */
 export function parseLead(input: unknown, listDay: IsoDate): { ok: true; lead: NewLead } | { ok: false; message: string } {
@@ -82,6 +105,8 @@ export function parseLead(input: unknown, listDay: IsoDate): { ok: true; lead: N
       instagram: instagramUrl(line(field("instagram"), 200)),
       facebook: facebookUrl(line(field("facebook"), 200)),
       note: line(field("note"), 300),
+      address: line(field("address"), 160),
+      tips: tipsOf(field("tips")),
       listDay,
     },
   };

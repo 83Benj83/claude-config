@@ -87,3 +87,9 @@ export async function deleteCallback(repository: Repository, actor: Member, id: 
   await repository.deleteCallback(callback.id);
   return { ok: true, data: null, message: `${callback.name} : rappel supprimé.` };
 }
+
+/** Rappels à faire aujourd'hui ou en retard : la pastille du menu et de l'accueil. */
+export async function callbacksDue(repository: Repository, clock: Clock): Promise<number> {
+  const all = await repository.listCallbacks(clock.now);
+  return all.filter((callback) => callback.status === "pending" && callback.dueOn <= clock.today).length;
+}

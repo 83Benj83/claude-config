@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, newContextLike, openMenu, openSection, signIn, unique } from "./helpers";
+import { loginAs, newContextLike, openLead, openMenu, openSection, signIn, unique } from "./helpers";
 
 test.describe("accès", () => {
   test("un visiteur non connecté est renvoyé vers la connexion", async ({ page }) => {
@@ -65,10 +65,15 @@ test.describe("à contacter", () => {
     await openSection(page, "À contacter");
     await expect(page.getByRole("heading", { level: 1, name: "À contacter" })).toBeVisible();
     if (test.info().project.name === "mobile") {
-      name = (await page.getByRole("article").filter({ has: page.getByRole("list", { name: /^Coordonnées de/ }) }).last().getByRole("heading").first().innerText()).trim();
+      const last = page.getByRole("article").filter({ has: page.getByRole("link", { name: /^Appeler / }) }).last();
+      name = (await last.locator("h3 span[id]").first().innerText()).trim();
     }
 
     const card = page.getByRole("article", { name });
+    // Ligne légère : le nom et un bouton d'appel ; la flèche déplie le reste.
+    await expect(card.getByRole("link", { name: `Appeler ${name}` })).toHaveAttribute("href", /^tel:/);
+    await expect(card.getByRole("button", { name: "Effectué" })).toHaveCount(0);
+    await openLead(card);
     await expect(card.getByRole("list", { name: `Coordonnées de ${name}` }).getByRole("link")).not.toHaveCount(0);
     await card.getByRole("button", { name: "Effectué" }).click();
     await card.getByRole("radio", { name: "Téléphone" }).check();

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, newContextLike, openSection, unique } from "./helpers";
+import { loginAs, newContextLike, openLead, openSection, unique } from "./helpers";
 
 test.describe("rappels et numéros ajoutés par l'équipe", () => {
   test("un membre ajoute un numéro ; un collègue le voit, le met en rappel ; un troisième le coche fait", async ({ page, browser }) => {
@@ -12,6 +12,7 @@ test.describe("rappels et numéros ajoutés par l'équipe", () => {
     await page.getByRole("textbox", { name: "Téléphone" }).fill("04 94 12 34 56");
     await page.getByRole("button", { name: "Ajouter à la liste" }).click();
     await expect(page.getByText(`${name} ajouté à la liste « À contacter ».`)).toBeVisible();
+    await openLead(page.getByRole("article", { name }));
     await expect(page.getByRole("article", { name })).toContainText("Ajouté par Léa Fontaine");
 
     // Un collègue le voit et le met en rappel pour demain.
@@ -21,10 +22,12 @@ test.describe("rappels et numéros ajoutés par l'équipe", () => {
     await theo.goto("/a-contacter");
     const card = theo.getByRole("article", { name });
     await expect(card).toBeVisible();
+    await openLead(card);
     await card.getByRole("button", { name: "À rappeler plus tard" }).click();
     await card.getByText("Demain", { exact: true }).click();
+    await card.getByRole("button", { name: /^Plus de détails/ }).click();
     await card.getByText("Haute", { exact: true }).click();
-    await card.getByLabel(/Infos utiles/).fill("Rappeler le gérant");
+    await card.getByLabel(/Info complémentaire/).fill("Rappeler le gérant");
     await card.getByRole("button", { name: "Envoyer dans les rappels" }).click();
     await expect(card).toBeHidden();
 
@@ -110,10 +113,14 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     const total = await cards.count();
     expect(total).toBeGreaterThan(0);
     // Le premier part en rappel, les autres sont marqués appelés.
+    await openLead(cards.first());
     await cards.first().getByRole("button", { name: "À rappeler plus tard" }).click();
     await cards.first().getByRole("button", { name: "Envoyer dans les rappels" }).click();
-    for (let i = 0; i < total - 1; i += 1) {
-      await file.getByRole("button", { name: "Effectué" }).first().click();
+    for (let i = 1; i < total; i += 1) {
+      const card = cards.nth(i);
+      await openLead(card);
+      await card.getByRole("button", { name: "Effectué" }).click();
+      await expect(card.getByRole("button", { name: "Annuler" })).toBeVisible();
     }
     await expect(file.getByText(`${total} sur ${total} traités`)).toBeVisible();
     await page.getByRole("button", { name: "Fichier terminé" }).click();
