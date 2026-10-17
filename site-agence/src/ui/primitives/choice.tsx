@@ -80,7 +80,7 @@ export function Segmented<T extends string>({
   size?: "sm" | "md";
 }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex max-w-full overflow-x-auto rounded-full border border-line bg-surface-2 p-1">
+    <div role="group" aria-label={label} className="inline-flex max-w-full self-start overflow-x-auto rounded-full border border-line bg-surface-2 p-1">
       {options.map((option) => {
         const active = option.value === value;
         return (

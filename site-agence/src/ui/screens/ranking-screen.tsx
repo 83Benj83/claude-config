@@ -64,7 +64,7 @@ export function RankingScreen({ view }: { view: RankingView }) {
           )}
           <div className="flex items-center justify-between gap-4 px-4 pt-5 pb-2 sm:px-5">
             <h2 className="text-sm font-semibold text-fg">Tous les prospecteurs</h2>
-            <p className="hidden text-xs text-subtle sm:block">Variation {info.comparison}</p>
+            <p className="text-right text-xs text-subtle">Variation {info.comparison}</p>
           </div>
           <RankingList rows={data.rows} meId={view.meId} comparison={info.comparison} />
         </Card>

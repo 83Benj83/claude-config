@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 /** Pastille « Nouveau » : quelqu'un a écrit dans l'échange depuis la dernière visite. */
 export function NewBadge({ id }: { id: string }) {
   return (
-    <span id={id} className="tone-coral shrink-0 rounded-full bg-[var(--tone)] px-2 py-0.5 text-[0.6875rem] font-semibold text-white">
+    <span id={id} className="tone-coral shrink-0 rounded-full bg-[var(--tone-ink)] px-2 py-0.5 text-[0.6875rem] font-semibold text-surface">
       Nouveau
     </span>
   );

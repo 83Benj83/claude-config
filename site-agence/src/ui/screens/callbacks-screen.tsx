@@ -44,7 +44,7 @@ export function CallbacksScreen({ view }: { view: CallbacksView }) {
   const filters: { value: Filter; label: string }[] = [
     { value: "pending", label: `À rappeler (${view.counts.pending})` },
     { value: "done", label: `Déjà appelés (${view.done.length})` },
-    { value: "all", label: "Tous" },
+    { value: "all", label: `Tous (${view.counts.pending + view.done.length})` },
   ];
 
   return (

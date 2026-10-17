@@ -168,12 +168,11 @@ function ResourceCard({ resource, canEdit, onEdit }: { resource: Resource; canEd
 
       {resource.kind === "template" ? (
         <div className="relative">
-          <p
-            id={valueId}
-            className={`rounded-xl bg-surface-2 px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-fg ${long && !expanded ? "line-clamp-5" : ""}`}
-          >
-            <Placeholders text={resource.value} />
-          </p>
+          <div className="rounded-xl bg-surface-2 px-4 py-3">
+            <p id={valueId} className={`text-sm leading-relaxed whitespace-pre-line text-fg ${long && !expanded ? "line-clamp-5" : ""}`}>
+              <Placeholders text={resource.value} />
+            </p>
+          </div>
           {long && (
             <button type="button" onClick={() => setExpanded((value) => !value)} className="mt-1.5 text-sm font-medium text-accent-ink hover:underline">
               {expanded ? "Réduire" : "Lire tout le modèle"}
@@ -181,7 +180,7 @@ function ResourceCard({ resource, canEdit, onEdit }: { resource: Resource; canEd
           )}
         </div>
       ) : (
-        <p id={valueId} className="truncate rounded-xl bg-surface-2 px-3.5 py-2.5 font-mono text-[0.8125rem] text-fg" title={resource.value}>
+        <p id={valueId} className="truncate rounded-xl bg-surface-2 px-3.5 py-2.5 text-sm text-fg tabular-nums" title={resource.value}>
           {resource.kind === "link" ? resource.value.replace(/^https?:\/\//, "") : resource.value}
         </p>
       )}
@@ -285,7 +284,7 @@ function ResourceForm({ resource, nextSortOrder, onDone }: { resource: Resource 
           error={errors.value}
           rows={8}
           maxLength={5000}
-          hint="Astuce : mets [Nom du restaurant] ou [Prénom] là où il faut personnaliser."
+          hint="Astuce : mets [Nom du commerce] ou [Prénom] là où il faut personnaliser."
         />
       ) : (
         <Field

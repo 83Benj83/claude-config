@@ -18,7 +18,7 @@ const SEARCH_DELAY_MS = 300;
 type SearchState = { key: string; results: Establishment[] };
 
 /**
- * « Déjà contacté ? » : on tape le nom d'un restaurant, on sait tout de suite
+ * « Déjà contacté ? » : on tape le nom d'un commerce, on sait tout de suite
  * si l'équipe l'a déjà démarché, par qui, quand et comment.
  */
 export function SearchScreen({ view }: { view: DirectoryView }) {
@@ -63,8 +63,8 @@ export function SearchScreen({ view }: { view: DirectoryView }) {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Nom du restaurant"
-              aria-label="Nom du restaurant"
+              placeholder="Nom du commerce"
+              aria-label="Nom du commerce"
               autoFocus
               className={`${controlClasses} h-14 pl-12 text-lg`}
             />

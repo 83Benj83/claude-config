@@ -11,7 +11,7 @@ import { buttonClasses } from "../primitives/button";
 import { Field, FormMessage } from "../primitives/field";
 
 const STEPS = [
-  { icon: PlusCircleIcon, title: "Prospecter", text: "Ajoute chaque restaurant contacté : nom, ville et moyen de contact." },
+  { icon: PlusCircleIcon, title: "Prospecter", text: "Ajoute chaque commerce contacté : nom, ville et moyen de contact." },
   { icon: MagnifyingGlassIcon, title: "Déjà contacté ?", text: "Vérifie en deux secondes qu'un établissement n'a pas déjà été démarché." },
   { icon: BookOpenTextIcon, title: "Guide et ressources", text: "Le guide du prospecteur, les modèles de message et les liens utiles, à portée de main." },
 ];

@@ -53,7 +53,7 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
         title="Contrats"
         description={
           view.canEdit
-            ? "Les sites en cours de création et ceux déjà en ligne. Tu es le seul à pouvoir les gérer ; l'équipe les consulte."
+            ? "Les sites en cours de création et ceux déjà en ligne. C'est toi qui les gères ; l'équipe les consulte."
             : "Les sites en cours de création et ceux déjà en ligne. La gestion des contrats est réservée à l'administrateur."
         }
         actions={

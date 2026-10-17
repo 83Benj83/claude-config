@@ -68,7 +68,7 @@ export function ChatScreen({ view }: { view: MessagesView }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <ScreenHeader title="Échange" description="La discussion de l'équipe, rangée par salons : tout le monde voit tout, en direct." />
+      <ScreenHeader title="Échange" compactOnPhone description="La discussion de l'équipe, rangée par salons : tout le monde voit tout, en direct." />
 
       <div role="tablist" aria-label="Salons" className="flex gap-2 overflow-x-auto pb-1">
         {channels.map((entry) => (
@@ -92,12 +92,13 @@ export function ChatScreen({ view }: { view: MessagesView }) {
         ))}
       </div>
 
-      <Card className="flex h-[max(24rem,calc(100dvh-20rem))] flex-col overflow-hidden">
+      <Card className="flex h-[max(24rem,calc(100dvh-15.5rem))] flex-col overflow-hidden sm:h-[max(24rem,calc(100dvh-20rem))]">
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5 sm:px-5">
-          <p className="min-w-0 flex-1 truncate text-sm text-muted">
-            <strong className="font-semibold text-fg"># {active.label}</strong> · {active.description}
+          <p className="min-w-0 basis-full truncate text-sm text-muted sm:flex-1 sm:basis-auto">
+            <strong className="font-semibold text-fg"># {active.label}</strong>
+            <span className="max-sm:hidden"> · {active.description}</span>
           </p>
-          <div className="relative w-full sm:w-56">
+          <div className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
             <MagnifyingGlassIcon size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-subtle" aria-hidden />
             <input
               type="search"

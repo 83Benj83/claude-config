@@ -23,15 +23,15 @@ test("aperçu local : connexion, ajout, doublon, recherche, création d'identifi
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByRole("heading", { level: 1, name: /Léa/ })).toBeVisible();
   await openSection(page, "Prospecter");
-  await page.getByLabel("Nom du restaurant").fill("Chez Aperçu");
+  await page.getByLabel("Nom du commerce").fill("Chez Aperçu");
   await page.getByLabel("Ville", { exact: true }).fill("Lyon");
   await page.locator("label").filter({ hasText: /^Téléphone$/ }).click();
   await page.getByRole("button", { name: "Ajouter le prospect" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Chez Aperçu ajouté" })).toBeVisible();
-  await page.getByLabel("Nom du restaurant").fill("chez apercu");
+  await page.getByLabel("Nom du commerce").fill("chez apercu");
   await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
   await openSection(page, "Déjà contacté ?");
-  await page.getByRole("searchbox", { name: "Nom du restaurant" }).fill("Aperçu");
+  await page.getByRole("searchbox", { name: "Nom du commerce" }).fill("Aperçu");
   await expect(page.getByRole("button", { name: /Chez Aperçu/ })).toBeVisible();
   await openSection(page, "Classement");
   await expect(page.getByRole("heading", { level: 1, name: "Classement" })).toBeVisible();

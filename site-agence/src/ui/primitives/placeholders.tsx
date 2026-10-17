@@ -7,7 +7,7 @@ export function Placeholders({ text }: { text: string }) {
     <>
       {parts.map((part, index) =>
         part.startsWith("[") && part.endsWith("]") ? (
-          <mark key={index} className="rounded-md bg-accent-soft px-1 py-px font-medium text-accent-ink">
+          <mark key={index} className="rounded-md bg-accent-soft box-decoration-clone px-1 py-px font-medium text-accent-ink">
             {part.slice(1, -1)}
           </mark>
         ) : (

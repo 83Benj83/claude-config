@@ -93,10 +93,10 @@ function todayStatus(row: ActivityRow, today: IsoDate): string {
   if (row.today) {
     const first = time(row.today.firstSeenAt);
     const last = time(row.today.lastSeenAt);
-    return first === last ? `Venu à ${first}` : `Venu à ${first} · dernière visite à ${last}`;
+    return first === last ? `Arrivée à ${first}` : `Arrivée à ${first} · dernière visite à ${last}`;
   }
   if (row.neverSeen) return "Jamais connecté";
-  return row.lastSeenAt ? `Pas encore venu · dernière visite ${when(row.lastSeenAt, today)}` : "Pas encore venu";
+  return row.lastSeenAt ? `Pas de visite aujourd'hui · dernière visite ${when(row.lastSeenAt, today)}` : "Pas de visite aujourd'hui";
 }
 
 /** Les 7 derniers jours : présence jour par jour, prospects et messages. */
@@ -170,7 +170,7 @@ function LoginsCard({ logins, today }: { logins: ActivityLogin[]; today: IsoDate
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-fg">{event.name ?? "Identifiant inconnu"}</p>
                 <p className={`text-xs ${event.ok ? "text-subtle" : "text-danger"}`} suppressHydrationWarning>
-                  {event.ok ? "Connecté" : "Mot de passe refusé"} · {when(event.at, today)}
+                  {event.ok ? "Connexion réussie" : "Mot de passe refusé"} · {when(event.at, today)}
                 </p>
               </div>
             </li>

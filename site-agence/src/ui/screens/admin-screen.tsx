@@ -240,7 +240,7 @@ function MemberRow({ member, isMe, onEdit }: { member: Member; isMe: boolean; on
         <p className="mt-0.5 truncate text-xs text-subtle">
           {member.jobTitle}
           {" · "}
-          {!member.active ? "désactivé" : member.welcomedAt ? (lastLogin ? `dernière connexion le ${lastLogin}` : "déjà connecté") : "jamais connecté"}
+          {!member.active ? "désactivé" : member.welcomedAt ? (lastLogin ? `dernière connexion le ${lastLogin}` : "première connexion faite") : "aucune connexion"}
         </p>
       </div>
       <div className="hidden shrink-0 items-center gap-1.5 sm:flex">

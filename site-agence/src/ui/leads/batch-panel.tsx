@@ -9,65 +9,87 @@ import type { LeadsView } from "@/lib/leads";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { ChipGroup } from "../primitives/choice";
-import { Card, CardHeader } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 import { LEAD_LIST_CLASSES, LeadCard } from "./lead-card";
 
-/** Extraire un fichier de 10 à 50 commerces : ils disparaissent de la liste des autres. */
+/**
+ * Extraire un fichier de 10 à 50 commerces : ils disparaissent de la liste des
+ * autres. Replié en une ligne pour garder la liste légère ; on choisit la taille
+ * en le dépliant.
+ */
 export function ExtractBatch({ view }: { view: LeadsView }) {
   const { actions } = usePlatform();
   const toast = useToast();
+  const [open, setOpen] = useState(false);
   const [size, setSize] = useState<string>(String(view.batchSizes[0]));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const available = view.open.length;
 
   return (
-    <Card aria-labelledby="extraire-fichier">
-      <CardHeader
-        id="extraire-fichier"
-        title="Extraire un fichier"
-        description="Prends 10 à 50 commerces d'un coup : ils sont à toi et disparaissent de la liste des autres, le temps de les appeler."
-      />
-      <div className="flex flex-col gap-4 px-5 pt-5 pb-6 sm:px-6">
-        <ChipGroup
-          label="Combien de commerces ?"
-          name="taille-fichier"
-          value={size}
-          onChange={setSize}
-          options={view.batchSizes.map((value) => ({ value: String(value), label: String(value) }))}
-        />
-        <p className="text-sm text-muted">
-          {pluralize(available, "commerce")} disponible{available > 1 ? "s" : ""}, dont {view.withPhone} avec numéro (pris en premier).
-        </p>
-        {error && (
-          <p role="alert" className="text-sm text-danger">
-            {error}
-          </p>
-        )}
-        <div>
-          <button
-            type="button"
-            disabled={pending || available === 0}
-            onClick={() =>
-              start(async () => {
-                const result = await actions.extractBatch({ size: Number(size) });
-                if (!result.ok) {
-                  setError(result.message ?? GENERIC_ERROR);
-                  return;
-                }
-                setError(null);
-                toast(result.message ?? "Fichier extrait.");
-              })
-            }
-            className={buttonClasses({ size: "lg" })}
-          >
-            <FileArrowDownIcon size={18} weight="bold" aria-hidden />
-            {pending ? "Extraction…" : `Extraire ${size} commerces`}
-          </button>
+    <section aria-labelledby="extraire-fichier" className="rounded-2xl border border-line bg-surface shadow-card">
+      <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-ink">
+          <FileArrowDownIcon size={20} weight="bold" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 id="extraire-fichier" className="text-[0.9375rem] font-semibold text-fg">
+            Extraire un fichier
+          </h2>
+          <p className="text-sm text-muted">10 à 50 commerces rien que pour toi, le temps de les appeler.</p>
         </div>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="extraire-fichier-choix"
+          aria-label={open ? "Fermer le choix du fichier" : "Choisir la taille du fichier"}
+          onClick={() => setOpen((value) => !value)}
+          className={buttonClasses({ variant: open ? "ghost" : "secondary", size: "sm" })}
+        >
+          {open ? "Fermer" : "Choisir"}
+        </button>
       </div>
-    </Card>
+      {open && (
+        <div id="extraire-fichier-choix" className="reveal-in flex flex-col gap-4 border-t border-line px-4 pt-4 pb-5 sm:px-5">
+          <ChipGroup
+            label="Combien de commerces ?"
+            name="taille-fichier"
+            value={size}
+            onChange={setSize}
+            options={view.batchSizes.map((value) => ({ value: String(value), label: String(value) }))}
+          />
+          <p className="text-sm text-muted">
+            {pluralize(available, "commerce")} disponible{available > 1 ? "s" : ""}, dont {view.withPhone} avec numéro (pris en premier).
+          </p>
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
+          <div>
+            <button
+              type="button"
+              disabled={pending || available === 0}
+              onClick={() =>
+                start(async () => {
+                  const result = await actions.extractBatch({ size: Number(size) });
+                  if (!result.ok) {
+                    setError(result.message ?? GENERIC_ERROR);
+                    return;
+                  }
+                  setError(null);
+                  toast(result.message ?? "Fichier extrait.");
+                })
+              }
+              className={buttonClasses({})}
+            >
+              <FileArrowDownIcon size={18} weight="bold" aria-hidden />
+              {pending ? "Extraction…" : `Extraire ${size} commerces`}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

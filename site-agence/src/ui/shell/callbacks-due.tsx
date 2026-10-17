@@ -46,7 +46,7 @@ export const useCallbacksDue = () => use(CallbacksDueContext);
 /** Pastille chiffrée : « 3 » avec, pour les lecteurs d'écran, « 3 rappels à faire aujourd'hui ». */
 export function DueBadge({ id, count }: { id: string; count: number }) {
   return (
-    <span id={id} className="tone-violet shrink-0 rounded-full bg-[var(--tone)] px-2 py-0.5 text-[0.6875rem] font-semibold text-white tabular-nums">
+    <span id={id} className="tone-violet shrink-0 rounded-full bg-[var(--tone-ink)] px-2 py-0.5 text-[0.6875rem] font-semibold text-surface tabular-nums">
       <span aria-hidden>{count > 99 ? "99+" : count}</span>
       <span className="sr-only">
         {count} rappel{count > 1 ? "s" : ""} à faire aujourd&apos;hui

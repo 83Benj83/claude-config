@@ -32,7 +32,7 @@ export function ReportScreen({ view }: { view: ReportView }) {
     <div className="flex flex-col gap-6">
       <ScreenHeader
         title="Bilan du mois"
-        description="Combien de restaurants chacun a contactés, jour par jour."
+        description="Combien de commerces chacun a contactés, jour par jour."
         actions={<ExportButtons month={view.month} />}
       />
 

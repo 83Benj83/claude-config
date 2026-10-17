@@ -31,7 +31,7 @@ export const site = {
   ],
 
   about: {
-    title: "Vous trouvez les clients, l'équipe fait le reste.",
+    title: "Tu trouves les clients, l'équipe fait le reste.",
     body: "Astrinova conçoit des sites internet professionnels pour les commerces et les petites entreprises : restaurants, snacks, salons de thé, bubble tea, cafés, boulangeries, coiffeurs, barbiers, instituts de beauté, boutiques…",
   },
 

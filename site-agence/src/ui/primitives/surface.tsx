@@ -48,7 +48,18 @@ function useSection() {
 }
 
 /** En-tête d'écran : famille de la rubrique (en couleur), titre, phrase d'accroche, actions à droite. */
-export function ScreenHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
+export function ScreenHeader({
+  title,
+  description,
+  actions,
+  compactOnPhone = false,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  /** Sur téléphone, sans la phrase d'explication (écrans où chaque ligne compte, comme l'échange). */
+  compactOnPhone?: boolean;
+}) {
   const section = useSection();
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -62,7 +73,7 @@ export function ScreenHeader({ title, description, actions }: { title: ReactNode
           </p>
         )}
         <h1 className="font-display text-2xl font-bold tracking-tight text-fg sm:text-[2rem]">{title}</h1>
-        {description && <p className="mt-1.5 max-w-[62ch] text-[0.9375rem] text-muted">{description}</p>}
+        {description && <p className={`mt-1.5 max-w-[62ch] text-[0.9375rem] text-muted ${compactOnPhone ? "max-sm:hidden" : ""}`}>{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>
@@ -73,8 +84,8 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
       {icon && <span className="grid size-12 place-items-center rounded-full bg-accent-soft text-accent-ink">{icon}</span>}
-      <p className="font-display text-lg font-bold tracking-tight text-fg">{title}</p>
-      {children && <div className="max-w-sm text-sm text-muted">{children}</div>}
+      <p className="font-display text-lg font-bold tracking-tight text-balance text-fg">{title}</p>
+      {children && <div className="max-w-sm text-sm text-pretty text-muted">{children}</div>}
       {action}
     </div>
   );

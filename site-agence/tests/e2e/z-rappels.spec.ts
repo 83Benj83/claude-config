@@ -80,6 +80,7 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     test.skip(test.info().project.name === "mobile", "Un seul passage : les deux projets partagent les mêmes données.");
     await loginAs(page, "lea", "Léa Fontaine");
     await openSection(page, "À contacter");
+    await page.getByRole("button", { name: "Choisir la taille du fichier" }).click();
     await page.getByText("10", { exact: true }).click();
     await page.getByRole("button", { name: /^Extraire 10 commerces/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: "Mon fichier" })).toBeVisible();
@@ -104,6 +105,7 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     test.skip(test.info().project.name === "mobile", "Un seul passage : les deux projets partagent les mêmes données.");
     await loginAs(page, "lea", "Léa Fontaine");
     await openSection(page, "À contacter");
+    await page.getByRole("button", { name: "Choisir la taille du fichier" }).click();
     await page.getByText("10", { exact: true }).click();
     await page.getByRole("button", { name: /^Extraire 10 commerces/ }).click();
     const file = page.getByRole("region", { name: "Mon fichier" });

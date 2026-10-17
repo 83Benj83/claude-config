@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDownIcon, ArrowUpIcon, EqualsIcon } from "@phosphor-icons/react";
-import { formatDelta } from "@/lib/format";
+import { formatInt } from "@/lib/format";
 
 /** Variation par rapport à la période précédente : flèche + valeur, jamais la couleur seule. */
 export function Delta({ value, label }: { value: number; label: string }) {
@@ -10,7 +10,7 @@ export function Delta({ value, label }: { value: number; label: string }) {
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-medium tabular ${tone}`} title={label}>
       <Icon size={12} weight="bold" aria-hidden />
-      {value === 0 ? "=" : formatDelta(value)}
+      {value === 0 ? null : formatInt(Math.abs(value))}
       <span className="sr-only"> {label}</span>
     </span>
   );

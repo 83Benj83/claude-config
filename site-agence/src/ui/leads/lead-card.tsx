@@ -90,7 +90,14 @@ export function LeadCard({
               </span>
               {meta && <span className="mt-0.5 block truncate text-sm text-subtle tabular-nums">{meta}</span>}
             </span>
-            {known && <span className="hidden shrink-0 rounded-full bg-gold-soft px-2 py-0.5 text-xs font-medium text-gold-ink sm:inline">Déjà contacté</span>}
+            {known && (
+              <span className="shrink-0 rounded-full bg-gold-soft px-2 py-0.5 text-xs font-medium text-gold-ink" title="Déjà contacté par l'équipe">
+                <span className="sm:hidden" aria-hidden>
+                  Déjà
+                </span>
+                <span className="max-sm:sr-only">Déjà contacté</span>
+              </span>
+            )}
             {handled && (
               <span className="flex shrink-0 items-center gap-1 rounded-full bg-success-soft px-2 py-0.5 text-xs font-medium text-success">
                 <CheckCircleIcon size={14} weight="fill" aria-hidden />
@@ -110,13 +117,15 @@ export function LeadCard({
           <a
             href={telHref(lead.phone)}
             aria-label={`Appeler ${lead.name}`}
-            className="grid size-10 shrink-0 place-items-center rounded-full bg-success-soft text-success transition-transform hover:scale-105 active:scale-95"
+            // L'appel déplie aussi la ligne : au retour, « Effectué » ou « À rappeler » sont à portée de pouce.
+            onClick={() => setOpen(true)}
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-success-soft text-success transition-transform hover:scale-105 active:scale-95"
           >
             <PhoneIcon size={18} weight="fill" aria-hidden />
           </a>
         ) : (
           // Même largeur sans numéro : les flèches restent alignées d'une ligne à l'autre.
-          <span className="size-10 shrink-0" aria-hidden />
+          <span className="size-11 shrink-0" aria-hidden />
         )}
       </div>
       {open && (

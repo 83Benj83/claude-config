@@ -297,14 +297,18 @@
       radial-gradient(80% 70% at 0% 100%, rgb(232 193 119 / 0.22), transparent 60%),
       #17151f;
   }
-  .sky-stars {
-    background-image:
+  /* Étoiles posées par-dessus les halos (les deux couches dans le même fond, sinon l'une efface l'autre). */
+  .sky.sky-stars {
+    background:
       radial-gradient(1.5px 1.5px at 12% 22%, rgb(255 255 255 / 0.7), transparent 60%),
       radial-gradient(1px 1px at 32% 68%, rgb(255 255 255 / 0.55), transparent 60%),
       radial-gradient(1.5px 1.5px at 58% 18%, rgb(255 255 255 / 0.6), transparent 60%),
       radial-gradient(1px 1px at 78% 52%, rgb(255 255 255 / 0.5), transparent 60%),
       radial-gradient(1.5px 1.5px at 90% 84%, rgb(255 255 255 / 0.55), transparent 60%),
-      radial-gradient(1px 1px at 46% 88%, rgb(255 255 255 / 0.45), transparent 60%);
+      radial-gradient(1px 1px at 46% 88%, rgb(255 255 255 / 0.45), transparent 60%),
+      radial-gradient(120% 90% at 100% 0%, rgb(169 155 234 / 0.42), transparent 55%),
+      radial-gradient(80% 70% at 0% 100%, rgb(232 193 119 / 0.22), transparent 60%),
+      #17151f;
   }
 
   .tabular {

@@ -144,7 +144,7 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
               <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                 <Field
                   ref={nameRef}
-                  label="Nom du restaurant"
+                  label="Nom du commerce"
                   value={form.name}
                   onChange={(event) => set("name", event.target.value)}
                   error={errors.name}
@@ -236,10 +236,13 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
             </form>
             )}
           </Card>
-          <ImportList today={view.today} />
         </div>
 
         <MyProspects view={view} />
+        {/* L'import (fichier Excel ou CSV) sert surtout sur ordinateur : en dernier sur téléphone. */}
+        <div className="min-w-0 lg:col-span-7">
+          <ImportList today={view.today} />
+        </div>
       </div>
     </div>
   );
@@ -287,7 +290,7 @@ function MyProspects({ view }: { view: ProspectionView }) {
   for (const prospect of view.mine) byDay.set(prospect.date, [...(byDay.get(prospect.date) ?? []), prospect]);
 
   return (
-    <Card className="flex flex-col lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100dvh-3rem)]" aria-labelledby="mes-prospects">
+    <Card className="flex flex-col lg:sticky lg:top-6 lg:col-span-5 lg:row-span-2 lg:max-h-[calc(100dvh-3rem)]" aria-labelledby="mes-prospects">
       <div className="grid grid-cols-3 border-b border-line">
         {[
           { label: "Aujourd'hui", value: view.todayCount },

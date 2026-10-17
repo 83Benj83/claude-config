@@ -54,7 +54,7 @@ function OrgTree({ heads, context }: { heads: OrgNode[]; context: Context }) {
   return (
     <section aria-label={`Équipe de ${label}`} className="flex flex-col items-center">
       {heads.length > 1 && <p className="mb-3 text-xs font-medium tracking-wide text-subtle uppercase">Co-direction</p>}
-      <div className={`grid w-full gap-3 ${heads.length > 1 ? "max-w-2xl sm:grid-cols-2" : "max-w-xs"}`}>
+      <div className={`grid w-full gap-3 ${heads.length > 1 ? "max-w-2xl sm:grid-cols-2" : "md:max-w-xs"}`}>
         {heads.map((head) => (
           <MemberCard key={head.member.id} member={head.member} context={context} emphasis />
         ))}
@@ -62,9 +62,9 @@ function OrgTree({ heads, context }: { heads: OrgNode[]; context: Context }) {
 
       {columns.length > 0 && (
         <>
-          <span aria-hidden className="h-10 w-px bg-line-strong" />
+          <span aria-hidden className="h-10 w-px bg-line-strong max-md:ml-5 max-md:h-4 max-md:self-start" />
           <div
-            className="relative grid w-full gap-x-4 gap-y-10 md:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
+            className="relative grid w-full gap-x-4 gap-y-4 max-md:ml-5 max-md:w-auto max-md:self-stretch max-md:border-l max-md:border-line-strong max-md:pt-2 max-md:pl-4 md:gap-y-10 md:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
             style={{ "--cols": columnCount } as CSSProperties}
           >
             {columnCount > 1 && (
@@ -75,7 +75,9 @@ function OrgTree({ heads, context }: { heads: OrgNode[]; context: Context }) {
               />
             )}
             {columns.map((column) => (
-              <div key={column.member.id} className="flex flex-col items-center">
+              <div key={column.member.id} className="relative flex flex-col items-center">
+                {/* Téléphone : petit trait vers le rail de gauche ; ordinateur : trait vertical depuis la barre du haut. */}
+                <span aria-hidden className="absolute top-8 -left-4 h-px w-4 bg-line-strong md:hidden" />
                 <span aria-hidden className="hidden h-6 w-px bg-line-strong md:block" />
                 <div className="w-full">
                   <MemberCard member={column.member} context={context} emphasis />

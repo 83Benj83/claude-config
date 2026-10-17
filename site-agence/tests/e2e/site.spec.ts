@@ -125,11 +125,11 @@ test.describe("activité (admins)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Activité" })).toBeVisible();
 
     const today = page.getByRole("list", { name: "Présence aujourd'hui" }).getByRole("listitem").filter({ hasText: "Mehdi Belkacem" });
-    await expect(today).toContainText(/Venu à \d{2}:\d{2}/);
+    await expect(today).toContainText(/Arrivée à \d{2}:\d{2}/);
     await expect(page.getByRole("list", { name: "Présence et activité sur 7 jours" }).getByRole("listitem")).not.toHaveCount(0);
 
     const logins = page.getByRole("list", { name: "Journal des connexions" });
-    await expect(logins.getByRole("listitem").filter({ hasText: "Mehdi Belkacem" }).first()).toContainText("Connecté");
+    await expect(logins.getByRole("listitem").filter({ hasText: "Mehdi Belkacem" }).first()).toContainText("Connexion réussie");
     await expect(logins.getByRole("listitem").filter({ hasText: "Inès Marchetti" }).first()).toContainText("Mot de passe refusé");
     await expect(page.getByRole("progressbar", { name: "Espace de stockage utilisé" })).toBeVisible();
   });
@@ -141,21 +141,21 @@ test.describe("prospection", () => {
     await loginAs(page, "lea", "Léa Fontaine");
     await page.goto("/prospection");
 
-    await page.getByLabel("Nom du restaurant").fill(name);
+    await page.getByLabel("Nom du commerce").fill(name);
     await page.getByLabel("Ville", { exact: true }).fill("Lyon");
     await page.getByRole("radio", { name: "Téléphone" }).check({ force: true });
     await page.getByRole("button", { name: "Ajouter le prospect" }).click();
     await expect(page.getByRole("status").filter({ hasText: `${name} ajouté` })).toBeVisible();
 
     // Même nom tapé une seconde fois : alerte « déjà contacté » en direct.
-    await page.getByLabel("Nom du restaurant").fill(name.toUpperCase());
+    await page.getByLabel("Nom du commerce").fill(name.toUpperCase());
     await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
 
     await page.goto(`/recherche?q=${encodeURIComponent(name)}`);
     await expect(page.getByText("Déjà contacté", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: new RegExp(name) })).toBeVisible();
 
-    await page.getByRole("searchbox", { name: "Nom du restaurant" }).fill(`Introuvable ${unique()}`);
+    await page.getByRole("searchbox", { name: "Nom du commerce" }).fill(`Introuvable ${unique()}`);
     await expect(page.getByText("Jamais contacté")).toBeVisible();
   });
 

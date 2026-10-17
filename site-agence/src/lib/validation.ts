@@ -37,7 +37,7 @@ export function isEditableDate(date: IsoDate, today: IsoDate): boolean {
 }
 
 export const prospectSchema = z.object({
-  name: line(2, 120, "Indique le nom du restaurant."),
+  name: line(2, 120, "Indique le nom du commerce."),
   city: line(2, 80, "Indique la ville."),
   channel: z.string().refine(isChannel, "Choisis le moyen de contact.").transform((value) => value as Channel),
   contact: optionalLine(160),
