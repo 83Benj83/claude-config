@@ -326,6 +326,15 @@ export class PreviewRepository implements Repository {
     return this.leads.filter((lead) => lead.batchId === batchId);
   }
 
+  async linkLeadProspects(links: { leadId: string; prospectId: string }[]): Promise<void> {
+    await Promise.all(
+      links.map(({ leadId, prospectId }) => {
+        const lead = this.store.leads.get(leadId);
+        return lead && lead.status === "open" && lead.batchId ? this.store.putDoc("leads", { ...lead, prospectId }) : undefined;
+      }),
+    );
+  }
+
   async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
     const batch = this.store.batches.get(batchId);
     if (!batch || batch.finishedAt) return false;
@@ -335,14 +344,14 @@ export class PreviewRepository implements Repository {
     await Promise.all(
       this.leads
         .filter((lead) => lead.batchId === batchId && lead.status === "open")
-        .map((lead) => this.store.putDoc("leads", { ...lead, status: "done", doneBy: memberId, doneAt: at, prospectId: byLead.get(lead.id) ?? null })),
+        .map((lead) => this.store.putDoc("leads", { ...lead, status: "done", doneBy: memberId, doneAt: at, prospectId: byLead.get(lead.id) ?? lead.prospectId })),
     );
     return true;
   }
 
   async releaseBatch(batchId: string): Promise<number> {
     const back = this.leads.filter((lead) => lead.batchId === batchId && lead.status === "open");
-    await Promise.all(back.map((lead) => this.store.putDoc("leads", { ...lead, batchId: null, outcome: null })));
+    await Promise.all(back.map((lead) => this.store.putDoc("leads", { ...lead, batchId: null, outcome: null, prospectId: null })));
     await this.store.removeDoc("batches", batchId);
     return back.length;
   }

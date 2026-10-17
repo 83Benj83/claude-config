@@ -318,6 +318,11 @@ export class DemoRepository implements Repository {
     return this.leads.filter((l) => l.batchId === batchId).map(clone);
   }
 
+  async linkLeadProspects(links: { leadId: string; prospectId: string }[]): Promise<void> {
+    const byLead = new Map(links.map((link) => [link.leadId, link.prospectId]));
+    this.state.leads = this.leads.map((l) => (byLead.has(l.id) && l.status === "open" && l.batchId ? { ...l, prospectId: byLead.get(l.id) ?? null } : l));
+  }
+
   async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
     const batch = this.batches.find((b) => b.id === batchId);
     if (!batch || batch.finishedAt) return false;
@@ -335,7 +340,7 @@ export class DemoRepository implements Repository {
 
   async releaseBatch(batchId: string): Promise<number> {
     const back = this.leads.filter((l) => l.batchId === batchId && l.status === "open").length;
-    this.state.leads = this.leads.map((l) => (l.batchId === batchId && l.status === "open" ? { ...l, batchId: null, outcome: null } : l));
+    this.state.leads = this.leads.map((l) => (l.batchId === batchId && l.status === "open" ? { ...l, batchId: null, outcome: null, prospectId: null } : l));
     this.state.batches = this.batches.filter((b) => b.id !== batchId);
     return back;
   }

@@ -60,6 +60,7 @@ export function ExtractBatch({ view }: { view: LeadsView }) {
           />
           <p className="text-sm text-muted">
             {pluralize(available, "commerce")} disponible{available > 1 ? "s" : ""}, dont {view.withPhone} avec numéro (pris en premier).
+            {" "}Ils comptent tout de suite dans ton classement.
           </p>
           {error && (
             <p role="alert" className="text-sm text-danger">
@@ -141,6 +142,7 @@ export function MyBatch({ view }: { view: LeadsView }) {
         <div className="flex flex-wrap gap-2">
           {confirmRelease ? (
             <>
+              <span className="basis-full text-xs text-muted">Les commerces rendus ne comptent plus dans ton classement.</span>
               <button type="button" disabled={pending} onClick={release} className={buttonClasses({ variant: "secondary", size: "sm", className: "border-danger text-danger" })}>
                 Rendre à la liste
               </button>

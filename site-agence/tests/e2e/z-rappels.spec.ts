@@ -101,7 +101,7 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     await otherContext.close();
   });
 
-  test("traiter tout le fichier (appelé ou rappel) permet de le terminer et de compter les appels", async ({ page }) => {
+  test("le fichier compte dès l'extraction ; tout traiter (appelé ou rappel) permet de le terminer", async ({ page }) => {
     test.skip(test.info().project.name === "mobile", "Un seul passage : les deux projets partagent les mêmes données.");
     await loginAs(page, "lea", "Léa Fontaine");
     await openSection(page, "À contacter");
@@ -110,6 +110,7 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     await page.getByRole("button", { name: /^Extraire 10 commerces/ }).click();
     const file = page.getByRole("region", { name: "Mon fichier" });
     await expect(file).toBeVisible();
+    await expect(page.getByText(/commerces? extraits? : ils sont à toi et comptent déjà au classement\./)).toBeVisible();
 
     const cards = file.getByRole("article");
     const total = await cards.count();
@@ -126,7 +127,7 @@ test.describe("fichiers de 10 à 50 commerces", () => {
     }
     await expect(file.getByText(`${total} sur ${total} traités`)).toBeVisible();
     await page.getByRole("button", { name: "Fichier terminé" }).click();
-    await expect(page.getByText(/Fichier terminé : \d+ commerces? ajoutés? à tes prospects\./)).toBeVisible();
+    await expect(page.getByText(/Fichier terminé : \d+ commerces? comptés? dans tes prospects\./)).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Mon fichier" })).toHaveCount(0);
   });
 });

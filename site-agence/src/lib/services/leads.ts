@@ -108,7 +108,17 @@ async function myBatch(repository: Repository, actor: Member): Promise<LeadBatch
   return (await repository.listActiveBatches()).find((batch) => batch.memberId === actor.id) ?? null;
 }
 
-/** Extrait un fichier : les commerces disparaissent de la liste des autres jusqu'à la clôture. */
+/** Prospect du jour pour un commerce appelé par téléphone ; `null` si la fiche est invalide. */
+function phoneProspect(lead: Lead, actor: Member, clock: Clock): Prospect | null {
+  const parsed = prospectSchema.safeParse({ name: lead.name, city: lead.city, channel: "telephone", contact: lead.phone ?? "", note: lead.note ?? "", date: clock.today });
+  return parsed.success ? { id: crypto.randomUUID(), memberId: actor.id, ...parsed.data, createdAt: clock.now } : null;
+}
+
+/**
+ * Extrait un fichier : les commerces disparaissent de la liste des autres
+ * jusqu'à la clôture, et comptent tout de suite comme prospects du jour
+ * (classement, bilan, « déjà contacté ? »).
+ */
 export async function extractBatch(repository: Repository, actor: Member, size: unknown, clock: Clock): Promise<ActionResult<{ count: number }>> {
   if (!BATCH_SIZES.some((allowed) => allowed === size)) return { ok: false, message: "Choisis 10, 20, 30, 40 ou 50 commerces." };
   if (await myBatch(repository, actor)) return { ok: false, message: "Tu as déjà un fichier en cours : termine-le (ou rends-le) avant d'en extraire un autre." };
@@ -119,11 +129,20 @@ export async function extractBatch(repository: Repository, actor: Member, size: 
     await repository.releaseBatch(batch.id);
     return { ok: false, message: "Il n'y a plus de commerce disponible dans la liste." };
   }
+  const links: { leadId: string; prospect: Prospect }[] = created.leads.flatMap((lead) => {
+    const prospect = phoneProspect(lead, actor, clock);
+    return prospect ? [{ leadId: lead.id, prospect }] : [];
+  });
+  await repository.addProspects(links.map((link) => link.prospect));
+  await repository.linkLeadProspects(links.map((link) => ({ leadId: link.leadId, prospectId: link.prospect.id })));
   const count = created.leads.length;
   return {
     ok: true,
     data: { count },
-    message: count < (size as number) ? `Seulement ${count} commerces disponibles : ils sont à toi.` : `${count} commerces extraits : ils sont à toi.`,
+    message:
+      count < (size as number)
+        ? `Seulement ${count} commerces disponibles : ils sont à toi et comptent déjà au classement.`
+        : `${count} commerces extraits : ils sont à toi et comptent déjà au classement.`,
   };
 }
 
@@ -155,27 +174,24 @@ export async function handleBatchLead(
   return { ok: false, message: "Choisis « Effectué » ou « À rappeler plus tard »." };
 }
 
-/** Clôture : possible quand tout le fichier est traité ; les appelés rejoignent « déjà contactés » et le classement. */
+/** Clôture : possible quand tout le fichier est traité. Les commerces comptent depuis l'extraction ; seuls ceux d'un fichier plus ancien, sans prospect, sont comptés ici. */
 export async function finishBatch(repository: Repository, actor: Member, clock: Clock): Promise<ActionResult<{ counted: number }>> {
   const batch = await myBatch(repository, actor);
   if (!batch) return { ok: false, message: "Tu n'as pas de fichier en cours." };
   const leads = await repository.listBatchLeads(batch.id);
   const pending = leads.filter((l) => l.status === "open" && !l.outcome).length;
   if (pending > 0) return { ok: false, message: `Il reste ${pending} commerce${pending > 1 ? "s" : ""} à traiter dans ton fichier.` };
-  const toCount = leads.filter((l) => l.status === "open" && l.outcome === "contacted");
-  const created: { leadId: string; prospect: Prospect }[] = [];
-  const prospects: Prospect[] = [];
-  for (const lead of toCount) {
-    const parsed = prospectSchema.safeParse({ name: lead.name, city: lead.city, channel: "telephone", contact: lead.phone ?? "", note: lead.note ?? "", date: clock.today });
-    if (!parsed.success) continue;
-    const prospect: Prospect = { id: crypto.randomUUID(), memberId: actor.id, ...parsed.data, createdAt: clock.now };
-    prospects.push(prospect);
-    created.push({ leadId: lead.id, prospect });
-  }
+  const created = leads
+    .filter((l) => l.status === "open" && l.outcome === "contacted" && !l.prospectId)
+    .flatMap((lead) => {
+      const prospect = phoneProspect(lead, actor, clock);
+      return prospect ? [{ leadId: lead.id, prospect }] : [];
+    });
   if (!(await repository.finishBatch(batch.id, actor.id, clock.now, created))) {
     return { ok: false, message: "Ce fichier est déjà terminé." };
   }
-  return { ok: true, data: { counted: prospects.length }, message: `Fichier terminé : ${prospects.length} commerce${prospects.length > 1 ? "s" : ""} ajouté${prospects.length > 1 ? "s" : ""} à tes prospects.` };
+  const total = leads.filter((l) => l.prospectId).length + created.length;
+  return { ok: true, data: { counted: total }, message: `Fichier terminé : ${total} commerce${total > 1 ? "s" : ""} compté${total > 1 ? "s" : ""} dans tes prospects.` };
 }
 
 /** Rend le fichier : ce qui n'est pas traité revient dans la liste (le propriétaire ou un admin). */
@@ -187,6 +203,8 @@ export async function releaseBatch(repository: Repository, actor: Member, batchI
   if (leads.some((l) => l.status === "open" && l.outcome)) {
     return { ok: false, message: "Des commerces sont déjà traités : termine le fichier plutôt que de le rendre." };
   }
+  // Rendu sans appel : les commerces ne comptent plus.
+  for (const lead of leads) if (lead.status === "open" && lead.prospectId) await repository.deleteProspect(lead.prospectId);
   const back = await repository.releaseBatch(batch.id);
   return { ok: true, data: null, message: `${back} commerce${back > 1 ? "s" : ""} de retour dans la liste.` };
 }

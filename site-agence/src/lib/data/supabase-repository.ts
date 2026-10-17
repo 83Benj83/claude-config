@@ -892,6 +892,15 @@ export class SupabaseRepository implements Repository {
     return rows.map(toLead);
   }
 
+  async linkLeadProspects(links: { leadId: string; prospectId: string }[]): Promise<void> {
+    for (const { leadId, prospectId } of links) {
+      check(
+        "le lien du fichier avec les prospects",
+        await this.db.from("leads").update({ prospect_id: prospectId }).eq("id", leadId).eq("status", "open").not("batch_id", "is", null),
+      );
+    }
+  }
+
   async finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean> {
     // On ferme d'abord, de façon conditionnelle : un double clic ou deux appels simultanés ne créent qu'une fois les prospects.
     const closed = check(
@@ -917,7 +926,7 @@ export class SupabaseRepository implements Repository {
   async releaseBatch(batchId: string): Promise<number> {
     const rows = check(
       "la remise en liste",
-      await this.db.from("leads").update({ batch_id: null, outcome: null }).eq("batch_id", batchId).eq("status", "open").select("id"),
+      await this.db.from("leads").update({ batch_id: null, outcome: null, prospect_id: null }).eq("batch_id", batchId).eq("status", "open").select("id"),
     ) as { id: string }[];
     check("la fermeture du fichier", await this.db.from("lead_batches").delete().eq("id", batchId));
     return rows.length;

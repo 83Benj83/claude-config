@@ -163,13 +163,23 @@ describe("fichiers de 10 à 50 commerces", () => {
     expect(await leads.claimLead(repository, theo, { id: mine[0].id, channel: "telephone" }, clock)).toMatchObject({ ok: false });
   });
 
+  test("dès l'extraction, chaque commerce extrait compte comme prospect du jour (classement, bilan, déjà contacté)", async () => {
+    const repository = repositoryWith(many(30));
+    await leads.extractBatch(repository, lea, 20, clock);
+    const prospects = await repository.listProspects({ from: TODAY, to: TODAY });
+    expect(prospects).toHaveLength(20);
+    expect(prospects.every((p) => p.memberId === lea.id && p.channel === "telephone" && p.date === TODAY)).toBe(true);
+    const mine = await repository.listBatchLeads((await repository.listActiveBatches())[0].id);
+    expect(new Set(mine.map((l) => l.prospectId))).toEqual(new Set(prospects.map((p) => p.id)));
+  });
+
   test("un seul fichier en cours par personne", async () => {
     const repository = repositoryWith(many(30));
     await leads.extractBatch(repository, lea, 10, clock);
     expect((await leads.extractBatch(repository, lea, 10, clock)).ok).toBe(false);
   });
 
-  test("clôture impossible tant que tout n'est pas traité, puis les appelés rejoignent les prospects", async () => {
+  test("clôture impossible tant que tout n'est pas traité ; la clôture ne compte pas une deuxième fois", async () => {
     const repository = repositoryWith(many(12));
     await leads.extractBatch(repository, lea, 10, clock);
     const batch = (await repository.listActiveBatches())[0];
@@ -182,8 +192,9 @@ describe("fichiers de 10 à 50 commerces", () => {
       expect((await leads.handleBatchLead(repository, lea, { id: item.id, ...outcome }, clock)).ok).toBe(true);
     }
     const done = await leads.finishBatch(repository, lea, clock);
-    expect(done).toMatchObject({ ok: true, data: { counted: 9 } });
-    expect(await repository.listProspects({ from: TODAY, to: TODAY })).toHaveLength(9);
+    expect(done).toMatchObject({ ok: true });
+    // Comptés à l'extraction : les 10, rappel compris, et rien de plus à la clôture.
+    expect(await repository.listProspects({ from: TODAY, to: TODAY })).toHaveLength(10);
     expect(await repository.listActiveBatches()).toHaveLength(0);
     expect(await repository.listCallbacks("2026-10-01T00:00:00Z")).toHaveLength(1);
     expect((await repository.getLead(items[1].id))?.status).toBe("done");
@@ -218,8 +229,12 @@ describe("fichiers de 10 à 50 commerces", () => {
     const [first] = await repository.listBatchLeads(batch.id);
     expect((await leads.handleBatchLead(repository, theo, { id: first.id, outcome: "contacted" }, clock)).ok).toBe(false);
     expect((await leads.releaseBatch(repository, theo, batch.id)).ok).toBe(false);
+    expect(await repository.listProspects({ from: TODAY, to: TODAY })).toHaveLength(10);
     expect(await leads.releaseBatch(repository, lea, batch.id)).toMatchObject({ ok: true });
-    expect((await repository.listLeads("2026-10-01T00:00:00Z")).every((l) => !l.batchId)).toBe(true);
+    const back = await repository.listLeads("2026-10-01T00:00:00Z");
+    expect(back.every((l) => !l.batchId && !l.prospectId)).toBe(true);
+    // Fichier rendu sans appel : ses commerces ne comptent plus.
+    expect(await repository.listProspects({ from: TODAY, to: TODAY })).toHaveLength(0);
   });
 });
 

@@ -50,7 +50,7 @@ type Mode = "idle" | "done" | "callback" | "remove";
  * un geste). La flèche déplie le reste : les infos utiles pour l'appel,
  * l'adresse, les autres coordonnées, puis les deux issues : « Effectué »
  * (compté au classement) ou « À rappeler plus tard » (date, heure, info).
- * Dans un fichier extrait (`batch`), « Effectué » est compté à la clôture.
+ * Dans un fichier extrait (`batch`), chaque commerce compte dès l'extraction ; « Effectué » sert au suivi.
  */
 export function LeadCard({
   row,

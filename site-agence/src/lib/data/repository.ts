@@ -118,6 +118,8 @@ export interface Repository {
    * s'il a déjà un fichier en cours.
    */
   createBatch(batch: LeadBatch, size: number): Promise<{ batch: LeadBatch; leads: Lead[] } | null>;
+  /** Relie les commerces d'un fichier en cours aux prospects créés à l'extraction. */
+  linkLeadProspects(links: { leadId: string; prospectId: string }[]): Promise<void>;
   /** Commerces d'un fichier. */
   listBatchLeads(batchId: string): Promise<Lead[]>;
   /**
@@ -126,7 +128,7 @@ export interface Repository {
    */
   /** Clôture atomique : false si le fichier était déjà clos (aucun prospect créé dans ce cas). */
   finishBatch(batchId: string, memberId: string, at: string, items: { leadId: string; prospect: Prospect }[]): Promise<boolean>;
-  /** Abandonne le fichier : ses commerces non traités reviennent dans la liste. */
+  /** Abandonne le fichier : ses commerces non traités reviennent dans la liste, sans lien vers un prospect. */
   releaseBatch(batchId: string): Promise<number>;
   /** Prospects dont le nom normalisé est l'un de ceux-ci (commerces déjà contactés). */
   findProspectsByNameKeys(nameKeys: string[]): Promise<Prospect[]>;
