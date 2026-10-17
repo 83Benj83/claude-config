@@ -34,9 +34,14 @@ export function toggleTheme() {
   }
 }
 
-/** Libellé du thème à venir ; `null` tant que le navigateur n'a pas répondu (rendu serveur). */
+/** Thème affiché ; `null` tant que le navigateur n'a pas répondu (rendu serveur). */
+export function useTheme(): Theme | null {
+  return useSyncExternalStore<Theme | null>(subscribe, readTheme, () => null);
+}
+
+/** Libellé du thème à venir. */
 export function useNextThemeLabel(): string {
-  const theme = useSyncExternalStore<Theme | null>(subscribe, readTheme, () => null);
+  const theme = useTheme();
   return theme === null ? "Changer de thème" : theme === "dark" ? "Passer en thème clair" : "Passer en thème sombre";
 }
 

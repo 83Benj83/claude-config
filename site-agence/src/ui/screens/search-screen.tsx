@@ -11,7 +11,7 @@ import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { controlClasses } from "../primitives/field";
 import { ChannelIcon } from "../primitives/icon";
-import { Badge, Card, EmptyState, ScreenHeader } from "../primitives/surface";
+import { Badge, Card, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
 
 const SEARCH_DELAY_MS = 300;
 
@@ -93,8 +93,8 @@ export function SearchScreen({ view }: { view: DirectoryView }) {
         {!searchable ? (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Établissements déjà contactés" value={view.totalEstablishments} />
-              <Stat label="Contactés cette semaine" value={view.contactedThisWeek} />
+              <StatTile label="Établissements déjà contactés" value={formatInt(view.totalEstablishments)} />
+              <StatTile label="Contactés cette semaine" value={formatInt(view.contactedThisWeek)} />
             </div>
             <Card aria-labelledby="recents">
               <h2 id="recents" className="px-5 pt-5 text-[0.9375rem] font-semibold tracking-tight text-fg sm:px-6">
@@ -154,15 +154,6 @@ export function SearchScreen({ view }: { view: DirectoryView }) {
           </>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-line bg-surface px-4 py-3.5">
-      <p className="text-xs text-subtle">{label}</p>
-      <p className="mt-0.5 text-2xl font-semibold tracking-tight text-fg">{formatInt(value)}</p>
     </div>
   );
 }

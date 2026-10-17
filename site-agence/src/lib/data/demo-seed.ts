@@ -1,6 +1,6 @@
 import { AGENCY_RESOURCES } from "@/content/resources";
 import { addDays, isWeekend } from "../dates";
-import type { Channel, IsoDate, Lead, Member, Prospect, Resource } from "../types";
+import type { Callback, Channel, Contract, IsoDate, Lead, Member, Message, Prospect, Resource } from "../types";
 
 /**
  * Données d'exemple du mode démo et de l'aperçu interactif : une équipe
@@ -117,11 +117,25 @@ function pickChannel(random: () => number): Channel {
   return "telephone";
 }
 
+/**
+ * Numéros de démonstration : uniquement dans les plages que l'Arcep réserve
+ * aux œuvres de fiction (04 65 71…, 06 39 98…), pour n'appeler personne par erreur.
+ */
+const two = (n: number) => String(n % 100).padStart(2, "0");
+export const fictionalLandline = (n: number) => `04 65 71 ${two(Math.floor(n / 100))} ${two(n)}`;
+const fictionalMobile = (a: number, b: number) => `06 39 98 ${two(a)} ${two(b)}`;
+
 function contactFor(channel: Channel, name: string, random: () => number): string | null {
   const slug = name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]+/g, "");
   switch (channel) {
     case "telephone":
-      return `0${4 + Math.floor(random() * 3)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)} ${String(Math.floor(random() * 90) + 10)}`;
+    {
+      // Mêmes tirages qu'avant (données reproductibles), numéro dans la plage de fiction.
+      random();
+      random();
+      random();
+      return fictionalMobile(Math.floor(random() * 100), Math.floor(random() * 100));
+    }
     case "instagram":
       return `@${slug.slice(0, 18)}`;
     case "email":
@@ -184,11 +198,11 @@ export function demoLeads(today: IsoDate): Lead[] {
     listDay: today,
     createdAt: `${today}T06:00:00.000Z`,
   };
-  const phone = (n: number) => `04 78 00 00 ${String(n).padStart(2, "0")}`;
+  const phone = fictionalLandline;
   const leads: Lead[] = [
     { ...base, id: "demo-lead-1", name: "Pizzeria Il Forno", city: "Lyon", category: "Pizzeria", phone: phone(1), email: null, instagram: "https://www.instagram.com/ilforno.demo/", facebook: null, note: "Pas de site, 4,6 sur Google", address: "8 rue Mercière, 69002 Lyon", tips: ["Pas de site : seulement Instagram (1 200 abonnés)", "Pizzas au feu de bois, ouvert depuis 2015", "Angle : carte en ligne + commande à emporter"] },
     { ...base, id: "demo-lead-2", name: "Salon Coupe Nette", city: "Lyon", category: "Coiffeur", phone: null, email: "contact@coupenette.demo", instagram: null, facebook: "https://www.facebook.com/coupenette.demo", note: null },
-    { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: "04 91 00 00 02", email: null, instagram: null, facebook: null, note: "Ouvert le dimanche", address: "2 quai du Port, 13002 Marseille", tips: ["Aucun site ni réseau social trouvé", "Clientèle de touristes sur le Vieux-Port", "Angle : commandes de gâteaux en ligne"] },
+    { ...base, id: "demo-lead-3", name: "Boulangerie du Port", city: "Marseille", category: "Boulangerie", phone: fictionalLandline(2), email: null, instagram: null, facebook: null, note: "Ouvert le dimanche", address: "2 quai du Port, 13002 Marseille", tips: ["Aucun site ni réseau social trouvé", "Clientèle de touristes sur le Vieux-Port", "Angle : commandes de gâteaux en ligne"] },
   ];
   const cities = ["Lyon", "Marseille", "Toulon"];
   for (let n = 4; n <= 15; n += 1) {
@@ -206,4 +220,76 @@ export function demoLeads(today: IsoDate): Lead[] {
     });
   }
   return leads;
+}
+
+/**
+ * Exemples du mode démo et de l'aperçu local : quelques rappels, messages et
+ * contrats pour voir chaque rubrique remplie. Jamais envoyés dans une vraie base.
+ */
+export function demoExamples(today: IsoDate): { callbacks: Callback[]; messages: Message[]; contracts: Contract[] } {
+  const at = (day: IsoDate, time: string) => `${day}T${time}:00.000Z`;
+  const callback = (id: string, overrides: Partial<Callback>): Callback => ({
+    id,
+    name: "",
+    city: null,
+    phone: null,
+    contactName: null,
+    dueOn: today,
+    dueTime: null,
+    priority: "moyenne",
+    note: null,
+    addedBy: "lea",
+    leadId: null,
+    status: "pending",
+    doneBy: null,
+    doneAt: null,
+    createdAt: at(addDays(today, -3), "09:00"),
+    ...overrides,
+  });
+  const message = (id: string, authorId: string, channel: string, text: string, createdAt: string, reactions: Record<string, string[]> = {}): Message => ({
+    id,
+    authorId,
+    text,
+    attachments: [],
+    createdAt,
+    channel,
+    replyTo: null,
+    pinned: false,
+    reactions,
+  });
+  const contract = (id: string, overrides: Partial<Contract>): Contract => ({
+    id,
+    client: "",
+    city: null,
+    contact: null,
+    pack: "Pro",
+    options: null,
+    amount: null,
+    monthly: null,
+    status: "maquette",
+    signedOn: addDays(today, -10),
+    deliveredOn: null,
+    siteUrl: null,
+    broughtBy: null,
+    note: null,
+    createdAt: at(addDays(today, -10), "10:00"),
+    updatedAt: at(addDays(today, -2), "10:00"),
+    ...overrides,
+  });
+  return {
+    callbacks: [
+      callback("demo-rappel-1", { name: "Le Comptoir du Marché", city: "Lyon", phone: fictionalLandline(21), contactName: "Sophie, la gérante", dueOn: addDays(today, -1), priority: "haute", note: "Voulait réfléchir au pack Pro." }),
+      callback("demo-rappel-2", { name: "Crêperie de Lucie", city: "Annecy", phone: fictionalLandline(22), dueTime: "15:00", addedBy: "yanis", note: "Rappeler après le service du midi." }),
+      callback("demo-rappel-3", { name: "Salon Belle Mèche", city: "Toulon", phone: fictionalLandline(23), dueOn: addDays(today, 3), priority: "faible", addedBy: "clara" }),
+    ],
+    messages: [
+      message("demo-msg-1", "mehdi", "general", "Bonjour à tous ! Objectif de la semaine : 60 appels chacun. On fait le point vendredi.", at(today, "07:30"), { "👍": ["lea", "clara"] }),
+      message("demo-msg-2", "lea", "prospection", "Les boulangeries répondent mieux en milieu d'après-midi, après le rush du midi.", at(today, "08:15"), { "💡": ["yanis"] }),
+      message("demo-msg-3", "clara", "astuces", "Phrase qui marche : « Je ne vends rien aujourd'hui, je vous montre juste à quoi ressemblerait votre site. »", at(addDays(today, -1), "16:40")),
+    ],
+    contracts: [
+      contract("demo-contrat-1", { client: "Pizzeria Il Forno", city: "Lyon", pack: "Pro", amount: 490, monthly: 29, status: "developpement", broughtBy: "Léa Fontaine" }),
+      contract("demo-contrat-2", { client: "Fleuriste Pétale", city: "Bordeaux", pack: "Essentiel", amount: 290, status: "termine", signedOn: addDays(today, -30), deliveredOn: addDays(today, -12), broughtBy: "Clara Nguyen" }),
+    ],
+  };
 }

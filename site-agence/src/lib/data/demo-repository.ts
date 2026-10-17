@@ -3,7 +3,7 @@ import { cityKey, nameKey } from "../establishments";
 import { hashPassword } from "../password";
 import type { Contract, DateRange, Entry, IsoDate, Callback, Mockup, Lead, LeadBatch, LeadOutcome, LoginEvent, Member, Message, PresenceDay, Prospect, Resource, StoredFile } from "../types";
 import { countedSince, entriesFromProspects } from "../views";
-import { DEMO_MEMBERS, DEMO_RESOURCES, demoLeads, generateDemoProspects } from "./demo-seed";
+import { DEMO_MEMBERS, DEMO_RESOURCES, demoExamples, demoLeads, generateDemoProspects } from "./demo-seed";
 import { loginKey, type Credentials, type MemberUpdate, type NewFile, type NewMember, type Repository } from "./repository";
 
 type StoredMember = { member: Member; passwordHash: string | null; sessionVersion: number };
@@ -39,8 +39,8 @@ export async function createDemoState(today: IsoDate): Promise<DemoState> {
     members,
     prospects: generateDemoProspects(today),
     resources: DEMO_RESOURCES.map((r) => ({ ...r })),
-    // Aucun contrat d'exemple : l'équipe saisit les siens.
-    contracts: [],
+    // Quelques exemples pour voir chaque rubrique remplie (démo uniquement).
+    ...demoExamples(today),
     leads: demoLeads(today),
   };
 }

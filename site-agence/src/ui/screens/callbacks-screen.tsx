@@ -11,7 +11,7 @@ import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { CopyButton } from "../primitives/copy-button";
 import { Field } from "../primitives/field";
-import { Card, CardHeader, EmptyState, ScreenHeader } from "../primitives/surface";
+import { Card, CardHeader, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 import { CallbackForm, emptyCallback } from "../rappels/callback-form";
 
@@ -79,9 +79,9 @@ export function CallbacksScreen({ view }: { view: CallbacksView }) {
       )}
 
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="En retard" value={view.counts.late} tone={view.counts.late > 0 ? "danger" : "neutral"} />
-        <Stat label="Aujourd'hui" value={view.counts.today} tone={view.counts.today > 0 ? "accent" : "neutral"} />
-        <Stat label="À venir" value={view.counts.pending - view.counts.late - view.counts.today} tone="neutral" />
+        <StatTile label="En retard" value={view.counts.late} tone={view.counts.late > 0 ? "alert" : "neutral"} />
+        <StatTile label="Aujourd'hui" value={view.counts.today} tone={view.counts.today > 0 ? "accent" : "neutral"} />
+        <StatTile label="À venir" value={view.counts.pending - view.counts.late - view.counts.today} />
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer les rappels">
@@ -142,16 +142,6 @@ export function CallbacksScreen({ view }: { view: CallbacksView }) {
           <EmptyState title="Aucun rappel fait récemment." />
         </Card>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, tone }: { label: string; value: number; tone: "danger" | "accent" | "neutral" }) {
-  const color = tone === "danger" ? "text-danger" : tone === "accent" ? "text-accent-ink" : "text-fg";
-  return (
-    <div className="rounded-2xl border border-line bg-surface px-4 py-3">
-      <p className="text-xs text-subtle">{label}</p>
-      <p className={`mt-0.5 text-2xl font-semibold tracking-tight ${color}`}>{value}</p>
     </div>
   );
 }

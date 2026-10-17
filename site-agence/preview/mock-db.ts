@@ -4,6 +4,7 @@
  * publiée.
  */
 import { todayIso } from "@/lib/dates";
+import { demoExamples } from "@/lib/data/demo-seed";
 import { parseLead } from "@/lib/leads";
 import parisLeads from "../data/leads-paris-2026-10.json";
 import varLeads from "../data/leads-var-2026-10.json";
@@ -26,11 +27,19 @@ function leadDocs(today: string) {
   });
 }
 
+/** Exemples de rappels, messages et contrats : base locale de test seulement. */
+function exampleDocs(today: string) {
+  const examples = demoExamples(today);
+  return (["callbacks", "messages", "contracts"] as const).flatMap((collection) =>
+    examples[collection].map(({ id, ...data }) => ({ collection, id, data: data as Record<string, unknown> })),
+  );
+}
+
 type Listener = { collection: string; order?: { field: string; dir: "asc" | "desc" }; limit?: number; next: (snap: unknown) => void };
 
 export async function createMockDb(): Promise<Db> {
   const collections = new Map<string, Map<string, Record<string, unknown>>>();
-  for (const doc of [...(await buildSeed(todayIso(), { iterations: 2_000 })), ...leadDocs(todayIso())]) {
+  for (const doc of [...(await buildSeed(todayIso(), { iterations: 2_000 })), ...leadDocs(todayIso()), ...exampleDocs(todayIso())]) {
     if (!collections.has(doc.collection)) collections.set(doc.collection, new Map());
     collections.get(doc.collection)!.set(doc.id, structuredClone(doc.data));
   }

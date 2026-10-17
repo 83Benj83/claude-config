@@ -13,7 +13,7 @@ import { buttonClasses } from "../primitives/button";
 import { ChipGroup, Segmented } from "../primitives/choice";
 import { Field, FormMessage, SelectField, TextArea, controlClasses } from "../primitives/field";
 import { Sheet } from "../primitives/sheet";
-import { Card, EmptyState, ScreenHeader } from "../primitives/surface";
+import { Card, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 import { MockupsPanel } from "../contracts/mockups-panel";
 
@@ -66,12 +66,12 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
         }
       />
 
-      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Figure label="En cours" value={formatInt(view.totals.inProgress)} />
-        <Figure label="Effectués" value={formatInt(view.totals.done)} />
-        <Figure label="Signé au total" value={formatEuros(view.totals.signed)} />
-        <Figure label="Abonnements en ligne" value={`${formatEuros(view.totals.monthly)} / mois`} />
-      </dl>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="En cours" value={formatInt(view.totals.inProgress)} />
+        <StatTile label="Effectués" value={formatInt(view.totals.done)} />
+        <StatTile label="Signé au total" value={formatEuros(view.totals.signed)} />
+        <StatTile label="Abonnements en ligne" value={formatEuros(view.totals.monthly)} suffix=" / mois" />
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Segmented
@@ -148,15 +148,6 @@ export function ContractsScreen({ view }: { view: ContractsView }) {
           )}
         </Sheet>
       )}
-    </div>
-  );
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="tone-gold min-w-0 rounded-2xl border border-line bg-surface px-4 py-3">
-      <dt className="text-xs text-subtle">{label}</dt>
-      <dd className="mt-0.5 truncate font-display text-xl font-bold tracking-tight text-fg tabular">{value}</dd>
     </div>
   );
 }

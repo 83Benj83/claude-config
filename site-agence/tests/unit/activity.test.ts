@@ -108,7 +108,7 @@ describe("activity view", () => {
     expect(view.rows[0].lastSeenAt).toBe("2026-10-02T10:00:00.000Z");
   });
 
-  test("the log shows the latest attempts, the count covers the whole day", () => {
+  test("identical refused attempts form one line; the count covers the whole day", () => {
     const refused: LoginEvent[] = Array.from({ length: 45 }, (_, index) => ({
       id: `r${index}`,
       memberId: null,
@@ -121,9 +121,51 @@ describe("activity view", () => {
       members,
       logins: refused,
     });
-    expect(view.logins).toHaveLength(40);
-    expect(view.logins[0]).toMatchObject({ id: "r44", name: null });
+    // 45 essais identiques à la suite : une seule ligne, avec le nombre et la plage horaire.
+    expect(view.logins).toHaveLength(1);
+    expect(view.logins[0]).toMatchObject({ id: "r44", name: null, count: 45, at: "2026-10-14T09:44:00.000Z", firstAt: "2026-10-14T09:00:00.000Z" });
     expect(view.totals.refusedToday).toBe(45);
+  });
+
+  test("the log keeps the 40 latest lines", () => {
+    const alternating: LoginEvent[] = Array.from({ length: 50 }, (_, index) => ({
+      id: `x${index}`,
+      memberId: null,
+      login: "lea",
+      ok: index % 2 === 0,
+      at: `2026-10-14T09:${String(index).padStart(2, "0")}:00.000Z`,
+    }));
+    const view = buildActivityView({
+      ...{ presence: [], prospects: [], messages: [], contracts: [], storage: { files: 0, bytes: 0 }, establishments: 0, statsSince: null, today },
+      members,
+      logins: alternating,
+    });
+    expect(view.logins).toHaveLength(40);
+    expect(view.logins[0]).toMatchObject({ id: "x49", count: 1 });
+  });
+
+  test("identical attempts in a row are grouped; a different person, result or day starts a new line", () => {
+    const event = (id: string, login: string, ok: boolean, at: string): LoginEvent => ({ id, memberId: null, login, ok, at });
+    const view = buildActivityView({
+      ...{ presence: [], prospects: [], messages: [], contracts: [], storage: { files: 0, bytes: 0 }, establishments: 0, statsSince: null, today },
+      members,
+      logins: [
+        event("a", "lea", true, "2026-10-14T08:00:00.000Z"),
+        event("b", "Léa", true, "2026-10-14T09:00:00.000Z"),
+        event("c", "lea", false, "2026-10-14T09:30:00.000Z"),
+        event("d", "lea", true, "2026-10-14T10:00:00.000Z"),
+        event("e", "max", true, "2026-10-14T10:05:00.000Z"),
+        event("f", "max", true, "2026-10-13T18:00:00.000Z"),
+      ],
+    });
+    expect(view.logins.map((login) => [login.id, login.name, login.ok, login.count])).toEqual([
+      ["e", "Max", true, 1],
+      ["d", "Léa", true, 1],
+      ["c", "Léa", false, 1],
+      ["b", "Léa", true, 2],
+      ["f", "Max", true, 1],
+    ]);
+    expect(view.logins[3]).toMatchObject({ at: "2026-10-14T09:00:00.000Z", firstAt: "2026-10-14T08:00:00.000Z" });
   });
 
   test("sign-in log, newest first, with names found from the typed identifier", () => {

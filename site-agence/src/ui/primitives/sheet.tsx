@@ -73,7 +73,7 @@ export function Sheet({
             <button
               type="button"
               onClick={onClose}
-              className="grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg"
+              className="-my-1.5 -mr-2 grid size-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-fg"
               aria-label="Fermer"
             >
               <XIcon size={20} aria-hidden />

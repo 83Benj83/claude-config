@@ -70,7 +70,7 @@ export function ChatScreen({ view }: { view: MessagesView }) {
     <div className="flex flex-col gap-4">
       <ScreenHeader title="Échange" compactOnPhone description="La discussion de l'équipe, rangée par salons : tout le monde voit tout, en direct." />
 
-      <div role="tablist" aria-label="Salons" className="flex gap-2 overflow-x-auto pb-1">
+      <div role="tablist" aria-label="Salons" className="chip-row">
         {channels.map((entry) => (
           <button
             key={entry.id}

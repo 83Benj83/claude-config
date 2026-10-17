@@ -13,7 +13,7 @@ import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { Segmented } from "../primitives/choice";
 import { ChannelIcon } from "../primitives/icon";
-import { Card, EmptyState, ScreenHeader } from "../primitives/surface";
+import { Card, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 
 type Tab = "personnes" | "calendrier" | "canaux";
@@ -24,7 +24,6 @@ export function ReportScreen({ view }: { view: ReportView }) {
   const { report } = view;
   const isCurrent = view.month === view.currentMonth;
   const elapsed = report.days.filter((day) => day <= view.lastDay);
-  const leader = report.rows[0]?.total > 0 ? report.rows[0] : null;
   const average = report.activeMembers > 0 ? report.teamTotal / report.activeMembers : 0;
   const monthHref = (month: string) => (month === view.currentMonth ? "/bilan" : `/bilan?mois=${month}`);
 
@@ -60,23 +59,18 @@ export function ReportScreen({ view }: { view: ReportView }) {
         )}
       </nav>
 
-      <Card className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-10">
-        <div className="flex flex-col justify-between gap-6">
-          <div>
-            <p className="text-sm text-subtle">Prospects de l&apos;équipe{isCurrent ? " à ce jour" : ""}</p>
-            <p className="mt-1 text-6xl font-semibold tracking-tighter text-fg">{formatInt(report.teamTotal)}</p>
-          </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
-            <Figure label="Prospecteurs actifs" value={`${report.activeMembers} / ${report.rows.length}`} />
-            <Figure label="Moyenne par prospecteur" value={formatDecimal(average)} />
-            <Figure
-              label="Meilleur jour"
-              value={report.bestTeamDay ? formatInt(report.bestTeamDay.count) : "-"}
-              detail={report.bestTeamDay ? formatDayShort(report.bestTeamDay.date) : undefined}
-            />
-            <Figure label="En tête" value={leader ? leader.member.fullName : "-"} detail={leader ? `${formatInt(leader.total)} prospects` : undefined} />
-          </dl>
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label={`Prospects de l'équipe${isCurrent ? " à ce jour" : ""}`} value={formatInt(report.teamTotal)} />
+        <StatTile label="Prospecteurs actifs" value={`${report.activeMembers} / ${report.rows.length}`} />
+        <StatTile label="Moyenne par prospecteur" value={formatDecimal(average)} />
+        <StatTile
+          label="Meilleur jour"
+          value={report.bestTeamDay ? formatInt(report.bestTeamDay.count) : "-"}
+          detail={report.bestTeamDay ? formatDayShort(report.bestTeamDay.date) : undefined}
+        />
+      </div>
+
+      <Card className="p-5 sm:p-6">
         <TrendChart points={elapsed.map((date, index) => ({ date, total: report.teamDaily[index] }))} label="Prospects de l'équipe par jour" />
       </Card>
 
@@ -110,18 +104,6 @@ export function ReportScreen({ view }: { view: ReportView }) {
           </div>
         </Card>
       )}
-    </div>
-  );
-}
-
-function Figure({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs text-subtle">{label}</dt>
-      <dd className="mt-0.5 truncate text-lg font-semibold tracking-tight text-fg">
-        {value}
-        {detail && <span className="block truncate text-xs font-normal text-subtle">{detail}</span>}
-      </dd>
     </div>
   );
 }

@@ -38,9 +38,15 @@ export type ActivityRow = {
   messagesWeek: number;
 };
 
+/** Une ligne du journal : un essai, ou plusieurs essais identiques à la suite. */
 export type ActivityLogin = {
   id: string;
+  /** Essai le plus récent de la ligne. */
   at: string;
+  /** Premier essai de la ligne (égal à `at` pour un essai seul). */
+  firstAt: string;
+  /** Essais à la suite de la même personne, avec le même résultat, le même jour. */
+  count: number;
   ok: boolean;
   /** Nom de la personne, `null` si l'identifiant n'existe pas. */
   name: string | null;
@@ -138,13 +144,22 @@ export function buildActivityView(input: ActivityInput): ActivityView {
   const byId = new Map(input.members.map((member) => [member.id, member]));
   const byLogin = new Map(input.members.map((member) => [loginKey(member.login), member]));
 
-  const logins = [...input.logins]
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, LOGIN_EVENTS_SHOWN)
-    .map((event): ActivityLogin => {
-      const member = (event.memberId && byId.get(event.memberId)) || byLogin.get(loginKey(event.login));
-      return { id: event.id, at: event.at, ok: event.ok, name: member ? member.fullName : null, login: event.login };
-    });
+  // Du plus récent au plus ancien ; les essais identiques à la suite tiennent sur une ligne.
+  const logins: ActivityLogin[] = [];
+  let lastKey: string | null = null;
+  for (const event of [...input.logins].sort((a, b) => b.at.localeCompare(a.at))) {
+    const member = (event.memberId && byId.get(event.memberId)) || byLogin.get(loginKey(event.login));
+    const key = `${member ? member.id : `?${loginKey(event.login)}`}|${event.ok}|${dayOf(event.at)}`;
+    const previous = logins.at(-1);
+    if (previous && key === lastKey) {
+      previous.firstAt = event.at;
+      previous.count += 1;
+      continue;
+    }
+    if (logins.length === LOGIN_EVENTS_SHOWN) break;
+    logins.push({ id: event.id, at: event.at, firstAt: event.at, count: 1, ok: event.ok, name: member ? member.fullName : null, login: event.login });
+    lastKey = key;
+  }
 
   return {
     today,

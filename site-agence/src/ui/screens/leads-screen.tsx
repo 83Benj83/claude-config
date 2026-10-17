@@ -74,7 +74,7 @@ export function LeadsScreen({ view }: { view: LeadsView }) {
               {pluralize(view.open.length, "commerce")} à contacter
             </p>
             {view.cities.length > 1 && (
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par ville">
+              <div className="chip-row" role="group" aria-label="Filtrer par ville">
                 <CityChip label={`Toutes (${view.open.length})`} pressed={city === null} onClick={() => setCity(null)} />
                 {view.cities.map((entry) => (
                   <CityChip

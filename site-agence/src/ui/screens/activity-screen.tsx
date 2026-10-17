@@ -7,7 +7,7 @@ import { APP_TIME_ZONE, formatDayLong, formatDayShort, formatRelativeDay, todayI
 import { formatInt, pluralize } from "@/lib/format";
 import type { IsoDate } from "@/lib/types";
 import { Avatar } from "../primitives/avatar";
-import { Badge, Card, CardHeader, EmptyState, ScreenHeader } from "../primitives/surface";
+import { Badge, Card, CardHeader, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
 
 const timeFormatter = new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: APP_TIME_ZONE });
 const dayLetterFormatter = new Intl.DateTimeFormat("fr-FR", { weekday: "narrow", timeZone: "UTC" });
@@ -31,10 +31,10 @@ export function ActivityScreen({ view }: { view: ActivityView }) {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Figure label="Venus aujourd'hui" value={`${formatInt(totals.presentToday)} / ${formatInt(totals.members)}`} />
-        <Figure label="Prospects ajoutés aujourd'hui" value={formatInt(totals.prospectsToday)} />
-        <Figure label="Messages aujourd'hui" value={formatInt(totals.messagesToday)} />
-        <Figure label="Connexions refusées aujourd'hui" value={formatInt(totals.refusedToday)} alert={totals.refusedToday > 0} />
+        <StatTile label="Venus aujourd'hui" value={`${formatInt(totals.presentToday)} / ${formatInt(totals.members)}`} />
+        <StatTile label="Prospects ajoutés aujourd'hui" value={formatInt(totals.prospectsToday)} />
+        <StatTile label="Messages aujourd'hui" value={formatInt(totals.messagesToday)} />
+        <StatTile label="Connexions refusées aujourd'hui" value={formatInt(totals.refusedToday)} tone={totals.refusedToday > 0 ? "alert" : "neutral"} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
@@ -47,15 +47,6 @@ export function ActivityScreen({ view }: { view: ActivityView }) {
           <SiteCard view={view} />
         </div>
       </div>
-    </div>
-  );
-}
-
-function Figure({ label, value, alert = false }: { label: string; value: string; alert?: boolean }) {
-  return (
-    <div className={`min-w-0 rounded-2xl border px-3 py-3 sm:px-4 sm:py-3.5 ${alert ? "border-danger/40 bg-danger-soft" : "border-line bg-surface"}`}>
-      <p className={`text-xs ${alert ? "text-danger" : "text-subtle"}`}>{label}</p>
-      <p className={`mt-0.5 font-display text-2xl font-bold tracking-tight tabular ${alert ? "text-danger" : "text-fg"}`}>{value}</p>
     </div>
   );
 }
@@ -170,7 +161,7 @@ function LoginsCard({ logins, today }: { logins: ActivityLogin[]; today: IsoDate
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-fg">{event.name ?? "Identifiant inconnu"}</p>
                 <p className={`text-xs ${event.ok ? "text-subtle" : "text-danger"}`} suppressHydrationWarning>
-                  {event.ok ? "Connexion réussie" : "Mot de passe refusé"} · {when(event.at, today)}
+                  {loginSummary(event, today)}
                 </p>
               </div>
             </li>
@@ -184,6 +175,14 @@ function LoginsCard({ logins, today }: { logins: ActivityLogin[]; today: IsoDate
       </p>
     </Card>
   );
+}
+
+/** « Connexion réussie · aujourd'hui à 09:05 », « 3 mots de passe refusés · aujourd'hui, de 09:00 à 09:12 » */
+function loginSummary(event: ActivityLogin, today: IsoDate): string {
+  if (event.count === 1) return `${event.ok ? "Connexion réussie" : "Mot de passe refusé"} · ${when(event.at, today)}`;
+  const what = event.ok ? `${event.count} connexions réussies` : `${event.count} mots de passe refusés`;
+  const day = formatRelativeDay(todayIso(new Date(event.at)), today).toLowerCase();
+  return `${what} · ${day}, de ${time(event.firstAt)} à ${time(event.at)}`;
 }
 
 /** Chiffres du site : équipe, contrats, fichiers et espace de stockage. */

@@ -91,6 +91,40 @@ export function EmptyState({ icon, title, children, action }: { icon?: ReactNode
   );
 }
 
+/**
+ * Case de chiffre : la même dans toutes les rubriques (bilan, rappels,
+ * contrats, admin, activité…). `alert` colore toute la case (à traiter),
+ * `accent` seulement le chiffre (à voir aujourd'hui).
+ */
+export function StatTile({
+  label,
+  value,
+  suffix,
+  detail,
+  tone = "neutral",
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  /** Unité en petit après le chiffre (« jours »). */
+  suffix?: ReactNode;
+  /** Précision sous le chiffre (une date, un nom). */
+  detail?: ReactNode;
+  tone?: "neutral" | "accent" | "alert";
+}) {
+  const box = tone === "alert" ? "border-danger/40 bg-danger-soft" : "border-line bg-surface";
+  const ink = tone === "alert" ? "text-danger" : tone === "accent" ? "text-accent-ink" : "text-fg";
+  return (
+    <div className={`min-w-0 rounded-2xl border px-3.5 py-3 sm:px-4 sm:py-3.5 ${box}`}>
+      <p className={`text-xs ${tone === "alert" ? "text-danger" : "text-subtle"}`}>{label}</p>
+      <p className={`mt-0.5 truncate font-display text-2xl font-bold tracking-tight tabular ${ink}`}>
+        {value}
+        {suffix && <span className="text-sm font-normal text-subtle">{suffix}</span>}
+      </p>
+      {detail && <p className="truncate text-xs text-subtle">{detail}</p>}
+    </div>
+  );
+}
+
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "accent" | "success" | "danger" }) {
   const tones = {
     neutral: "border-line bg-surface-2 text-muted",

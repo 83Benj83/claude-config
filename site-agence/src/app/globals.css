@@ -238,6 +238,35 @@
     animation: shimmer 1.6s var(--ease-out-expo) infinite;
   }
 
+  /*
+   * Rangée de puces (villes, salons) : sur téléphone, une seule ligne qui
+   * défile au doigt, de bord à bord, sans barre de défilement ; à partir de
+   * la tablette, les puces passent à la ligne.
+   */
+  .chip-row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: -0.25rem -1rem;
+    padding: 0.25rem 1rem;
+    scroll-padding-inline: 1rem;
+  }
+  .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+  .chip-row > * {
+    flex-shrink: 0;
+  }
+  @media (min-width: 40rem) {
+    .chip-row {
+      flex-wrap: wrap;
+      overflow: visible;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
   /* Trame de points pour varier les surfaces sans image. */
   .dot-grid {
     background-image: radial-gradient(var(--dot) 1px, transparent 1px);

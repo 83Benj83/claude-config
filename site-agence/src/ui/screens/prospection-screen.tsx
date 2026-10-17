@@ -105,20 +105,23 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
             <div className="flex gap-2 px-5 pt-4 sm:px-6" role="group" aria-label="Type d'enregistrement">
               {(
                 [
-                  ["contacted", "Contact effectué"],
-                  ["callback", "À rappeler plus tard"],
+                  ["contacted", "Contact effectué", "Contact effectué"],
+                  ["callback", "À rappeler plus tard", "À rappeler"],
                 ] as const
-              ).map(([value, label]) => (
+              ).map(([value, label, short]) => (
                 <button
                   key={value}
                   type="button"
                   aria-pressed={mode === value}
+                  aria-label={label}
                   onClick={() => setMode(value)}
-                  className={`h-10 rounded-full border px-4 text-sm font-medium transition-colors ${
+                  className={`h-10 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors ${
                     mode === value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-input bg-surface text-muted hover:text-fg"
                   }`}
                 >
-                  {label}
+                  {/* Téléphone : libellé court, les deux choix tiennent sur une ligne. */}
+                  <span className="sm:hidden">{short}</span>
+                  <span className="max-sm:hidden">{label}</span>
                 </button>
               ))}
             </div>
@@ -299,7 +302,7 @@ function MyProspects({ view }: { view: ProspectionView }) {
         ].map((stat, index) => (
           <div key={stat.label} className={`px-4 py-4 ${index > 0 ? "border-l border-line" : ""}`}>
             <p className="text-xs text-subtle">{stat.label}</p>
-            <p className="mt-0.5 text-2xl font-semibold tracking-tight text-fg">
+            <p className="mt-0.5 font-display text-2xl font-bold tracking-tight text-fg tabular">
               {formatInt(stat.value)}
               {stat.suffix && <span className="text-sm font-normal text-subtle">{stat.suffix}</span>}
             </p>

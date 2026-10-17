@@ -27,7 +27,7 @@ import { CopyButton } from "../primitives/copy-button";
 import { Segmented } from "../primitives/choice";
 import { Checkbox, Field, FormMessage, SelectField, controlClasses } from "../primitives/field";
 import { Sheet } from "../primitives/sheet";
-import { Badge, Card, ScreenHeader } from "../primitives/surface";
+import { Badge, Card, ScreenHeader, StatTile } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
 
 type Tab = "identifiants" | "statistiques";
@@ -75,9 +75,9 @@ export function AdminScreen({ view }: { view: AdminView }) {
       <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
         <div className="flex min-w-0 flex-col gap-4 lg:col-span-8">
           <div className="grid grid-cols-3 gap-3">
-            <Figure label="Actifs" value={active.length} />
-            <Figure label="Jamais connectés" value={waiting} />
-            <Figure label="Admins" value={admins} />
+            <StatTile label="Actifs" value={formatInt(active.length)} />
+            <StatTile label="Jamais connectés" value={formatInt(waiting)} />
+            <StatTile label="Admins" value={formatInt(admins)} />
           </div>
           <Card aria-label="Liste des identifiants">
             <ul className="divide-y divide-line">
@@ -163,8 +163,8 @@ function StatisticsPanel({ view }: { view: AdminView }) {
     <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
       <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
         <div className="grid grid-cols-2 gap-3">
-          <Figure label="Prospects ce mois-ci" value={view.stats.countedThisMonth} />
-          <Figure label="Commerces déjà contactés" value={view.stats.establishments} />
+          <StatTile label="Prospects ce mois-ci" value={formatInt(view.stats.countedThisMonth)} />
+          <StatTile label="Commerces déjà contactés" value={formatInt(view.stats.establishments)} />
         </div>
         <Card className="p-5">
           <p className="text-sm text-subtle">Les compteurs partent du</p>
@@ -218,17 +218,15 @@ function StatisticsPanel({ view }: { view: AdminView }) {
   );
 }
 
-function Figure({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-line bg-surface px-3 py-3 sm:px-4 sm:py-3.5">
-      <p className="text-xs text-subtle">{label}</p>
-      <p className="mt-0.5 font-display text-2xl font-bold tracking-tight text-fg tabular">{formatInt(value)}</p>
-    </div>
-  );
-}
-
 function MemberRow({ member, isMe, onEdit }: { member: Member; isMe: boolean; onEdit: () => void }) {
   const lastLogin = member.lastLoginAt ? formatDayShort(todayIso(new Date(member.lastLoginAt))) : null;
+  const status = !member.active
+    ? "désactivé"
+    : member.welcomedAt
+      ? lastLogin
+        ? `dernière connexion le ${lastLogin}`
+        : "première connexion faite"
+      : "aucune connexion";
   return (
     <div className={`flex items-center gap-3 px-4 py-3.5 sm:px-5 ${member.active ? "" : "opacity-60"}`}>
       <Avatar member={member} size="sm" highlight={isMe} />
@@ -239,14 +237,19 @@ function MemberRow({ member, isMe, onEdit }: { member: Member; isMe: boolean; on
         </p>
         <p className="mt-0.5 truncate text-xs text-subtle">
           {member.jobTitle}
-          {" · "}
-          {!member.active ? "désactivé" : member.welcomedAt ? (lastLogin ? `dernière connexion le ${lastLogin}` : "première connexion faite") : "aucune connexion"}
+          <span className="max-sm:hidden">
+            {" · "}
+            {status}
+          </span>
+        </p>
+        {/* Téléphone : rôles et dernière connexion sur une ligne à part, rien n'est coupé. */}
+        <p className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+          <RoleBadges member={member} />
+          <span className="text-xs text-subtle">{status}</span>
         </p>
       </div>
       <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
-        {member.isAdmin && <Badge tone="accent">Admin</Badge>}
-        {member.isProspector && <Badge>Prospecteur</Badge>}
-        {!member.active && <Badge tone="danger">Désactivé</Badge>}
+        <RoleBadges member={member} />
       </div>
       <button
         type="button"
@@ -257,6 +260,16 @@ function MemberRow({ member, isMe, onEdit }: { member: Member; isMe: boolean; on
         <PencilSimpleIcon size={18} aria-hidden />
       </button>
     </div>
+  );
+}
+
+function RoleBadges({ member }: { member: Member }) {
+  return (
+    <>
+      {member.isAdmin && <Badge tone="accent">Admin</Badge>}
+      {member.isProspector && <Badge>Prospecteur</Badge>}
+      {!member.active && <Badge tone="danger">Désactivé</Badge>}
+    </>
   );
 }
 
