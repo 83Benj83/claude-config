@@ -22,6 +22,7 @@ import { ChipGroup } from "../primitives/choice";
 import { CopyButton } from "../primitives/copy-button";
 import { Icon } from "../primitives/icon";
 import { useToast } from "../primitives/toast";
+import { callbacksChanged } from "../shell/callbacks-due";
 import { CallbackForm, emptyCallback } from "../rappels/callback-form";
 
 /** Liste des lignes : une seule carte, lignes séparées par un filet. */
@@ -270,6 +271,7 @@ function LeadActions({ row, today, canManage, batch }: { row: LeadRow; today: st
                 : await actions.deferLead({ id: lead.id, callback: values });
               if (result.ok) {
                 toast(result.message ?? "Rappel enregistré.");
+                callbacksChanged();
                 setMode("idle");
               }
               return result;

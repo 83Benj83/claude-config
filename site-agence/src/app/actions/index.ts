@@ -196,6 +196,10 @@ export async function addLead(input: LeadFormValues): Promise<ActionResult<{ id:
   });
 }
 
+export async function importLeads(rows: Record<string, string>[]): Promise<ActionResult<{ added: number; skipped: { line: number; message: string }[] }>> {
+  return withMember(async (actor) => leads.importLeads(await getRepository(), actor, rows, clock()));
+}
+
 export async function deferLead(input: { id: string; callback: CallbackFormValues }): Promise<ActionResult> {
   return withMember(async (actor) => leads.deferLead(await getRepository(), actor, { id: input?.id, callback: input?.callback }, clock()));
 }
@@ -231,6 +235,10 @@ export async function completeCallback(id: string): Promise<ActionResult> {
 
 export async function reopenCallback(id: string): Promise<ActionResult> {
   return withMember(async (actor) => callbacks.reopenCallback(await getRepository(), actor, id));
+}
+
+export async function updateCallback(input: CallbackFormValues & { id: string }): Promise<ActionResult> {
+  return withMember(async (actor) => callbacks.updateCallback(await getRepository(), actor, input, clock()));
 }
 
 export async function rescheduleCallback(input: { id: string; dueOn: string; dueTime: string; priority?: string }): Promise<ActionResult> {

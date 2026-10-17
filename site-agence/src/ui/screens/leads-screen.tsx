@@ -9,6 +9,7 @@ import { pluralize } from "@/lib/format";
 import { arrondissement, type DoneLeadRow, type LeadRow, type LeadsView } from "@/lib/leads";
 import { AddLead } from "../leads/add-lead";
 import { ExtractBatch, MyBatch } from "../leads/batch-panel";
+import { ImportLeads } from "../leads/import-leads";
 import { LEAD_LIST_CLASSES, LeadCard } from "../leads/lead-card";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
@@ -47,6 +48,7 @@ export function LeadsScreen({ view }: { view: LeadsView }) {
 
       <MyBatch view={view} />
       {!view.myBatch && <ExtractBatch view={view} />}
+      <ImportLeads />
 
       {view.otherBatches.length > 0 && (
         <p className="flex items-center gap-2 text-sm text-muted">

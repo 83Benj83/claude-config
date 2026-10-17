@@ -108,6 +108,8 @@ export type AppActions = {
   deleteLead(id: string): Promise<ActionResult>;
   /** Tous les membres peuvent ajouter un numéro à contacter. */
   addLead(input: LeadFormValues): Promise<ActionResult<{ id: string }>>;
+  /** Importe une liste (lignes d'un fichier Excel ou CSV, titres en clés). */
+  importLeads(rows: Record<string, string>[]): Promise<ActionResult<{ added: number; skipped: { line: number; message: string }[] }>>;
   /** « À rappeler plus tard » depuis la liste : le commerce rejoint les rappels. */
   deferLead(input: { id: string; callback: CallbackFormValues }): Promise<ActionResult>;
   /** Fichiers de 10 à 50 commerces. */
@@ -120,6 +122,8 @@ export type AppActions = {
   completeCallback(id: string): Promise<ActionResult>;
   reopenCallback(id: string): Promise<ActionResult>;
   rescheduleCallback(input: { id: string; dueOn: string; dueTime: string; priority?: string }): Promise<ActionResult>;
+  /** Modifie tout le rappel (tout membre). */
+  updateCallback(input: CallbackFormValues & { id: string }): Promise<ActionResult>;
   deleteCallback(id: string): Promise<ActionResult>;
   searchDirectory(input: { query: string; city: string }): Promise<Establishment[]>;
 

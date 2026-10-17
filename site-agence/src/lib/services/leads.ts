@@ -3,7 +3,7 @@ import { isChannel } from "../channels";
 import type { Repository } from "../data/repository";
 import { todayIso } from "../dates";
 import { contactFor, parseLead } from "../leads";
-import { BATCH_SIZES } from "../rules";
+import { BATCH_SIZES, LEAD_IMPORT_MAX_ROWS } from "../rules";
 import { nameKey } from "../establishments";
 import type { IsoDate, Lead, LeadBatch, Member, Prospect } from "../types";
 import { addCallback } from "./callbacks";
@@ -84,6 +84,45 @@ export async function addLead(repository: Repository, actor: Member, input: unkn
   const lead: Lead = { ...parsed.lead, id: crypto.randomUUID(), status: "open", doneBy: null, doneAt: null, prospectId: null, addedBy: actor.id, batchId: null, outcome: null, createdAt: clock.now };
   await repository.addLeads([lead]);
   return { ok: true, data: { lead }, message: `${lead.name} ajouté à la liste « À contacter ».` };
+}
+
+/**
+ * Importe une liste (fichier Excel ou CSV lu dans le navigateur) : chaque
+ * membre peut le faire. Nom, ville et au moins un moyen de contact par ligne ;
+ * un commerce déjà dans la liste (ou en double dans le fichier) est écarté.
+ * `line` : numéro de la ligne de données (1 = première ligne après les titres).
+ */
+export async function importLeads(
+  repository: Repository,
+  actor: Member,
+  rows: unknown,
+  clock: Clock,
+): Promise<ActionResult<{ added: number; skipped: { line: number; message: string }[] }>> {
+  if (!Array.isArray(rows) || rows.length === 0) return { ok: false, message: "Le fichier ne contient aucune ligne." };
+  if (rows.length > LEAD_IMPORT_MAX_ROWS) return { ok: false, message: `${LEAD_IMPORT_MAX_ROWS} lignes au plus par fichier : coupe-le en plusieurs.` };
+  const keyOf = (name: string, city: string) => `${nameKey(name)}|${city.trim().toLowerCase()}`;
+  const known = new Set((await repository.listLeads(clock.now)).filter((l) => l.status === "open").map((l) => keyOf(l.name, l.city)));
+  const skipped: { line: number; message: string }[] = [];
+  const added: Lead[] = [];
+  rows.forEach((row, index) => {
+    const line = index + 1;
+    const parsed = parseLead(row, clock.today);
+    if (!parsed.ok) return void skipped.push({ line, message: parsed.message });
+    const { lead } = parsed;
+    if (!lead.phone && !lead.email && !lead.instagram && !lead.facebook) {
+      return void skipped.push({ line, message: "Aucun téléphone, e-mail, Instagram ou Facebook valide." });
+    }
+    const key = keyOf(lead.name, lead.city);
+    if (known.has(key)) return void skipped.push({ line, message: `${lead.name} (${lead.city}) est déjà dans la liste.` });
+    known.add(key);
+    added.push({ ...lead, id: crypto.randomUUID(), status: "open", doneBy: null, doneAt: null, prospectId: null, addedBy: actor.id, batchId: null, outcome: null, createdAt: clock.now });
+  });
+  if (added.length > 0) await repository.addLeads(added);
+  const message =
+    added.length === 0
+      ? "Aucun commerce ajouté : vérifie les lignes écartées."
+      : `${added.length} commerce${added.length > 1 ? "s" : ""} ajouté${added.length > 1 ? "s" : ""} à la liste « À contacter ».`;
+  return { ok: true, data: { added: added.length, skipped }, message };
 }
 
 /** « À rappeler plus tard » : le commerce quitte la liste et rejoint les rappels de l'équipe. */

@@ -36,3 +36,6 @@ export const STORAGE_QUOTA_BYTES = 1024 ** 3;
 export const BATCH_SIZES = [10, 20, 30, 40, 50] as const;
 /** Rappels faits : gardés visibles pendant ce délai (heures). */
 export const CALLBACK_DONE_VISIBLE_HOURS = 48;
+
+/** Une liste importée dans « À contacter » : 500 lignes au plus. */
+export const LEAD_IMPORT_MAX_ROWS = 500;

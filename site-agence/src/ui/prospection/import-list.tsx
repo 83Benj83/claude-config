@@ -1,22 +1,20 @@
 "use client";
 
 import { CheckCircleIcon, CopyIcon, DownloadSimpleIcon, FileArrowUpIcon, WarningCircleIcon, XCircleIcon } from "@phosphor-icons/react";
-import Papa from "papaparse";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { GENERIC_ERROR, type ProspectFormValues } from "@/lib/actions-contract";
 import { CHANNELS, channelLabel, isChannel } from "@/lib/channels";
 import { formatDayShort } from "@/lib/dates";
 import {
-  IMPORT_MAX_BYTES,
   IMPORT_MAX_ROWS,
   readTable,
   toFormValues,
-  type Cell,
   type ImportField,
   type ImportTable,
   type RowStatus,
 } from "@/lib/prospect-import";
 import type { Channel, IsoDate } from "@/lib/types";
+import { readSpreadsheet } from "../import/read-file";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { Checkbox, Field, FormMessage, SelectField } from "../primitives/field";
@@ -39,31 +37,6 @@ const TEMPLATE = [
   "Boulangerie Martin;Lyon;Sur place;Mme Martin;Intéressée par le pack Pro;",
 ].join("\r\n");
 
-/** Texte d'un fichier CSV : UTF-8, sinon l'encodage d'Excel sous Windows. */
-async function readText(file: File): Promise<string> {
-  const bytes = await file.arrayBuffer();
-  try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return new TextDecoder("windows-1252").decode(bytes);
-  }
-}
-
-async function readFile(file: File): Promise<Cell[][]> {
-  const extension = file.name.toLowerCase().split(".").pop() ?? "";
-  if (extension === "xls") throw new Error("Ancien format Excel (.xls) : enregistre le fichier en .xlsx ou en CSV, puis recommence.");
-  if (file.size > IMPORT_MAX_BYTES) throw new Error("Fichier trop lourd : 2 Mo au plus.");
-  if (extension === "xlsx") {
-    const { readSheet } = await import("read-excel-file/universal");
-    return (await readSheet(file)) as Cell[][];
-  }
-  if (["csv", "txt", "tsv"].includes(extension)) {
-    const parsed = Papa.parse<string[]>(await readText(file), { skipEmptyLines: "greedy" });
-    return parsed.data;
-  }
-  throw new Error("Format non pris en charge : choisis un fichier Excel (.xlsx), CSV ou texte.");
-}
-
 /** Bloc « Importer une liste » de l'écran Prospecter. */
 export function ImportList({ today }: { today: IsoDate }) {
   const { download } = usePlatform();
@@ -78,7 +51,7 @@ export function ImportList({ today }: { today: IsoDate }) {
     setError(null);
     startReading(async () => {
       try {
-        const table = readTable(await readFile(file));
+        const table = readTable(await readSpreadsheet(file));
         if (table.rows.length === 0) throw new Error("Ce fichier ne contient aucune ligne.");
         if (table.rows.length > IMPORT_MAX_ROWS) throw new Error(`Ce fichier contient ${table.rows.length} lignes : ${IMPORT_MAX_ROWS} au plus par import.`);
         setOpened({ fileName: file.name, table });

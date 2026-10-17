@@ -51,10 +51,10 @@ const emailOf = (value: string | null) => (value && /^[^\s@]+@[^\s@]+\.[a-z]{2,}
 const FIELDS: Record<keyof Omit<NewLead, "listDay">, string[]> = {
   address: ["adresse", "address"],
   tips: ["tips", "infos appel", "infos utiles", "arguments"],
-  name: ["nom", "name", "enseigne", "commerce"],
-  city: ["ville", "city"],
+  name: ["nom", "name", "enseigne", "commerce", "nom du commerce", "nom du restaurant", "etablissement", "entreprise", "societe", "boutique", "restaurant"],
+  city: ["ville", "city", "commune", "localite"],
   category: ["categorie", "category", "type", "activite"],
-  phone: ["telephone", "tel", "phone", "numero"],
+  phone: ["telephone", "tel", "phone", "numero", "numero de telephone", "portable", "mobile", "fixe"],
   email: ["email", "e mail", "mail"],
   instagram: ["instagram", "insta"],
   facebook: ["facebook", "fb"],
@@ -110,6 +110,37 @@ export function parseLead(input: unknown, listDay: IsoDate): { ok: true; lead: N
       listDay,
     },
   };
+}
+
+type TableCell = string | number | boolean | Date | null | undefined;
+
+const tableText = (cell: TableCell): string => {
+  if (cell === null || cell === undefined) return "";
+  if (cell instanceof Date) return Number.isNaN(cell.getTime()) ? "" : todayIso(cell);
+  return String(cell).replace(/\s+/g, " ").trim();
+};
+
+/**
+ * Lignes d'un fichier importé (Excel ou CSV) : la première ligne non vide
+ * donne les titres, chaque ligne suivante devient un objet « titre → texte »
+ * (à passer à `parseLead`). Un numéro devenu nombre dans Excel retrouve son 0.
+ */
+export function leadRowsFromTable(table: readonly (readonly TableCell[])[]): Record<string, string>[] {
+  const filled = table.filter((row) => row.some((cell) => tableText(cell) !== ""));
+  const [header, ...rows] = filled;
+  if (!header) return [];
+  const titles = header.map(tableText);
+  const isPhone = titles.map((title) => FIELDS.phone.includes(normalizeText(title)));
+  return rows.map((row) =>
+    Object.fromEntries(
+      titles.flatMap((title, index) => {
+        if (!title) return [];
+        const cell = row[index];
+        const text = tableText(cell);
+        return [[title, isPhone[index] && typeof cell === "number" && /^[1-9]\d{8}$/.test(text) ? `0${text}` : text]];
+      }),
+    ),
+  );
 }
 
 /** Moyens de contact connus du commerce, toujours dans le même ordre. */

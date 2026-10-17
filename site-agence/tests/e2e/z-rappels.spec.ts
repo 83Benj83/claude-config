@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, newContextLike, openLead, openSection, unique } from "./helpers";
+import { loginAs, newContextLike, openLead, openMenu, openSection, unique } from "./helpers";
 
 test.describe("rappels et numéros ajoutés par l'équipe", () => {
   test("un membre ajoute un numéro ; un collègue le voit, le met en rappel ; un troisième le coche fait", async ({ page, browser }) => {
@@ -189,5 +189,63 @@ test.describe("échange par salons", () => {
 
     await page.getByRole("tab", { name: "# Annonces" }).click();
     await expect(page.getByText(/Salon en lecture seule/)).toBeVisible();
+  });
+});
+
+test.describe("liste importée et rappels modifiables", () => {
+  test("un membre importe un fichier CSV dans « À contacter » ; les lignes invalides sont écartées avec la raison", async ({ page }) => {
+    test.skip(test.info().project.name === "mobile", "Un seul passage : les deux projets partagent les mêmes données.");
+    const u = unique();
+    const csv = ["Nom;Ville;Téléphone;Catégorie", `Import Lead A ${u};Toulon;04 94 00 11 22;Boulangerie`, `Import Lead B ${u};Hyères;06 11 22 33 44;`, `Sans contact ${u};Toulon;;`].join("\n");
+    await loginAs(page, "theo", "Théo Garnier");
+    await openSection(page, "À contacter");
+    await page.getByRole("button", { name: "Importer une liste" }).click();
+    await page.getByLabel("Fichier de commerces à contacter").setInputFiles({ name: "liste.csv", mimeType: "text/csv", buffer: Buffer.from(csv, "utf8") });
+    await expect(page.getByText("3 lignes trouvées.")).toBeVisible();
+    await page.getByRole("button", { name: "Ajouter à la liste" }).click();
+    await expect(page.getByText("2 commerces ajoutés, 1 ligne écartée.")).toBeVisible();
+    await expect(page.getByRole("list", { name: "Lignes écartées" })).toContainText("Ligne 4 : Aucun téléphone");
+    await expect(page.getByRole("article", { name: `Import Lead A ${u}` })).toBeVisible();
+  });
+
+  test("un collègue modifie tout un rappel ; la pastille du menu baisse dès qu'un rappel est fait", async ({ page, browser }) => {
+    test.skip(test.info().project.name === "mobile", "Un seul passage : les deux projets partagent les mêmes données.");
+    const name = `Rappel modifiable ${unique()}`;
+    await loginAs(page, "lea", "Léa Fontaine");
+    await openSection(page, "Rappels");
+    await page.getByRole("button", { name: "Nouveau rappel" }).click();
+    const form = page.getByRole("region", { name: "Nouveau rappel" });
+    await form.getByLabel("Commerce").fill(name);
+    await form.getByText("Aujourd'hui", { exact: true }).click();
+    await form.getByRole("button", { name: "Enregistrer le rappel" }).click();
+    await expect(page.getByRole("article", { name })).toBeVisible();
+
+    const otherContext = await newContextLike(browser);
+    const theo = await otherContext.newPage();
+    await loginAs(theo, "theo", "Théo Garnier");
+    await theo.goto("/rappels");
+    await theo.getByRole("button", { name: `Modifier le rappel ${name}` }).click();
+    const sheet = theo.getByRole("dialog", { name: `Modifier « ${name} »` });
+    await sheet.getByLabel("Commerce").fill(`${name} (modifié)`);
+    await sheet.getByLabel(/Info complémentaire/).fill("Demander le gérant");
+    await sheet.getByRole("button", { name: "Enregistrer les modifications" }).click();
+    const edited = theo.getByRole("article", { name: `${name} (modifié)` });
+    await expect(edited).toContainText("Demander le gérant");
+    await expect(edited).toContainText("Ajouté par Léa Fontaine");
+    await otherContext.close();
+
+    // La pastille se met à jour tout de suite, sans recharger la page.
+    const badge = async () => {
+      await openMenu(page);
+      const text = await page.getByRole("dialog", { name: "Menu" }).getByRole("link", { name: "Rappels" }).innerText();
+      await page.keyboard.press("Escape");
+      return Number(text.match(/\b(\d+)\b/)?.[1] ?? 0);
+    };
+    await page.reload();
+    await expect.poll(badge).toBeGreaterThan(0);
+    const before = await badge();
+    await page.getByRole("article", { name: `${name} (modifié)` }).getByRole("button", { name: "C'est fait" }).click();
+    await expect(page.getByRole("article", { name: `${name} (modifié)` })).toBeHidden();
+    await expect.poll(badge).toBe(before - 1);
   });
 });

@@ -97,6 +97,7 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
         const result = await leads.addLead(repository, actor, input, clock());
         return result.ok ? { ok: true as const, data: { id: result.data.lead.id }, message: result.message } : result;
       }),
+    importLeads: (rows) => withMember((actor) => leads.importLeads(repository, actor, rows, clock())),
     deferLead: (input) => withMember((actor) => leads.deferLead(repository, actor, { id: input?.id, callback: input?.callback }, clock())),
     extractBatch: (input) => withMember((actor) => leads.extractBatch(repository, actor, input?.size, clock())),
     handleBatchLead: (input) =>
@@ -112,6 +113,7 @@ export function createPreviewActions(repository: Repository, session: PreviewSes
     reopenCallback: (id) => withMember((actor) => callbacks.reopenCallback(repository, actor, id)),
     rescheduleCallback: (input) =>
       withMember((actor) => callbacks.rescheduleCallback(repository, actor, { id: input?.id, dueOn: input?.dueOn, dueTime: input?.dueTime, priority: input?.priority }, clock())),
+    updateCallback: (input) => withMember((actor) => callbacks.updateCallback(repository, actor, input, clock())),
     deleteCallback: (id) => withMember((actor) => callbacks.deleteCallback(repository, actor, id)),
 
     saveResource: (input) => withMember((actor) => members.saveResource(repository, actor, input)),

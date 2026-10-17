@@ -18,6 +18,7 @@ import { Field, FormMessage, TextArea } from "../primitives/field";
 import { ChannelIcon } from "../primitives/icon";
 import { Card, CardHeader, EmptyState, ScreenHeader } from "../primitives/surface";
 import { useToast } from "../primitives/toast";
+import { callbacksChanged } from "../shell/callbacks-due";
 
 /** Délai avant de vérifier un nom pendant la frappe. */
 const LOOKUP_DELAY_MS = 350;
@@ -134,6 +135,7 @@ export function ProspectionScreen({ view }: { view: ProspectionView }) {
                     const result = await actions.addCallback(values);
                     if (result.ok) {
                       toast(result.message ?? "Rappel enregistré.");
+                      callbacksChanged();
                       setForm((current) => ({ ...current, name: "", contact: "", note: "" }));
                     }
                     return result;

@@ -80,6 +80,22 @@ export async function rescheduleCallback(
   return { ok: true, data: null, message: `${callback.name} : rappel reporté.` };
 }
 
+/**
+ * Modifie un rappel (tout membre) : commerce, numéro, interlocuteur, date,
+ * heure, importance et note. Un rappel en retard garde sa date si on ne la
+ * change pas ; une nouvelle date doit être aujourd'hui ou plus tard.
+ */
+export async function updateCallback(repository: Repository, _actor: Member, input: unknown, clock: Clock): Promise<ActionResult> {
+  const data = typeof input === "object" && input !== null ? (input as Record<string, unknown>) : {};
+  const callback = await repository.getCallback(String(data.id ?? ""));
+  if (!callback || callback.status !== "pending") return { ok: false, message: GONE };
+  const keepsDate = data.dueOn === callback.dueOn;
+  const parsed = parseCallback(data, keepsDate ? { ...clock, today: callback.dueOn < clock.today ? callback.dueOn : clock.today } : clock);
+  if (!parsed.ok) return { ok: false, errors: parsed.errors, message: Object.values(parsed.errors)[0] };
+  await repository.saveCallback({ ...callback, ...parsed.data });
+  return { ok: true, data: null, message: `${parsed.data.name} : rappel modifié.` };
+}
+
 export async function deleteCallback(repository: Repository, actor: Member, id: unknown): Promise<ActionResult> {
   const callback = await repository.getCallback(String(id ?? ""));
   if (!callback) return { ok: false, message: GONE };

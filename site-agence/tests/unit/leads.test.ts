@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { arrondissement, buildLeadsView, contactFor, facebookUrl, instagramUrl, leadContacts, parseLead } from "@/lib/leads";
+import { arrondissement, buildLeadsView, contactFor, facebookUrl, instagramUrl, leadContacts, leadRowsFromTable, parseLead } from "@/lib/leads";
 import type { Lead } from "@/lib/types";
 import { makeMember, makeProspect } from "./helpers";
 
@@ -132,5 +132,29 @@ describe("leads view", () => {
     expect([asMax.doneToday[0].canUndo, asMax.canManage]).toEqual([true, true]);
     const asOther = buildLeadsView({ leads, members, contacted: [], me: makeMember("zoe"), today });
     expect(asOther.doneToday[0].canUndo).toBe(false);
+  });
+});
+
+describe("lire une liste importée (Excel ou CSV)", () => {
+  test("la 1re ligne donne les titres ; lignes vides ignorées ; le 0 perdu par Excel est remis", () => {
+    const rows = leadRowsFromTable([
+      ["", "", ""],
+      ["Nom du commerce", "Ville", "Téléphone", "Catégorie"],
+      ["Boulangerie Soleil", "Hyères", 494000001, "Boulangerie"],
+      [null, "", undefined, ""],
+      ["Le Zinc", "Toulon", "06 12 34 56 78", ""],
+    ]);
+    expect(rows).toEqual([
+      { "Nom du commerce": "Boulangerie Soleil", Ville: "Hyères", Téléphone: "0494000001", Catégorie: "Boulangerie" },
+      { "Nom du commerce": "Le Zinc", Ville: "Toulon", Téléphone: "06 12 34 56 78", Catégorie: "" },
+    ]);
+    const parsed = parseLead(rows[0], "2026-10-17");
+    expect(parsed).toMatchObject({ ok: true, lead: { name: "Boulangerie Soleil", city: "Hyères", phone: "0494000001", category: "Boulangerie" } });
+  });
+
+  test("titres courants reconnus : établissement, commune, portable, numéro de téléphone", () => {
+    const parsed = parseLead({ Établissement: "Salon Mèche", Commune: "Toulon", "Numéro de téléphone": "04 94 00 00 09" }, "2026-10-17");
+    expect(parsed).toMatchObject({ ok: true, lead: { name: "Salon Mèche", city: "Toulon", phone: "04 94 00 00 09" } });
+    expect(parseLead({ Nom: "A", Ville: "B", Portable: "0612345678" }, "2026-10-17")).toMatchObject({ ok: true, lead: { phone: "0612345678" } });
   });
 });

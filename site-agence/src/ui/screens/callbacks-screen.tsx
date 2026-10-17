@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowCounterClockwiseIcon, CalendarCheckIcon, CheckCircleIcon, ClockIcon, PhoneCallIcon, PhoneIcon, TrashIcon, UserIcon } from "@phosphor-icons/react";
+import { ArrowCounterClockwiseIcon, CalendarCheckIcon, CheckCircleIcon, ClockIcon, PencilSimpleIcon, PhoneCallIcon, PhoneIcon, TrashIcon, UserIcon } from "@phosphor-icons/react";
 import { useState, useTransition } from "react";
 import { GENERIC_ERROR } from "@/lib/actions-contract";
 import { PRIORITY_LABELS, type CallbackRow, type CallbacksView } from "@/lib/callbacks";
@@ -10,10 +10,11 @@ import type { CallbackPriority } from "@/lib/types";
 import { usePlatform } from "../platform";
 import { buttonClasses } from "../primitives/button";
 import { CopyButton } from "../primitives/copy-button";
-import { Field } from "../primitives/field";
 import { Card, CardHeader, EmptyState, ScreenHeader, StatTile } from "../primitives/surface";
+import { Sheet } from "../primitives/sheet";
 import { useToast } from "../primitives/toast";
 import { CallbackForm, emptyCallback } from "../rappels/callback-form";
+import { callbacksChanged } from "../shell/callbacks-due";
 
 const PRIORITY_STYLE: Record<CallbackPriority, string> = {
   faible: "bg-surface-2 text-muted",
@@ -70,7 +71,10 @@ export function CallbacksScreen({ view }: { view: CallbacksView }) {
               onCancel={() => setAdding(false)}
               onSubmit={async (values) => {
                 const result = await actions.addCallback(values);
-                if (result.ok) toast(result.message ?? "Rappel enregistré.");
+                if (result.ok) {
+                  toast(result.message ?? "Rappel enregistré.");
+                  callbacksChanged();
+                }
                 return result;
               }}
             />
@@ -150,9 +154,7 @@ function CallbackCard({ row, today }: { row: CallbackRow; today: string }) {
   const { actions } = usePlatform();
   const toast = useToast();
   const [pending, start] = useTransition();
-  const [mode, setMode] = useState<"view" | "move" | "delete">("view");
-  const [dueOn, setDueOn] = useState(row.callback.dueOn < today ? today : row.callback.dueOn);
-  const [dueTime, setDueTime] = useState(row.callback.dueTime ?? "");
+  const [mode, setMode] = useState<"view" | "edit" | "delete">("view");
   const [error, setError] = useState<string | null>(null);
   const { callback } = row;
 
@@ -165,6 +167,7 @@ function CallbackCard({ row, today }: { row: CallbackRow; today: string }) {
       }
       setError(null);
       toast(result.message ?? "C'est fait.");
+      callbacksChanged();
       after?.();
     });
 
@@ -220,27 +223,7 @@ function CallbackCard({ row, today }: { row: CallbackRow; today: string }) {
       )}
 
       <div className="mt-auto pt-1">
-        {mode === "move" ? (
-          <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nouveau jour" type="date" min={today} value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
-              <Field label="Heure" optional type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run(() => actions.rescheduleCallback({ id: callback.id, dueOn, dueTime }), () => setMode("view"))}
-                className={buttonClasses({ size: "sm" })}
-              >
-                {pending ? "…" : "Reporter"}
-              </button>
-              <button type="button" onClick={() => setMode("view")} className={buttonClasses({ variant: "ghost", size: "sm" })}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        ) : mode === "delete" ? (
+        {mode === "delete" ? (
           <div className="flex flex-col gap-2 rounded-xl border border-danger/40 bg-danger-soft p-3">
             <p className="text-sm text-fg">Supprimer ce rappel pour toute l&apos;équipe ?</p>
             <div className="flex gap-2">
@@ -263,8 +246,9 @@ function CallbackCard({ row, today }: { row: CallbackRow; today: string }) {
               <CheckCircleIcon size={18} weight="bold" aria-hidden />
               {pending ? "…" : "C'est fait"}
             </button>
-            <button type="button" onClick={() => setMode("move")} className={buttonClasses({ variant: "secondary" })}>
-              Reporter
+            <button type="button" onClick={() => setMode("edit")} className={buttonClasses({ variant: "secondary" })} aria-label={`Modifier le rappel ${callback.name}`}>
+              <PencilSimpleIcon size={18} aria-hidden />
+              Modifier
             </button>
             {row.canDelete && (
               <button
@@ -279,6 +263,35 @@ function CallbackCard({ row, today }: { row: CallbackRow; today: string }) {
           </div>
         )}
       </div>
+
+      <Sheet open={mode === "edit"} onClose={() => setMode("view")} title={`Modifier « ${callback.name} »`} description="Visible de toute l'équipe.">
+        {mode === "edit" && (
+          <CallbackForm
+            today={today}
+            initial={{
+              name: callback.name,
+              city: callback.city ?? "",
+              phone: callback.phone ?? "",
+              contactName: callback.contactName ?? "",
+              dueOn: callback.dueOn,
+              dueTime: callback.dueTime ?? "",
+              priority: callback.priority,
+              note: callback.note ?? "",
+            }}
+            submitLabel="Enregistrer les modifications"
+            onCancel={() => setMode("view")}
+            onSubmit={async (values) => {
+              const result = await actions.updateCallback({ id: callback.id, ...values });
+              if (result.ok) {
+                toast(result.message ?? "Rappel modifié.");
+                callbacksChanged();
+                setMode("view");
+              }
+              return result;
+            }}
+          />
+        )}
+      </Sheet>
     </article>
   );
 }
@@ -305,6 +318,7 @@ function DoneRow({ row }: { row: CallbackRow }) {
         onClick={() =>
           start(async () => {
             const result = await actions.reopenCallback(callback.id);
+            if (result.ok) callbacksChanged();
             toast(result.message ?? (result.ok ? "Rappel rouvert." : GENERIC_ERROR), result.ok ? "success" : "error");
           })
         }

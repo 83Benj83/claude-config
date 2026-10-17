@@ -6,9 +6,16 @@ import { usePlatform } from "../platform";
 /*
  * Rappels à faire aujourd'hui ou en retard, pour toute l'équipe : une pastille
  * sur « Rappels » dans le menu et sur l'accueil. Relu à chaque changement de
- * page et toutes les minutes tant que l'onglet est visible.
+ * page, aussitôt après chaque rappel ajouté, fait, modifié ou supprimé, et
+ * toutes les minutes tant que l'onglet est visible.
  */
 const CHECK_EVERY_MS = 60_000;
+const CHANGED = "astrinova:rappels";
+
+/** À appeler après une action qui change les rappels : la pastille se met à jour tout de suite. */
+export function callbacksChanged() {
+  window.dispatchEvent(new Event(CHANGED));
+}
 
 const CallbacksDueContext = createContext(0);
 
@@ -30,10 +37,12 @@ export function CallbacksDueProvider({ children }: { children: ReactNode }) {
     check();
     const timer = setInterval(check, CHECK_EVERY_MS);
     document.addEventListener("visibilitychange", check);
+    window.addEventListener(CHANGED, check);
     return () => {
       cancelled = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", check);
+      window.removeEventListener(CHANGED, check);
     };
   }, [meId, actions, pathname]);
 

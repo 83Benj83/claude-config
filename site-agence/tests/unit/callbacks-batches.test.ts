@@ -252,3 +252,68 @@ describe("pastille des rappels", () => {
     expect(await callbacks.callbacksDue(repository, clock)).toBe(2);
   });
 });
+
+describe("modifier un rappel", () => {
+  test("n'importe quel membre modifie tout le rappel (nom, numéro, date, note…)", async () => {
+    const repository = repositoryWith([]);
+    const added = await callbacks.addCallback(repository, lea, callbackInput(), clock);
+    if (!added.ok) throw new Error("ajout refusé");
+    const result = await callbacks.updateCallback(
+      repository,
+      theo,
+      { id: added.data.callback.id, ...callbackInput({ name: "Boulangerie du Soleil", phone: "04 94 11 11 11", dueOn: "2026-10-20", dueTime: "", note: "Demander Paul" }) },
+      clock,
+    );
+    expect(result.ok).toBe(true);
+    expect(await repository.getCallback(added.data.callback.id)).toMatchObject({
+      name: "Boulangerie du Soleil",
+      phone: "04 94 11 11 11",
+      dueOn: "2026-10-20",
+      dueTime: null,
+      note: "Demander Paul",
+      addedBy: lea.id,
+    });
+  });
+
+  test("un rappel en retard se modifie sans changer sa date ; une nouvelle date passée est refusée", async () => {
+    const repository = repositoryWith([]);
+    const late = { ...(await callbacks.addCallback(repository, lea, callbackInput(), clock)) };
+    if (!late.ok) throw new Error("ajout refusé");
+    const id = late.data.callback.id;
+    const later = { today: "2026-10-18", now: "2026-10-18T09:00:00.000Z" };
+    expect((await callbacks.updateCallback(repository, theo, { id, ...callbackInput({ note: "Toujours pas joint" }) }, later)).ok).toBe(true);
+    expect((await callbacks.updateCallback(repository, theo, { id, ...callbackInput({ dueOn: "2026-10-16" }) }, later)).ok).toBe(false);
+  });
+});
+
+describe("importer une liste dans « À contacter »", () => {
+  test("chaque membre ajoute une liste ; lignes invalides et doublons écartés avec la raison", async () => {
+    const repository = repositoryWith([lead("x", { name: "Le Zinc", city: "Toulon" })]);
+    const result = await leads.importLeads(
+      repository,
+      theo,
+      [
+        { Nom: "Boulangerie Soleil", Ville: "Hyères", Téléphone: "04 94 00 00 01", Catégorie: "Boulangerie" },
+        { Nom: "Le Zinc", Ville: "toulon", Téléphone: "04 94 00 00 02" },
+        { Nom: "Sans ville", Téléphone: "04 94 00 00 03" },
+        { Nom: "Sans contact", Ville: "Toulon" },
+        { Nom: "Boulangerie Soleil", Ville: "Hyères", Téléphone: "04 94 00 00 01" },
+        { Nom: "Salon Mèche", Ville: "Toulon", Instagram: "@salonmeche" },
+      ],
+      clock,
+    );
+    expect(result).toMatchObject({ ok: true, data: { added: 2 } });
+    if (!result.ok) return;
+    expect(result.data.skipped.map((row) => row.line)).toEqual([2, 3, 4, 5]);
+    const open = (await repository.listLeads(clock.now)).filter((l) => l.status === "open");
+    expect(open.map((l) => l.name).sort()).toEqual(["Boulangerie Soleil", "Le Zinc", "Salon Mèche"]);
+    expect(open.find((l) => l.name === "Boulangerie Soleil")).toMatchObject({ addedBy: theo.id, category: "Boulangerie", listDay: TODAY });
+  });
+
+  test("refuse une liste vide ou trop longue", async () => {
+    const repository = repositoryWith([]);
+    expect((await leads.importLeads(repository, theo, [], clock)).ok).toBe(false);
+    const many = Array.from({ length: 501 }, (_, i) => ({ Nom: `C${i}`, Ville: "Toulon", Téléphone: "04 94 00 00 00" }));
+    expect((await leads.importLeads(repository, theo, many, clock)).ok).toBe(false);
+  });
+});
