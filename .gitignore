@@ -10,6 +10,7 @@
 
 # ── Données de session / machine-spécifiques ───────────────────
 .claude/sessions/
+.claude-flow/sessions/
 .claude/session-data/
 .claude/session-env/
 .claude/projects/
