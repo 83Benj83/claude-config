@@ -56,7 +56,7 @@ claude-config/
 │   └── dependencies.md     # dépendances obligatoires / optionnelles
 └── .claude/
     ├── skills/             # 65 skills
-    ├── agents/             # agents personnalisés
+    ├── agents/             # agents personnalisés (dont atelier/ : Iris, Hugo, Margaux, Bastien)
     ├── commands/           # slash-commands
     ├── rules/              # règles globales (git, contexte, style…)
     ├── helpers/            # scripts de hooks
